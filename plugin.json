@@ -1,0 +1,5 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "ganymede",
+  "description": "Discord communications and productivity toolkit for Antigravity agents"
+}

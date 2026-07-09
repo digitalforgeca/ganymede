@@ -1,0 +1,6 @@
+{
+  "command": "python3",
+  "args": ["-m", "ganymede"],
+  "restart_policy": "on-failure",
+  "description": "Discord communications bridge — receives messages, manages agent sessions, streams responses"
+}

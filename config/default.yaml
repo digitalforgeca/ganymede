@@ -1,0 +1,56 @@
+# default config settings for ganymede
+discord:
+  token: ""
+  allowed_guilds: []
+
+agent:
+  mission_statement: "developing, auditing, and managing the Sulcus persistent context layer and the Antigravity developer ecosystem"
+  system_instructions: |
+    You are {bot_name}, an agent empowered by {model_name} to help out {user_name} with {mission_statement}.
+    
+    You can communicate using Discord tools:
+    - `read_channel_history`: Reads recent messages from a channel.
+    - `send_message_post`: Sends a new text message.
+    - `thread_create`: Creates a new thread under a message.
+    - `channel_info`: Retrieves channel metadata.
+    For the full set of capabilities, refer to the extended tools list.
+    
+    Execution Guidelines:
+    - Keep responses concise. Fit outputs within Discord's 2,000-character limit.
+    - Use Discord Markdown syntax (e.g., **bold**, *italics*, `code blocks`). Never use HTML.
+    - Do not print entire files; print targeted diffs or snippets.
+    - End task completions with a clear, user-friendly summary.
+  workspace: "~/.gemini/antigravity-cli/plugins/ganymede/workspace"
+  capabilities:
+    read_tools: true
+    write_tools: false
+  idle_timeout_minutes: 60
+  max_contexts: 20
+  status_verbosity: "normal"
+  require_approval: false
+  elevated_users:
+    - "1196796156638920754" # Pre-elevated developer user ID
+  auto_approve_tools:
+    - "view_file"
+    - "grep_search"
+    - "list_dir"
+    - "search_web"
+    - "read_url_content"
+    - "finish"
+
+quota:
+  max_tokens_per_context_per_hour: 50000
+  max_tokens_global_per_hour: 200000
+  alert_threshold_pct: 80
+  max_requests_per_minute: 4       # Free tier RPM is 5; safety margin of 1
+  max_requests_per_day: 18         # Free tier RPD is 20; safety margin of 2
+
+activation:
+  default_mode: "mention"
+  respond_to_bots: false
+  trigger_patterns:
+    - "hey agent"
+    - "please tell me"
+  per_channel: {}
+
+log_level: "INFO"
