@@ -1,5 +1,13 @@
 # 🏛️ Ganymede
 
+<p align="left">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/Discord.py-2.4%2B-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord.py" />
+  <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
+  <img src="https://img.shields.io/badge/MCP-FastMCP-orange?style=for-the-badge&logo=json&logoColor=white" alt="Model Context Protocol" />
+  <img src="https://img.shields.io/badge/Platform-Console_/_Discord-green?style=for-the-badge" alt="Platform" />
+</p>
+
 **Ganymede** is a production-grade Discord integration and productivity harness for the Google Antigravity Agent. It enables users to converse with, schedule, and delegate background tasks to their Antigravity agent directly inside Discord channels and threads, complete with real-time feedback loops and safety checks.
 
 ---
