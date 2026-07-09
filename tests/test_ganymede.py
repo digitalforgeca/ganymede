@@ -173,8 +173,8 @@ class TestGanymedeCore(unittest.IsolatedAsyncioTestCase):
         managed = await self.agent_manager.get_or_create(self.context)
         self.assertIsNotNone(managed)
         
-        # Verify it uses the friendly conversation ID format
-        self.assertEqual(managed.conversation_id, "ganymede_discord_test_channel_999999")
+        # Verify it uses the robust identifier-based conversation ID format
+        self.assertEqual(managed.conversation_id, "ganymede_discord_999999")
         
         # Verify cached retrieval
         cached = await self.agent_manager.get_or_create(self.context)

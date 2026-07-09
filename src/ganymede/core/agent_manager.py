@@ -210,7 +210,7 @@ class AgentManager:
     def set_adapter(self, adapter) -> None:
         self.adapter = adapter
 
-    async def get_or_create(self, context: ContextKey, channel_name: str | None = None) -> ManagedAgent:
+    async def get_or_create(self, context: ContextKey) -> ManagedAgent:
         if context in self._agents:
             managed = self._agents[context]
             managed.last_active = time.time()
@@ -228,36 +228,7 @@ class AgentManager:
             conversation_id = await self.db.get_conversation_id_by_context(context)
         
         if not conversation_id:
-            # If not in DB, construct a friendly name from channel name
-            import re
-            
-            # Sanitization helper
-            def sanitize_name(name: str) -> str:
-                if not name:
-                    return "unknown"
-                # Convert to lowercase and replace spaces/hyphens/special chars with underscores
-                s = name.lower().replace(" ", "_").replace("-", "_")
-                # Remove non-alphanumeric/non-underscore characters
-                s = re.sub(r"[^a-z0-9_]", "", s)
-                # Deduplicate underscores
-                s = re.sub(r"_+", "_", s)
-                return s.strip("_")
-            
-            # Fetch channel name if not provided
-            if not channel_name and self.adapter:
-                try:
-                    channel = await self.adapter._resolve_channel(context)
-                    if channel:
-                        if hasattr(channel, "name"):
-                            channel_name = channel.name
-                        elif hasattr(channel, "recipient"):
-                            channel_name = f"dm_{channel.recipient.name}"
-                except Exception as e:
-                    logger.warn("Failed to resolve channel name for friendly ID", error=str(e))
-            
-            friendly_name = sanitize_name(channel_name)
-            
-            conversation_id = f"ganymede_{context.platform}_{friendly_name}_{context.channel_id}"
+            conversation_id = f"ganymede_{context.platform}_{context.channel_id}"
             if context.thread_id:
                 conversation_id += f"_{context.thread_id}"
                 

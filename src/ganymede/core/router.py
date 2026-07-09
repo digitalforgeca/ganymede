@@ -66,17 +66,7 @@ class Router:
                 if self.agent_manager:
                     self.agent_manager.set_active_author(message.context, message.author_id, message.author_name)
                     
-                    channel_name = None
-                    if message.raw and hasattr(message.raw, "channel"):
-                        channel = message.raw.channel
-                        if hasattr(channel, "name") and channel.name is not None:
-                            channel_name = channel.name
-                        elif hasattr(channel, "recipient") and channel.recipient is not None:
-                            channel_name = f"dm_{channel.recipient.name}"
-                        else:
-                            channel_name = f"dm_{message.author_name}"
-                            
-                    managed_agent = await self.agent_manager.get_or_create(message.context, channel_name)
+                    managed_agent = await self.agent_manager.get_or_create(message.context)
                     if self.adapter:
                         msg_id = await self.adapter.send_streaming_start(message.context)
                         start_time = time.time()
