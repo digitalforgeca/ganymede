@@ -45,46 +45,65 @@ You can control the level of feedback printed in Discord during agent turns via 
 
 ---
 
-## 🏃 Running the Harness
+## 🏃 Running the Standalone Binary (Quick Start)
 
-### 1. Install dependencies
+If you have downloaded the pre-compiled `ganymede` binary from the [GitHub Releases](https://github.com/digitalforgeca/ganymede/releases), use these instructions. No Python environment is required to run the bin.
+
+### 1. Run in Console Mode (Local Test)
+To test the harness locally in your terminal standard input/output without connecting to Discord:
 ```bash
-pip install -e .
+./ganymede --platform console
 ```
+Type your query and press **Enter** to talk to the agent. Type `/exit` to quit.
 
-### 2. Start the Discord Bot Sidecar
+### 2. Run in Discord Mode (Sidecar Bridge)
+To start the sidecar bot that connects to your Discord server:
 ```bash
-DISCORD_TOKEN="your-token" ganymede
-# Or run using the compiled standalone binary:
-DISCORD_TOKEN="your-token" ./dist/ganymede
+DISCORD_TOKEN="your-discord-bot-token" ./ganymede
 ```
+*(You can also save `DISCORD_TOKEN` in a local `.env` file in the same directory as the executable).*
 
-### 3. Build Standalone Binary
-To compile the entire codebase, including its Python interpreter and dependencies, into a standalone, single-file binary executable (so no Python needs to be installed on target environments):
+### 3. Run the Stdio MCP Server
+To run the stdio JSON-RPC Model Context Protocol server (for integration into an MCP host like Claude Desktop or Antigravity):
 ```bash
-pip install pyinstaller
-pyinstaller --onefile --name ganymede --paths src --add-data "config/default.yaml:config" src/ganymede/cli.py
-```
-The resulting executable is written to `dist/ganymede`.
-
-### 4. Verify Local IPC Server
-Once started, the sidecar writes its active dynamic local HTTP port to `rpc_port.txt`. You can verify it is active:
-```bash
-curl -s http://localhost:<port>/api/ping
-```
-
-### 5. Run Stdio MCP Handshake
-```bash
-# Using Python
-python3 -m ganymede.mcp_server
-# Or using the compiled standalone binary:
-./dist/ganymede mcp
+./ganymede mcp
 ```
 
 ---
 
-## 🧪 Testing
+## 💻 Development & Compiling from Source
 
+If you want to run Ganymede from source, modify the code, or compile your own standalone executable, use these instructions.
+
+### 1. Setup & Install Dependencies
+Ensure you have Python 3.10+ installed. Clone the repository and install the project in editable mode:
+```bash
+pip install -e .
+```
+
+### 2. Run from Source
+*   **Discord Mode**:
+    ```bash
+    DISCORD_TOKEN="your-discord-token" ganymede
+    ```
+*   **Console Mode**:
+    ```bash
+    ganymede --platform console
+    ```
+*   **MCP Server**:
+    ```bash
+    python3 -m ganymede.mcp_server
+    ```
+
+### 3. Compile Standalone Binary
+To package the entire Python app, its dependencies, and the interpreter into a single-file executable:
+```bash
+pip install pyinstaller
+pyinstaller --onefile --name ganymede --paths src --add-data "config/default.yaml:config" src/ganymede/cli.py
+```
+The compiled binary will be written to `dist/ganymede`.
+
+### 4. Running Tests
 Run the unittest suite verifying database, safety hooks, quota tracking, and agent manager lifecycle:
 ```bash
 python3 -m unittest tests/test_ganymede.py
