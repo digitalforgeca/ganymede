@@ -2,6 +2,8 @@ from typing import Protocol, Callable, Awaitable, Any, runtime_checkable
 from ganymede.core import ContextKey
 from ganymede.core.models import PlatformMessage
 
+import importlib
+
 @runtime_checkable
 class PlatformAdapter(Protocol):
     """Transport layer — receives messages and sends formatted responses."""
@@ -48,6 +50,13 @@ class BasePlatformProvider:
         self.db = db
         self.adapter: Any = None
 
+    @classmethod
+    def create_providers(cls, config: Any, router_factory: Callable[[Any], Any], db: Any) -> list['BasePlatformProvider']:
+        """Factory method to instantiate one or more provider instances based on the configuration."""
+        router = router_factory(config)
+        provider = cls(config, router, db)
+        return [provider]
+
     async def start(self) -> None:
         """Start all transport and integration services."""
         raise NotImplementedError()
@@ -55,3 +64,18 @@ class BasePlatformProvider:
     async def stop(self) -> None:
         """Gracefully shutdown all transport and integration services."""
         raise NotImplementedError()
+
+
+def get_platform_provider_class(platform_name: str) -> type[BasePlatformProvider]:
+    """Dynamically import and retrieve the BasePlatformProvider subclass for a given platform name."""
+    platform_name = platform_name.lower()
+    try:
+        module_path = f"ganymede.platforms.{platform_name}.provider"
+        module = importlib.import_module(module_path)
+        for name in dir(module):
+            obj = getattr(module, name)
+            if isinstance(obj, type) and issubclass(obj, BasePlatformProvider) and obj is not BasePlatformProvider:
+                return obj
+        raise ValueError(f"No BasePlatformProvider subclass found in {module_path}")
+    except ModuleNotFoundError as e:
+        raise ValueError(f"Platform provider module for '{platform_name}' not found: {str(e)}")

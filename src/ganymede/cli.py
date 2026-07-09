@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import copy
 import logging
 import os
 import signal
@@ -36,70 +35,30 @@ async def run(config: AppConfig):
     db = Database(config)
     await db.init()
     
-    # Dynamically resolve and load active platform provider
+    # Dynamically resolve and load active platform provider class
     platform_name = getattr(config, "platform", "discord").lower()
+    from ganymede.platforms.base import get_platform_provider_class
+    provider_class = get_platform_provider_class(platform_name)
     
-    # Check if there are multiple bots configured under discord
-    instances = []
-    if platform_name == "discord":
-        discord_raw = config.platforms.get("discord", {})
-        if isinstance(discord_raw, dict) and "bots" in discord_raw:
-            for bot_raw in discord_raw["bots"]:
-                bot_config = copy.deepcopy(config)
-                bot_config.platforms["discord"] = {
-                    "token": bot_raw.get("token", ""),
-                    "allowed_guilds": bot_raw.get("allowed_guilds", []),
-                    "name": bot_raw.get("name", "ganymede"),
-                    "namespace": bot_raw.get("namespace"),
-                }
-                if "agent" in bot_raw:
-                    agent_overrides = bot_raw["agent"]
-                    bot_config.agent.system_instructions = agent_overrides.get("system_instructions", bot_config.agent.system_instructions)
-                    bot_config.agent.workspace = agent_overrides.get("workspace", bot_config.agent.workspace)
-                    if "capabilities" in agent_overrides:
-                        bot_config.agent.capabilities.update(agent_overrides["capabilities"])
-                    bot_config.agent.idle_timeout_minutes = agent_overrides.get("idle_timeout_minutes", bot_config.agent.idle_timeout_minutes)
-                    bot_config.agent.max_contexts = agent_overrides.get("max_contexts", bot_config.agent.max_contexts)
-                    bot_config.agent.status_verbosity = agent_overrides.get("status_verbosity", bot_config.agent.status_verbosity)
-                    bot_config.agent.require_approval = agent_overrides.get("require_approval", bot_config.agent.require_approval)
-                    bot_config.agent.elevated_users = agent_overrides.get("elevated_users", bot_config.agent.elevated_users)
-                    bot_config.agent.auto_approve_tools = agent_overrides.get("auto_approve_tools", bot_config.agent.auto_approve_tools)
-                    bot_config.agent.mission_statement = agent_overrides.get("mission_statement", bot_config.agent.mission_statement)
-                instances.append(bot_config)
-        else:
-            instances.append(config)
-    else:
-        instances.append(config)
-        
-    runners = []
-    for inst_config in instances:
-        # Initialize Core subsystems
+    # Factory function to create a Router and its subsystems for a config copy
+    def router_factory(inst_config: AppConfig) -> Router:
         quota_tracker = QuotaTracker(inst_config)
         agent_manager = AgentManager(inst_config, quota_tracker, db=db)
         activation = ActivationManager(inst_config)
-        
-        # Initialize Router
         router = Router(inst_config, agent_manager, activation, db)
-        
-        if platform_name == "discord":
-            from ganymede.platforms.discord.provider import DiscordPlatformProvider
-            provider = DiscordPlatformProvider(inst_config, router, db)
-        elif platform_name == "console":
-            from ganymede.platforms.console.provider import ConsolePlatformProvider
-            provider = ConsolePlatformProvider(inst_config, router, db)
-        else:
-            raise ValueError(f"Unsupported communication platform: {config.platform}")
+        return router
 
-        agent_manager.set_adapter(provider.adapter)
-        runners.append((agent_manager, provider))
+    # The platform provider class provides the runner instances
+    providers = provider_class.create_providers(config, router_factory, db)
     
     # Hook signal handling for clean exit
     loop = asyncio.get_running_loop()
     
     async def shutdown():
         logger.info("Received shutdown request, cleaning up...")
-        for agent_manager, provider in runners:
-            await agent_manager.destroy_all()
+        for provider in providers:
+            if provider.router and provider.router.agent_manager:
+                await provider.router.agent_manager.destroy_all()
             await provider.stop()
         await db.close()
         logger.info("Shutdown completed.")
@@ -113,7 +72,7 @@ async def run(config: AppConfig):
             
     # Start platform provider services concurrently
     tasks = []
-    for agent_manager, provider in runners:
+    for provider in providers:
         tasks.append(provider.start())
         
     try:
