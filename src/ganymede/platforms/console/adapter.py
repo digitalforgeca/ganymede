@@ -85,9 +85,11 @@ class ConsoleAdapter(PlatformAdapter):
                     context = ContextKey("console", "terminal", None)
                     message = PlatformMessage(
                         context=context,
-                        author="user",
                         author_id="local_user",
+                        author_name="user",
                         content=text,
+                        is_bot=False,
+                        mentions_us=True,
                         raw=line
                     )
                     await self._on_message_callback(message)

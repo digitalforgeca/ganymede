@@ -94,7 +94,7 @@ class Router:
                             if self.db:
                                 try:
                                     bot_id = "bot"
-                                    if self.adapter and self.adapter.user:
+                                    if self.adapter and hasattr(self.adapter, "user") and self.adapter.user:
                                         bot_id = str(self.adapter.user.id)
                                     await self.db.save_message(
                                         context=message.context,
@@ -184,7 +184,7 @@ class Router:
                             if self.db:
                                 try:
                                     bot_id = "bot"
-                                    if self.adapter and self.adapter.user:
+                                    if self.adapter and hasattr(self.adapter, "user") and self.adapter.user:
                                         bot_id = str(self.adapter.user.id)
                                     await self.db.save_message(
                                         context=context,

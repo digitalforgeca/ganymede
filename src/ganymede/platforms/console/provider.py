@@ -13,6 +13,11 @@ class ConsolePlatformProvider(BasePlatformProvider):
         """Start console standard input listening task."""
         self.adapter.register_on_message(self.router.handle_message)
         await self.adapter.start()
+        if self.adapter._read_task:
+            try:
+                await self.adapter._read_task
+            except Exception:
+                pass
 
     async def stop(self) -> None:
         """Stop console standard input task."""
