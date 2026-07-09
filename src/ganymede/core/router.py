@@ -69,10 +69,12 @@ class Router:
                     channel_name = None
                     if message.raw and hasattr(message.raw, "channel"):
                         channel = message.raw.channel
-                        if hasattr(channel, "name"):
+                        if hasattr(channel, "name") and channel.name is not None:
                             channel_name = channel.name
-                        elif hasattr(channel, "recipient"):
+                        elif hasattr(channel, "recipient") and channel.recipient is not None:
                             channel_name = f"dm_{channel.recipient.name}"
+                        else:
+                            channel_name = f"dm_{message.author_name}"
                             
                     managed_agent = await self.agent_manager.get_or_create(message.context, channel_name)
                     if self.adapter:
