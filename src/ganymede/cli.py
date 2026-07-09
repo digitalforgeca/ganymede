@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import logging
 import os
 import signal
 import structlog
@@ -111,5 +112,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-import logging
