@@ -49,19 +49,19 @@ You can control the level of feedback printed in Discord during agent turns via 
 
 If you have downloaded the pre-compiled `ganymede` binary from the [GitHub Releases](https://github.com/digitalforgeca/ganymede/releases), use these instructions. No Python environment is required to run the bin.
 
-### 1. Run in Console Mode (Local Test)
-To test the harness locally in your terminal standard input/output without connecting to Discord:
+### 1. Run the Console Platform Provider
+To run Ganymede on the local terminal command-line platform using standard input/output:
 ```bash
 ./ganymede --platform console
 ```
 Type your query and press **Enter** to talk to the agent. Type `/exit` to quit.
 
-### 2. Run in Discord Mode (Sidecar Bridge)
-To start the sidecar bot that connects to your Discord server:
+### 2. Run the Discord Platform Provider
+To run Ganymede as a sidecar bridge connected to the Discord chat network:
 ```bash
 DISCORD_TOKEN="your-discord-bot-token" ./ganymede
 ```
-*(You can also save `DISCORD_TOKEN` in a local `.env` file in the same directory as the executable).*
+*(You can also save the required platform configurations in a local `.env` file in the same directory as the executable).*
 
 ### 3. Run the Stdio MCP Server
 To run the stdio JSON-RPC Model Context Protocol server (for integration into an MCP host like Claude Desktop or Antigravity):
@@ -82,15 +82,15 @@ pip install -e .
 ```
 
 ### 2. Run from Source
-*   **Discord Mode**:
+*   **Discord Platform**:
     ```bash
     DISCORD_TOKEN="your-discord-token" ganymede
     ```
-*   **Console Mode**:
+*   **Console Platform**:
     ```bash
     ganymede --platform console
     ```
-*   **MCP Server**:
+*   **Stdio MCP Server**:
     ```bash
     python3 -m ganymede.mcp_server
     ```
