@@ -4,6 +4,13 @@ from ganymede.core.models import PlatformMessage
 
 import importlib
 
+# Static imports for PyInstaller analysis to ensure bundling in single-file binary
+try:
+    import ganymede.platforms.discord.provider
+    import ganymede.platforms.console.provider
+except ImportError:
+    pass
+
 @runtime_checkable
 class PlatformAdapter(Protocol):
     """Transport layer — receives messages and sends formatted responses."""
