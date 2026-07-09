@@ -55,17 +55,30 @@ pip install -e .
 ### 2. Start the Discord Bot Sidecar
 ```bash
 DISCORD_TOKEN="your-token" ganymede
+# Or run using the compiled standalone binary:
+DISCORD_TOKEN="your-token" ./dist/ganymede
 ```
 
-### 3. Verify Local IPC Server
+### 3. Build Standalone Binary
+To compile the entire codebase, including its Python interpreter and dependencies, into a standalone, single-file binary executable (so no Python needs to be installed on target environments):
+```bash
+pip install pyinstaller
+pyinstaller --onefile --name ganymede --paths src --add-data "config/default.yaml:config" src/ganymede/cli.py
+```
+The resulting executable is written to `dist/ganymede`.
+
+### 4. Verify Local IPC Server
 Once started, the sidecar writes its active dynamic local HTTP port to `rpc_port.txt`. You can verify it is active:
 ```bash
 curl -s http://localhost:<port>/api/ping
 ```
 
-### 4. Run Stdio MCP Handshake
+### 5. Run Stdio MCP Handshake
 ```bash
+# Using Python
 python3 -m ganymede.mcp_server
+# Or using the compiled standalone binary:
+./dist/ganymede mcp
 ```
 
 ---

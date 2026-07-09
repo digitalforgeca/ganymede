@@ -85,12 +85,19 @@ def main():
     load_dotenv()
     
     parser = argparse.ArgumentParser(prog="ganymede")
+    parser.add_argument("command", nargs="?", choices=["run", "mcp"], default="run", help="Subcommand to run (run, mcp)")
     parser.add_argument("--config", default=None, help="Path to YAML configuration file")
     parser.add_argument("--workspace", default=None, help="Target workspace path for the agent")
     parser.add_argument("--log-level", default=None, help="Logging level")
     parser.add_argument("--platform", default=None, help="Target platform (discord, console)")
     
     args = parser.parse_args()
+    
+    if args.command == "mcp":
+        from ganymede.mcp_server.__main__ import main as mcp_main
+        mcp_main()
+        return
+        
     config = load_config(args)
     
     # Override log level from config
@@ -101,5 +108,8 @@ def main():
     )
     
     asyncio.run(run(config))
+
+if __name__ == "__main__":
+    main()
 
 import logging

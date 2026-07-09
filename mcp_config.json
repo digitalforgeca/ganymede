@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "discord": {
-      "command": "python3",
-      "args": ["-m", "ganymede.mcp_server"],
+      "command": "ganymede",
+      "args": ["mcp"],
       "env": {
         "DISCORD_TOKEN": "${DISCORD_TOKEN}"
       }
