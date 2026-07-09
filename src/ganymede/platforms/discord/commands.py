@@ -329,14 +329,14 @@ def setup_commands(adapter: discord.Client):
         )
         asyncio.create_task(adapter.router.handle_message(message))
 
-    @tree.command(name="grill-me", description="Align on a plan through an interactive interview")
+    @tree.command(name="grill", description="Align on a plan through an interactive interview")
     @app_commands.describe(prompt="Optional context or topic to align on")
-    async def grill_me(interaction: discord.Interaction, prompt: str | None = None):
+    async def grill(interaction: discord.Interaction, prompt: str | None = None):
         await interaction.response.send_message(f"🔥 *Starting interview alignment...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
-        content = f"/grill-me {prompt}" if prompt else "/grill-me"
+        content = f"/grill {prompt}" if prompt else "/grill"
         message = PlatformMessage(
             context=ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id),
             author_id=str(interaction.user.id),
