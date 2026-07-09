@@ -6,12 +6,24 @@ from ganymede.platforms.discord.ipc_server import DiscordIPCServer
 from ganymede.core.scheduler import DiscordScheduler
 from ganymede.core import ContextKey
 
+from ganymede.platforms.discord.config import DiscordConfig
+
 class DiscordPlatformProvider(BasePlatformProvider):
     """Platform provider for Discord. Manages the Discord client adapter, scheduler, and local IPC server."""
     
     def __init__(self, config: Any, router: Any, db: Any):
         super().__init__(config, router, db)
-        self.adapter = DiscordAdapter(config, router)
+        
+        raw_discord = config.platforms.get("discord", {})
+        if isinstance(raw_discord, dict):
+            self.discord_config = DiscordConfig(
+                token=raw_discord.get("token", ""),
+                allowed_guilds=raw_discord.get("allowed_guilds", [])
+            )
+        else:
+            self.discord_config = raw_discord
+
+        self.adapter = DiscordAdapter(config, self.discord_config, router)
         self.scheduler = DiscordScheduler(config, db, router)
 
         async def schedule_callback(cron, prompt, channel_id):

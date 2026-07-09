@@ -248,5 +248,47 @@ class TestGanymedeCore(unittest.IsolatedAsyncioTestCase):
         # Stop scheduler
         await scheduler.stop()
 
+    async def test_config_loading(self):
+        from ganymede.config import load_config
+        import tempfile
+        import os
+        
+        # Test loading config with custom platform dict in yaml
+        yaml_content = """
+platform: custom_platform
+agent:
+  idle_timeout_minutes: 30
+custom_platform:
+  api_key: "secret123"
+  endpoint: "https://api.custom.com"
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            f.write(yaml_content)
+            temp_name = f.name
+            
+        try:
+            # Mock CLI args
+            args = MagicMock()
+            args.config = temp_name
+            args.workspace = None
+            args.log_level = None
+            args.platform = None
+            
+            # Load config
+            config = load_config(args)
+            
+            # Verify core configurations
+            self.assertEqual(config.platform, "custom_platform")
+            self.assertEqual(config.agent.idle_timeout_minutes, 30)
+            
+            # Verify platform-specific configuration dictionary
+            self.assertIn("custom_platform", config.platforms)
+            self.assertEqual(config.platforms["custom_platform"]["api_key"], "secret123")
+            self.assertEqual(config.platforms["custom_platform"]["endpoint"], "https://api.custom.com")
+            
+        finally:
+            if os.path.exists(temp_name):
+                os.remove(temp_name)
+
 if __name__ == '__main__':
     unittest.main()

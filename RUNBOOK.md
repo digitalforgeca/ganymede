@@ -625,7 +625,7 @@ Use the official MCP Inspector tool to verify:
 
 ### Steps
 
-#### ⬜ 7.1 — Define default safety policies
+#### ✅ 7.1 — Define default safety policies
 
 ```python
 policies = [
@@ -643,7 +643,7 @@ policies = [
 
 ---
 
-#### ⬜ 7.2 — Implement Discord-based Decide hook
+#### ✅ 7.2 — Implement Discord-based Decide hook
 
 When the agent tries to call a restricted tool (e.g., `run_command`, `write_to_file`):
 
@@ -667,7 +667,7 @@ class DiscordApprovalHook:
 
 ---
 
-#### ⬜ 7.3 — Implement Inspect hook for audit logging
+#### ✅ 7.3 — Implement Inspect hook for audit logging
 
 Log every tool call (name, args, result, timestamp, context key) to SQLite.
 
@@ -676,7 +676,7 @@ Log every tool call (name, args, result, timestamp, context key) to SQLite.
 
 ---
 
-#### ⬜ 7.4 — Wire safety policies into AgentManager
+#### ✅ 7.4 — Wire safety policies into AgentManager
 
 When creating an `Agent`, pass the policies and hooks into the config.
 
@@ -691,7 +691,7 @@ When creating an `Agent`, pass the policies and hooks into the config.
 
 ### Steps
 
-#### ⬜ 8.1 — Register command tree
+#### ✅ 8.1 — Register command tree
 
 ```python
 tree = app_commands.CommandTree(client)
@@ -709,39 +709,39 @@ tree = app_commands.CommandTree(client)
 
 ---
 
-#### ⬜ 8.2 — Implement `/ask <prompt>`
+#### ✅ 8.2 — Implement `/ask <prompt>`
 
 Deferred response. Sends prompt to agent, streams response back via `DiscordStreamer`.
 Option: `ephemeral` (bool) — if true, response is only visible to the invoker.
 
 ---
 
-#### ⬜ 8.3 — Implement `/task <description>`
+#### ✅ 8.3 — Implement `/task <description>`
 
 Starts a background task. Returns immediately with task ID. On completion, posts result to channel + DMs the invoker.
 
 ---
 
-#### ⬜ 8.4 — Implement `/status [task_id]`
+#### ✅ 8.4 — Implement `/status [task_id]`
 
 Lists running tasks or shows detail for a specific task.
 
 ---
 
-#### ⬜ 8.5 — Implement `/session reset` and `/session info`
+#### ✅ 8.5 — Implement `/session reset` and `/session info`
 
 - `reset`: Destroy the agent for the current context, wipe conversation history
 - `info`: Show session uptime, token usage, active capabilities
 
 ---
 
-#### ⬜ 8.6 — Implement `/schedule <cron> <prompt>`
+#### ✅ 8.6 — Implement `/schedule <cron> <prompt>`
 
 Create a recurring scheduled prompt. Validate cron expression. Store in SQLite.
 
 ---
 
-#### ⬜ 8.7 — Implement `/config capabilities` (admin-gated)
+#### ✅ 8.7 — Implement `/config capabilities` (admin-gated)
 
 View and toggle agent capabilities (write_tools, run_commands). Requires admin role.
 
@@ -756,7 +756,7 @@ View and toggle agent capabilities (write_tools, run_commands). Requires admin r
 
 ### Steps
 
-#### ⬜ 9.1 — Define SQLite schema
+#### ✅ 9.1 — Define SQLite schema
 
 ```sql
 -- Conversations
@@ -830,7 +830,7 @@ CREATE TABLE quota_usage (
 
 ---
 
-#### ⬜ 9.2 — Implement async DB layer
+#### ✅ 9.2 — Implement async DB layer
 
 `aiosqlite` wrapper with migrations, connection pooling, and typed query methods.
 
@@ -838,7 +838,7 @@ CREATE TABLE quota_usage (
 
 ---
 
-#### ⬜ 9.3 — Implement APScheduler integration
+#### ✅ 9.3 — Implement APScheduler integration
 
 - Load saved schedules from SQLite on startup
 - Register cron triggers
@@ -849,7 +849,7 @@ CREATE TABLE quota_usage (
 
 ---
 
-#### ⬜ 9.4 — Implement conversation history injection
+#### ✅ 9.4 — Implement conversation history injection
 
 Before sending a prompt to the agent, prepend relevant conversation history from SQLite. Configurable context window (default: last 10 turns).
 
@@ -858,7 +858,7 @@ Before sending a prompt to the agent, prepend relevant conversation history from
 
 ---
 
-#### ⬜ 9.5 — Verify persistence across restarts
+#### ✅ 9.5 — Verify persistence across restarts
 
 1. Start bot, have a conversation, create a schedule
 2. Kill the bot
@@ -875,7 +875,7 @@ Before sending a prompt to the agent, prepend relevant conversation history from
 
 ### Steps
 
-#### ⬜ 10.1 — Implement global error handling
+#### ✅ 10.1 — Implement global error handling
 
 - Catch unhandled exceptions in the router, post error embed to channel
 - Catch `discord.HTTPException` for rate limits, retry with backoff
@@ -886,7 +886,7 @@ Before sending a prompt to the agent, prepend relevant conversation history from
 
 ---
 
-#### ⬜ 10.2 — Write unit tests
+#### ✅ 10.2 — Write unit tests
 
 | Module | Tests |
 |---|---|
@@ -900,14 +900,14 @@ Before sending a prompt to the agent, prepend relevant conversation history from
 
 ---
 
-#### ⬜ 10.3 — Write integration test: end-to-end flow
+#### ✅ 10.3 — Write integration test: end-to-end flow
 
 Mock Discord API. Simulate: message → activation → agent → stream → response.
 Verify: message appears in conversation log, quota updated, tool calls audited.
 
 ---
 
-#### ⬜ 10.4 — Write `README.md`
+#### ✅ 10.4 — Write `README.md`
 
 Sections: Overview, Prerequisites, Installation (pip + plugin setup), Configuration, Discord Bot Setup, Usage, Commands Reference, Architecture, Security, Contributing.
 
@@ -915,7 +915,7 @@ Sections: Overview, Prerequisites, Installation (pip + plugin setup), Configurat
 
 ---
 
-#### ⬜ 10.5 — Write setup wizard: `ganymede setup`
+#### ✅ 10.5 — Write setup wizard: `ganymede setup`
 
 Interactive CLI that:
 1. Prompts for Discord bot token
@@ -928,7 +928,7 @@ Interactive CLI that:
 
 ---
 
-#### ⬜ 10.6 — Final smoke test
+#### ✅ 10.6 — Final smoke test
 
 Full end-to-end on a real Discord server:
 1. Install plugin

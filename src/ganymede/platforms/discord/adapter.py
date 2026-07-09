@@ -8,13 +8,14 @@ from ganymede.core.models import PlatformMessage
 from ganymede.platforms.base import PlatformAdapter
 from ganymede.platforms.discord.streamer import DiscordStreamer
 from ganymede.config import AppConfig
+from ganymede.platforms.discord.config import DiscordConfig
 
 logger = structlog.get_logger()
 
 class DiscordAdapter(discord.Client, PlatformAdapter):
     """Adapter wrapping discord.py Client to satisfy PlatformAdapter protocol."""
 
-    def __init__(self, config: AppConfig, router: Any):
+    def __init__(self, config: AppConfig, discord_config: DiscordConfig, router: Any):
         # Enable necessary intents for message monitoring and command registration
         intents = discord.Intents.default()
         intents.message_content = True
@@ -24,6 +25,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         discord.Client.__init__(self, intents=intents)
         
         self.config = config
+        self.discord_config = discord_config
         self.router = router
         self.router.set_adapter(self)
         self.tree = app_commands.CommandTree(self)
@@ -42,7 +44,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         """Start the bot connection (non-blocking runs inside event loop)."""
         logger.info("Connecting to Discord...")
         # Since Client.start() is blocking inside the task, we run it
-        await discord.Client.start(self, self.config.discord.token)
+        await discord.Client.start(self, self.discord_config.token)
 
     async def stop(self) -> None:
         """Gracefully close the bot connection."""

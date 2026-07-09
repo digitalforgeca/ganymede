@@ -41,7 +41,7 @@ You can control the level of feedback printed in Discord during agent turns via 
 
 ### Environment Variables
 *   `DISCORD_TOKEN`: Your Discord Bot Token.
-*   `GEMINI_API_KEY`: Your Gemini API credential.
+*   *(Note: No Gemini or LLM API keys are required by Ganymede, as all model inference and authentication are managed natively by the Google Antigravity Agent).*
 
 ---
 
@@ -54,7 +54,7 @@ pip install -e .
 
 ### 2. Start the Discord Bot Sidecar
 ```bash
-DISCORD_TOKEN="your-token" GEMINI_API_KEY="your-key" ganymede
+DISCORD_TOKEN="your-token" ganymede
 ```
 
 ### 3. Verify Local IPC Server

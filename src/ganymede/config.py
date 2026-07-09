@@ -6,11 +6,6 @@ from typing import Any
 from google.antigravity import CapabilitiesConfig
 
 @dataclass
-class DiscordConfig:
-    token: str = ""
-    allowed_guilds: list[str] = field(default_factory=list)
-
-@dataclass
 class AgentConfig:
     system_instructions: str = "You are a helpful coding assistant."
     workspace: str = "~/dev"
@@ -44,7 +39,7 @@ class ActivationConfig:
 @dataclass
 class AppConfig:
     platform: str = "discord"
-    discord: DiscordConfig = field(default_factory=DiscordConfig)
+    platforms: dict[str, Any] = field(default_factory=dict)
     agent: AgentConfig = field(default_factory=AgentConfig)
     quota: QuotaConfig = field(default_factory=QuotaConfig)
     activation: ActivationConfig = field(default_factory=ActivationConfig)
@@ -83,7 +78,7 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
 
     env_token = os.environ.get("DISCORD_TOKEN") or os.environ.get("AGYD_DISCORD_TOKEN")
     if env_token:
-        config.discord.token = env_token
+        config.platforms.setdefault("discord", {})["token"] = env_token
 
     env_log_level = os.environ.get("AGY_DISCORD_LOG_LEVEL") or os.environ.get("AGYD_LOG_LEVEL")
     if env_log_level:
@@ -105,10 +100,16 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
     return config
 
 def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
-    if "discord" in data:
-        d = data["discord"]
-        config.discord.token = d.get("token", config.discord.token)
-        config.discord.allowed_guilds = d.get("allowed_guilds", config.discord.allowed_guilds)
+    if "platform" in data:
+        config.platform = data["platform"]
+    # Merge platform-specific config keys into config.platforms dict
+    core_keys = {"agent", "quota", "activation", "log_level", "platform"}
+    for k, v in data.items():
+        if k not in core_keys:
+            if isinstance(v, dict) and k in config.platforms and isinstance(config.platforms[k], dict):
+                config.platforms[k].update(v)
+            else:
+                config.platforms[k] = v
     if "agent" in data:
         a = data["agent"]
         config.agent.system_instructions = a.get("system_instructions", config.agent.system_instructions)
