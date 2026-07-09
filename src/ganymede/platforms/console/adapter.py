@@ -64,6 +64,13 @@ class ConsoleAdapter(PlatformAdapter):
     def register_on_message(self, callback: Callable[[PlatformMessage], Awaitable[None]]) -> None:
         self._on_message_callback = callback
 
+    def get_bot_namespace(self) -> str:
+        # Check if namespace is configured in config
+        console_config = self.config.platforms.get("console", {}) if hasattr(self.config, "platforms") else {}
+        if isinstance(console_config, dict) and console_config.get("namespace"):
+            return console_config["namespace"]
+        return "ganymede"
+
     async def _input_loop(self) -> None:
         loop = asyncio.get_running_loop()
         while self._running:

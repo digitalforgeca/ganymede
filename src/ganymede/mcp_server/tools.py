@@ -9,7 +9,11 @@ data_dir = get_default_data_dir()
 PORT_FILE_PATH = os.path.join(data_dir, "rpc_port.txt")
 
 async def _get_ipc_base_url() -> str:
-    """Read the active IPC port file and build localhost base URL."""
+    """Read the active IPC port file or environment and build localhost base URL."""
+    env_port = os.environ.get("GANYMEDE_IPC_PORT")
+    if env_port and env_port.isdigit():
+        return f"http://localhost:{env_port}"
+
     if not os.path.exists(PORT_FILE_PATH):
         raise RuntimeError(
             f"Active port file not found at {PORT_FILE_PATH}. "

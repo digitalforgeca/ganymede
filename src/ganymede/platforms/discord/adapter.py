@@ -94,6 +94,19 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
     def register_on_message(self, callback: Callable[[PlatformMessage], Awaitable[None]]) -> None:
         self._on_message_callback = callback
 
+    def get_bot_namespace(self) -> str:
+        # Check if namespace is explicitly configured
+        if getattr(self.discord_config, "namespace", None):
+            return self.discord_config.namespace
+        
+        # Derive from self.user.name if available, else use config.name
+        bot_name = self.user.name if self.user else getattr(self.discord_config, "name", "ganymede")
+        # Sanitize and lowercase
+        import re
+        s = bot_name.lower().strip()
+        s = re.sub(r"[^a-z0-9_.-]", "", s.replace(" ", "_").replace("-", "_"))
+        return s
+
     # --- discord.py Event Handlers ---
 
     async def on_ready(self) -> None:

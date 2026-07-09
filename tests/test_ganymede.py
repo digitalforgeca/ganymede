@@ -286,6 +286,75 @@ custom_platform:
             self.assertEqual(config.platforms["custom_platform"]["api_key"], "secret123")
             self.assertEqual(config.platforms["custom_platform"]["endpoint"], "https://api.custom.com")
             
+            
+        finally:
+            if os.path.exists(temp_name):
+                os.remove(temp_name)
+
+    async def test_multi_bot_config_partitioning(self):
+        from ganymede.config import load_config
+        import tempfile
+        import copy
+        
+        yaml_content = """
+platform: discord
+discord:
+  bots:
+    - name: "planner"
+      token: "plan_tok"
+      allowed_guilds: [111]
+      namespace: "planner-memories"
+      agent:
+        system_instructions: "planner inst"
+    - name: "orchestrator"
+      token: "orch_tok"
+      allowed_guilds: [222]
+      agent:
+        system_instructions: "orch inst"
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            f.write(yaml_content)
+            temp_name = f.name
+            
+        try:
+            args = MagicMock()
+            args.config = temp_name
+            args.workspace = None
+            args.log_level = None
+            args.platform = None
+            
+            config = load_config(args)
+            
+            # Verify they loaded under platforms.discord
+            discord_cfg = config.platforms.get("discord", {})
+            self.assertIn("bots", discord_cfg)
+            self.assertEqual(len(discord_cfg["bots"]), 2)
+            
+            # Replicate the instance split logic from cli.py
+            instances = []
+            discord_raw = config.platforms.get("discord", {})
+            for bot_raw in discord_raw["bots"]:
+                bot_config = copy.deepcopy(config)
+                bot_config.platforms["discord"] = {
+                    "token": bot_raw.get("token", ""),
+                    "allowed_guilds": bot_raw.get("allowed_guilds", []),
+                    "name": bot_raw.get("name", "ganymede"),
+                    "namespace": bot_raw.get("namespace"),
+                }
+                if "agent" in bot_raw:
+                    agent_overrides = bot_raw["agent"]
+                    bot_config.agent.system_instructions = agent_overrides.get("system_instructions", bot_config.agent.system_instructions)
+                instances.append(bot_config)
+                
+            self.assertEqual(len(instances), 2)
+            self.assertEqual(instances[0].platforms["discord"]["name"], "planner")
+            self.assertEqual(instances[0].platforms["discord"]["namespace"], "planner-memories")
+            self.assertEqual(instances[0].agent.system_instructions, "planner inst")
+            
+            self.assertEqual(instances[1].platforms["discord"]["name"], "orchestrator")
+            self.assertIsNone(instances[1].platforms["discord"]["namespace"])
+            self.assertEqual(instances[1].agent.system_instructions, "orch inst")
+            
         finally:
             if os.path.exists(temp_name):
                 os.remove(temp_name)

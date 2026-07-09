@@ -18,7 +18,9 @@ class DiscordPlatformProvider(BasePlatformProvider):
         if isinstance(raw_discord, dict):
             self.discord_config = DiscordConfig(
                 token=raw_discord.get("token", ""),
-                allowed_guilds=raw_discord.get("allowed_guilds", [])
+                allowed_guilds=raw_discord.get("allowed_guilds", []),
+                name=raw_discord.get("name", "ganymede"),
+                namespace=raw_discord.get("namespace")
             )
         else:
             self.discord_config = raw_discord

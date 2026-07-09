@@ -45,6 +45,7 @@ class DiscordIPCServer:
         
         # Retrieve the assigned port
         port = self.runner.addresses[0][1]
+        self.port = port
         logger.info("Local HTTP IPC Server started", host="localhost", port=port)
 
         # Write port to data directory so the stdio MCP server can read it

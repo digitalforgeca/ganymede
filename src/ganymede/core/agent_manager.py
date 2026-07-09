@@ -57,12 +57,14 @@ class CliResponse:
 class ManagedAgent:
     """Wraps a persistent conversation channel context mapped to an agy CLI session."""
 
-    def __init__(self, context_key: ContextKey, config: AppConfig, conversation_id: str):
+    def __init__(self, context_key: ContextKey, config: AppConfig, conversation_id: str, bot_namespace: str = "ganymede", ipc_port: int | None = None):
         self.context_key = context_key
         self.config = config
         self.last_active = time.time()
         self._lock = asyncio.Lock()
         self.conversation_id = conversation_id
+        self.bot_namespace = bot_namespace
+        self.ipc_port = ipc_port
         self.current_process: asyncio.subprocess.Process | None = None
 
     async def chat(self, prompt: str) -> CliResponse:
@@ -96,12 +98,19 @@ class ManagedAgent:
             
             logger.info("Executing agy CLI subprocess", command=" ".join(args), context=self.context_key)
             
+            # Build environment variables copy and inject SULCUS_NAMESPACE and GANYMEDE_IPC_PORT
+            subprocess_env = os.environ.copy()
+            subprocess_env["SULCUS_NAMESPACE"] = self.bot_namespace
+            if self.ipc_port:
+                subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
+
             # Spawn the subprocess with stdin redirected to DEVNULL to prevent terminal TTY suspends (SIGTTIN)
             process = await asyncio.create_subprocess_exec(
                 *args,
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=subprocess_env,
             )
             self.current_process = process
             
@@ -255,7 +264,15 @@ class AgentManager:
             if self.db:
                 await self.db.save_conversation_mapping(conversation_id, context)
 
-        managed = ManagedAgent(context, self.config, conversation_id)
+        bot_namespace = "ganymede"
+        ipc_port = None
+        if self.adapter:
+            if hasattr(self.adapter, "get_bot_namespace"):
+                bot_namespace = self.adapter.get_bot_namespace()
+            if hasattr(self.adapter, "ipc_server") and self.adapter.ipc_server and hasattr(self.adapter.ipc_server, "port"):
+                ipc_port = self.adapter.ipc_server.port
+
+        managed = ManagedAgent(context, self.config, conversation_id, bot_namespace, ipc_port)
         self._agents[context] = managed
         return managed
 
