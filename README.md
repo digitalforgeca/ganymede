@@ -23,6 +23,13 @@
     *   `/session <info|reset>`: Inspect current token quota usage and agent uptime or clear the active context.
     *   `/schedule <cron> <prompt>`: Establish recurring prompts.
     *   `/config <capability> <enabled>`: Toggle safety gates (e.g. `write_tools` or `run_commands`) in real-time (admin-only).
+    *   `/plan <prompt>`: Request the agent to produce a step-by-step plan before execution.
+    *   `/goal <prompt>`: Assign a long-running goal to the agent to execute autonomously.
+    *   `/grill-me [prompt]`: Trigger an interactive plan alignment interview.
+    *   `/learn <prompt>`: Persist a behavioral pattern or solution for future tasks.
+    *   `/teamwork-preview [prompt]`: Preview teamwork options with a team of autonomous subagents.
+    *   `/stop`: Abruptly terminate the active agent execution in this channel.
+    *   `/about`: Display metadata about the bot, active workspace, and credits.
 *   **Stdio MCP Server**: Exposes 7 Discord manipulation tools to the Antigravity Agent to let it read, write, and manage Discord channels.
 *   **Robust Persistence**: Utilizes SQLite to log historical turn contexts, scheduled jobs, tool audits, background tasks, and quota usage.
 
