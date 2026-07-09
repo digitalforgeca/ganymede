@@ -7,7 +7,7 @@ from ganymede.config import AppConfig
 
 logger = structlog.get_logger()
 
-class DiscordScheduler:
+class Scheduler:
     def __init__(self, config: AppConfig, db: Any, router: Any):
         self.config = config
         self.db = db
@@ -72,3 +72,8 @@ class DiscordScheduler:
             logger.debug("Failed to update last_run for job", error=str(e))
 
         await self.router.handle_scheduled_prompt(context, prompt)
+
+
+# Backwards compatibility alias
+DiscordScheduler = Scheduler
+

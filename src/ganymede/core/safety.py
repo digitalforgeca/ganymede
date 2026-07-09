@@ -1,5 +1,4 @@
 import structlog
-import discord
 import json
 import asyncio
 from typing import Any
@@ -9,50 +8,8 @@ from ganymede.core import ContextKey
 from ganymede.config import AppConfig
 
 logger = structlog.get_logger()
+active_adapter = None
 
-class ApprovalView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=60.0)
-        self.approved = None
-        self.approver_name = None
-
-    @discord.ui.button(label="Approve", style=discord.ButtonStyle.green, custom_id="approve")
-    async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
-        user_perms = getattr(interaction.user, "guild_permissions", None)
-        is_admin = False
-        if user_perms:
-            is_admin = user_perms.administrator or user_perms.manage_guild
-        elif interaction.guild is None:
-            is_admin = True
-
-        if not is_admin:
-            await interaction.response.send_message("❌ You are not authorized to approve this tool call.", ephemeral=True)
-            return
-
-        self.approved = True
-        self.approver_name = interaction.user.name
-        self.stop()
-        await interaction.response.defer()
-
-    @discord.ui.button(label="Deny", style=discord.ButtonStyle.red, custom_id="deny")
-    async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
-        user_perms = getattr(interaction.user, "guild_permissions", None)
-        is_admin = False
-        if user_perms:
-            is_admin = user_perms.administrator or user_perms.manage_guild
-        elif interaction.guild is None:
-            is_admin = True
-
-        if not is_admin:
-            await interaction.response.send_message("❌ You are not authorized to approve this tool call.", ephemeral=True)
-            return
-
-        self.approved = False
-        self.approver_name = interaction.user.name
-        self.stop()
-        await interaction.response.defer()
-
-active_adapter: Any = None
 
 class BaseApprovalProvider:
     """Abstract base class for platform-specific approval providers."""
@@ -75,67 +32,6 @@ class ConsoleApprovalProvider(BaseApprovalProvider):
 
     async def update_status(self, context: ContextKey, status_text: str) -> None:
         logger.info(f"Status update: {status_text}", context=context)
-
-
-class DiscordApprovalProvider(BaseApprovalProvider):
-    """Discord-specific approval provider using Embeds and Button Views."""
-    
-    def __init__(self, adapter: Any):
-        self.adapter = adapter
-
-    async def request_approval(self, context: ContextKey, data: ToolCall, original_desc: str) -> bool:
-        channel = await self.adapter._resolve_channel(context)
-        if not channel:
-            logger.error("Could not resolve channel for tool call approval", context_key=context)
-            return False
-
-        embed = discord.Embed(
-            title="🔒 Tool Call Approval Request",
-            description=original_desc,
-            color=discord.Color.orange()
-        )
-        
-        view = ApprovalView()
-        
-        try:
-            approval_msg = await channel.send(embed=embed, view=view)
-        except Exception as e:
-            logger.error("Failed to send approval message to channel", error=str(e))
-            return False
-
-        # Wait for user input or timeout
-        await view.wait()
-
-        # Update outcome
-        if view.approved is True:
-            outcome_desc = f"✅ Approved by {view.approver_name}"
-            embed.color = discord.Color.green()
-        elif view.approved is False:
-            outcome_desc = f"❌ Denied by {view.approver_name}"
-            embed.color = discord.Color.red()
-        else:
-            outcome_desc = "⚠️ Timed out (no response within 60s)"
-            embed.color = discord.Color.red()
-
-        embed.description = f"{original_desc}\n\n**Outcome**: {outcome_desc}"
-
-        # Disable all buttons
-        for child in view.children:
-            if isinstance(child, discord.ui.Button):
-                child.disabled = True
-
-        try:
-            await approval_msg.edit(embed=embed, view=view)
-        except Exception as e:
-            logger.error("Failed to edit approval message with outcome", error=str(e))
-
-        return view.approved is True
-
-    async def update_status(self, context: ContextKey, status_text: str) -> None:
-        try:
-            await self.adapter.update_streaming_status(context, status_text)
-        except Exception as e:
-            logger.debug("Failed to update tool execution status", error=str(e))
 
 
 class ApprovalHook(PreToolCallDecideHook):
@@ -193,10 +89,9 @@ class ApprovalHook(PreToolCallDecideHook):
             return HookResult(allow=False, message="Tool call denied.")
 
 
-class DiscordApprovalHook(ApprovalHook):
-    """Backwards-compatible wrapper that automatically uses the DiscordApprovalProvider."""
-    
-    def __init__(self, context_key: ContextKey, config: AppConfig):
-        global active_adapter
-        provider = DiscordApprovalProvider(active_adapter) if active_adapter else None
-        super().__init__(context_key, config, provider=provider)
+# For backwards compatibility with test suites and legacy hooks
+try:
+    from ganymede.platforms.discord.safety import DiscordApprovalHook, DiscordApprovalProvider, ApprovalView
+except ImportError:
+    pass
+

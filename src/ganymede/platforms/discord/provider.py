@@ -3,7 +3,7 @@ from typing import Any, Callable
 from ganymede.platforms.base import BasePlatformProvider
 from ganymede.platforms.discord.adapter import DiscordAdapter
 from ganymede.platforms.discord.ipc_server import DiscordIPCServer
-from ganymede.core.scheduler import DiscordScheduler
+from ganymede.core.scheduler import Scheduler
 from ganymede.core import ContextKey
 
 from ganymede.platforms.discord.config import DiscordConfig
@@ -26,7 +26,7 @@ class DiscordPlatformProvider(BasePlatformProvider):
             self.discord_config = raw_discord
 
         self.adapter = DiscordAdapter(config, self.discord_config, router)
-        self.scheduler = DiscordScheduler(config, db, router)
+        self.scheduler = Scheduler(config, db, router)
 
         async def schedule_callback(cron, prompt, channel_id):
             job_id = str(uuid.uuid4())
