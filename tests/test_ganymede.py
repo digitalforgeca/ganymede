@@ -4,6 +4,8 @@ import unittest
 from unittest.mock import AsyncMock, MagicMock
 import json
 import time
+import discord
+from discord import app_commands
 
 from ganymede.config import AppConfig, AgentConfig
 from ganymede.core import ContextKey
@@ -193,6 +195,58 @@ class TestGanymedeCore(unittest.IsolatedAsyncioTestCase):
         
         # ConsoleApprovalProvider should auto-approve by default
         self.assertTrue(result.allow)
+    async def test_scheduler_and_schedule_command(self):
+        from ganymede.core.scheduler import DiscordScheduler
+        from ganymede.platforms.discord.commands import setup_commands
+        
+        # 1. Initialize and start the scheduler
+        router = AsyncMock()
+        scheduler = DiscordScheduler(self.config, self.db, router)
+        await scheduler.start()
+        
+        # 2. Setup commands on the mock adapter
+        self.mock_adapter._connection = MagicMock()
+        self.mock_adapter._connection._command_tree = None
+        self.mock_adapter.tree = app_commands.CommandTree(self.mock_adapter)
+        setup_commands(self.mock_adapter)
+        
+        # Register the schedule_callback mock
+        mock_schedule_callback = AsyncMock(return_value="mock_job_123")
+        self.mock_adapter.schedule_callback = mock_schedule_callback
+        
+        # 3. Get the command from the tree
+        cmd = self.mock_adapter.tree.get_command("schedule")
+        self.assertIsNotNone(cmd)
+        
+        # 4. Invoke the command callback with a mock interaction
+        mock_interaction = AsyncMock()
+        mock_interaction.channel = MagicMock()
+        mock_interaction.channel.id = 999999
+        
+        # Run callback
+        await cmd.callback(mock_interaction, "*/10 * * * *", "List files")
+        
+        # Verify scheduler callback was executed with correct arguments
+        mock_schedule_callback.assert_called_once_with("*/10 * * * *", "List files", "999999")
+        
+        # Verify interaction sent ephemeral success response
+        mock_interaction.response.send_message.assert_called_once()
+        sent_embed = mock_interaction.response.send_message.call_args[1].get("embed")
+        self.assertIsNotNone(sent_embed)
+        self.assertEqual(sent_embed.title, "📅 Recurring Prompt Scheduled")
+        
+        # 5. Add actual job to scheduler and verify it registers
+        job_id = "test_job_123"
+        await scheduler.add_cron_job(job_id, self.context, "creator123", "*/10 * * * *", "Grep logs")
+        
+        # Verify db contains the schedule
+        schedules = await self.db.get_active_schedules()
+        self.assertEqual(len(schedules), 1)
+        self.assertEqual(schedules[0]["id"], job_id)
+        self.assertEqual(schedules[0]["cron_expr"], "*/10 * * * *")
+        
+        # Stop scheduler
+        await scheduler.stop()
 
 if __name__ == '__main__':
     unittest.main()
