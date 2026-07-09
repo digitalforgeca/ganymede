@@ -104,12 +104,17 @@ class ManagedAgent:
             if self.ipc_port:
                 subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
-            # Spawn the subprocess with stdin redirected to DEVNULL to prevent terminal TTY suspends (SIGTTIN)
+            # Ensure the configured workspace exists
+            workspace_dir = os.path.expanduser(self.config.agent.workspace)
+            os.makedirs(workspace_dir, exist_ok=True)
+
+            # Spawn the subprocess with stdin redirected to DEVNULL and cwd set to the workspace
             process = await asyncio.create_subprocess_exec(
                 *args,
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                cwd=workspace_dir,
                 env=subprocess_env,
             )
             self.current_process = process
@@ -134,8 +139,18 @@ class ManagedAgent:
             new_db_file = None
             for f in new_files:
                 if f.endswith(".db") and f != f"{self.conversation_id}.db":
-                    new_db_file = f
-                    break
+                    # Verify cascade_id inside the DB file to avoid race condition renames
+                    try:
+                        db_path = os.path.join(db_dir, f)
+                        import aiosqlite
+                        async with aiosqlite.connect(db_path) as conn:
+                            async with conn.execute("SELECT cascade_id FROM trajectory_meta LIMIT 1") as cursor:
+                                row = await cursor.fetchone()
+                                if row and row[0] == self.conversation_id:
+                                    new_db_file = f
+                                    break
+                    except Exception as e:
+                        logger.warning("Failed to inspect candidate database file", file=f, error=str(e))
                     
             if new_db_file:
                 old_base = new_db_file[:-3]
