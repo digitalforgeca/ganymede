@@ -37,3 +37,21 @@ class PlatformAdapter(Protocol):
     def register_on_message(self, callback: Callable[[PlatformMessage], Awaitable[None]]) -> None:
         """Register the router callback for processing inbound messages."""
         ...
+
+
+class BasePlatformProvider:
+    """Base class for platform provider integrations, encapsulating transport, IPC, and scheduler lifecycles."""
+    
+    def __init__(self, config: Any, router: Any, db: Any):
+        self.config = config
+        self.router = router
+        self.db = db
+        self.adapter: Any = None
+
+    async def start(self) -> None:
+        """Start all transport and integration services."""
+        raise NotImplementedError()
+
+    async def stop(self) -> None:
+        """Gracefully shutdown all transport and integration services."""
+        raise NotImplementedError()

@@ -42,42 +42,19 @@ async def run(config: AppConfig):
     # Initialize Router
     router = Router(config, agent_manager, activation, db)
     
-    # Dynamically resolve and load active platform adapter
+    # Dynamically resolve and load active platform provider
     platform_name = getattr(config, "platform", "discord").lower()
     
-    scheduler = None
-    ipc_server = None
-    
     if platform_name == "discord":
-        from ganymede.platforms.discord.adapter import DiscordAdapter
-        from ganymede.platforms.discord.ipc_server import DiscordIPCServer
-        from ganymede.core.scheduler import DiscordScheduler
-        
-        adapter = DiscordAdapter(config, router)
-        agent_manager.set_adapter(adapter)
-        adapter.register_on_message(router.handle_message)
-        
-        scheduler = DiscordScheduler(config, db, router)
-        await scheduler.start()
-        
-        async def schedule_callback(cron, prompt, channel_id):
-            import uuid
-            job_id = str(uuid.uuid4())
-            context = ContextKey("discord", channel_id, None)
-            await scheduler.add_cron_job(job_id, context, "system", cron, prompt)
-            return job_id
-
-        ipc_server = DiscordIPCServer(config, adapter, schedule_callback, db=db)
-        adapter.ipc_server = ipc_server
-        adapter.schedule_callback = schedule_callback
+        from ganymede.platforms.discord.provider import DiscordPlatformProvider
+        provider = DiscordPlatformProvider(config, router, db)
     elif platform_name == "console":
-        from ganymede.platforms.console.adapter import ConsoleAdapter
-        
-        adapter = ConsoleAdapter(config, router)
-        agent_manager.set_adapter(adapter)
-        adapter.register_on_message(router.handle_message)
+        from ganymede.platforms.console.provider import ConsolePlatformProvider
+        provider = ConsolePlatformProvider(config, router, db)
     else:
         raise ValueError(f"Unsupported communication platform: {config.platform}")
+
+    agent_manager.set_adapter(provider.adapter)
     
     # Hook signal handling for clean exit
     loop = asyncio.get_running_loop()
@@ -85,12 +62,8 @@ async def run(config: AppConfig):
     async def shutdown():
         logger.info("Received shutdown request, cleaning up...")
         await agent_manager.destroy_all()
-        if scheduler:
-            await scheduler.stop()
         await db.close()
-        if ipc_server:
-            await ipc_server.stop()
-        await adapter.stop()
+        await provider.stop()
         logger.info("Shutdown completed.")
         
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -100,13 +73,11 @@ async def run(config: AppConfig):
             # Signal handlers only work in main thread, ignore if tested/spawned elsewhere
             pass
             
-    # Start IPC server and Bot transport
+    # Start platform provider services
     try:
-        if ipc_server:
-            await ipc_server.start()
-        await adapter.start()
+        await provider.start()
     except Exception as e:
-        logger.error("Error during bot runtime execution", error=str(e))
+        logger.error("Error during platform execution", error=str(e))
         await shutdown()
 
 def main():
