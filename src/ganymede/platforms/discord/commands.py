@@ -13,9 +13,9 @@ logger = structlog.get_logger()
 def setup_commands(adapter: discord.Client):
     tree = adapter.tree
 
-    @tree.command(name="ask", description="Ask the agent a question and get a streamed response")
+    @tree.command(name="private", description="Ask the agent a question privately and get a streamed response")
     @app_commands.describe(prompt="The prompt to send to the agent")
-    async def ask(interaction: discord.Interaction, prompt: str):
+    async def private(interaction: discord.Interaction, prompt: str):
         # 1. Send initial response acknowledging the command
         await interaction.response.send_message(f"💬 *Processing query...*", ephemeral=True)
 

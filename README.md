@@ -17,7 +17,7 @@
 *   **Real-time Streaming & Tool Telemetry**: Streams conversational responses token-by-token. Employs chunk-based analysis to display the active tool execution state in real-time.
 *   **Safety Approvals**: Audits dangerous tool calls (like running terminal commands or modifying files) and sends an interactive permission request to the Discord channel using Green/Red buttons (admin-gated).
 *   **Slash Commands**: Fully registered Discord slash commands:
-    *   `/ask <prompt>`: Send a direct query to the agent.
+    *   `/private <prompt>`: Send a direct private query to the agent.
     *   `/task <description>`: Delegate a background task, log status, and receive DM notification upon completion.
     *   `/status [task_id]`: Check on running or past background tasks.
     *   `/session <info|reset>`: Inspect current token quota usage and agent uptime or clear the active context.
