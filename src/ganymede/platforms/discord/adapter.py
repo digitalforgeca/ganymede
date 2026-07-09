@@ -107,6 +107,13 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         s = re.sub(r"[^a-z0-9_.-]", "", s.replace(" ", "_").replace("-", "_"))
         return s
 
+    def get_conversation_id(self, context: ContextKey) -> str:
+        """Generate a unique, stable conversation identifier for the given context key."""
+        cid = f"ganymede_discord_{context.channel_id}"
+        if context.thread_id:
+            cid += f"_{context.thread_id}"
+        return cid
+
     # --- discord.py Event Handlers ---
 
     async def on_ready(self) -> None:

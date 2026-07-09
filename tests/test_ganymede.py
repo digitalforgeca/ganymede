@@ -38,6 +38,14 @@ class TestGanymedeCore(unittest.IsolatedAsyncioTestCase):
         self.mock_adapter.user = MagicMock()
         self.mock_adapter.user.id = 123456789
         
+        # Mock get_conversation_id return value
+        def mock_get_conversation_id(context):
+            cid = f"ganymede_discord_{context.channel_id}"
+            if context.thread_id:
+                cid += f"_{context.thread_id}"
+            return cid
+        self.mock_adapter.get_conversation_id = MagicMock(side_effect=mock_get_conversation_id)
+        
         # Mock channel resolving
         self.mock_channel = AsyncMock()
         self.mock_channel.name = "test_channel"

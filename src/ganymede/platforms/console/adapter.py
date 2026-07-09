@@ -71,6 +71,10 @@ class ConsoleAdapter(PlatformAdapter):
             return console_config["namespace"]
         return "ganymede"
 
+    def get_conversation_id(self, context: ContextKey) -> str:
+        """Generate a unique, stable conversation identifier for the given context key."""
+        return f"ganymede_console_{context.channel_id}"
+
     async def _input_loop(self) -> None:
         loop = asyncio.get_running_loop()
         while self._running:

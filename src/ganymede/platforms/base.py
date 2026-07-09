@@ -47,6 +47,10 @@ class PlatformAdapter(Protocol):
         """Register the router callback for processing inbound messages."""
         ...
 
+    def get_conversation_id(self, context: ContextKey) -> str:
+        """Generate a unique, stable conversation identifier for the given context key."""
+        ...
+
 
 class BasePlatformProvider:
     """Base class for platform provider integrations, encapsulating transport, IPC, and scheduler lifecycles."""

@@ -228,9 +228,13 @@ class AgentManager:
             conversation_id = await self.db.get_conversation_id_by_context(context)
         
         if not conversation_id:
-            conversation_id = f"ganymede_{context.platform}_{context.channel_id}"
-            if context.thread_id:
-                conversation_id += f"_{context.thread_id}"
+            if self.adapter:
+                conversation_id = self.adapter.get_conversation_id(context)
+            else:
+                # Default fallback if no adapter is bound
+                conversation_id = f"ganymede_{context.platform}_{context.channel_id}"
+                if context.thread_id:
+                    conversation_id += f"_{context.thread_id}"
                 
             if self.db:
                 await self.db.save_conversation_mapping(conversation_id, context)
