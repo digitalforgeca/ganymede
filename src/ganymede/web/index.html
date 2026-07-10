@@ -26,17 +26,17 @@
             <div class="section pt-0">
                 <aside class="menu">
                     <p class="menu-label">Administration</p>
-                    <ul class="menu-list">
-                        <li><a class="is-active">Dashboard</a></li>
-                        <li><a>Chats</a></li>
-                        <li><a>Settings</a></li>
+                    <ul class="menu-list sidebar-nav">
+                        <li><a class="is-active nav-item" data-target="view-dashboard">Dashboard</a></li>
+                        <li><a class="nav-item" data-target="view-chats">Chats</a></li>
+                        <li><a class="nav-item" data-target="view-settings">Settings</a></li>
                     </ul>
                 </aside>
             </div>
         </aside>
 
         <!-- Main Content Area -->
-        <div class="column is-10 main-content">
+        <div class="column is-10 main-content" style="overflow-y: auto;">
             <!-- Header -->
             <header class="section olympus-header">
                 <div class="level">
@@ -55,56 +55,114 @@
                 </div>
             </header>
 
-            <!-- Dashboard Grid -->
-            <main class="section">
-                <div class="columns">
-                    <!-- Left Column: Config & Files -->
-                    <div class="column is-one-third">
-                        
-                        <div class="box facet">
-                            <h2 class="title is-4 cinzel facet-title">Gateway Status</h2>
-                            <div class="content">
-                                <div class="metric mb-3">
-                                    <p class="heading mb-1">Platform Provider</p>
-                                    <p class="title is-5" id="val-platform">--</p>
+            <div class="view-container">
+                <!-- Dashboard View -->
+                <main class="section view-section" id="view-dashboard">
+                    <div class="columns">
+                        <!-- Left Column: Config & Files -->
+                        <div class="column is-one-third">
+                            <div class="box facet">
+                                <h2 class="title is-4 cinzel facet-title">Gateway Status</h2>
+                                <div class="content">
+                                    <div class="metric mb-3">
+                                        <p class="heading mb-1">Platform Provider</p>
+                                        <p class="title is-5" id="val-platform">--</p>
+                                    </div>
+                                    <div class="metric mb-3">
+                                        <p class="heading mb-1">Log Level</p>
+                                        <p class="title is-5" id="val-loglevel">--</p>
+                                    </div>
+                                    <div class="metric mb-3">
+                                        <p class="heading mb-1">Data Directory</p>
+                                        <p class="title is-5" id="val-datadir">--</p>
+                                    </div>
+                                    <div class="metric">
+                                        <p class="heading mb-1">Active Workspace</p>
+                                        <p class="title is-5" id="val-workspace" style="word-break: break-all;">--</p>
+                                    </div>
                                 </div>
-                                <div class="metric mb-3">
-                                    <p class="heading mb-1">Log Level</p>
-                                    <p class="title is-5" id="val-loglevel">--</p>
-                                </div>
-                                <div class="metric mb-3">
-                                    <p class="heading mb-1">Data Directory</p>
-                                    <p class="title is-5" id="val-datadir">--</p>
-                                </div>
-                                <div class="metric">
-                                    <p class="heading mb-1">Active Workspace</p>
-                                    <p class="title is-5" id="val-workspace" style="word-break: break-all;">--</p>
+                            </div>
+
+                            <div class="box facet mt-5">
+                                <h2 class="title is-4 cinzel facet-title">Workspace Artifacts</h2>
+                                <div class="content">
+                                    <ul class="file-list" id="file-list" style="list-style: none; margin: 0;">
+                                        <li class="empty-state">Loading artifacts...</li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="box facet mt-5">
-                            <h2 class="title is-4 cinzel facet-title">Workspace Artifacts</h2>
-                            <div class="content">
-                                <ul class="file-list" id="file-list" style="list-style: none; margin: 0;">
-                                    <li class="empty-state">Loading artifacts...</li>
-                                </ul>
+                        <!-- Right Column: Telemetry -->
+                        <div class="column is-two-thirds">
+                            <div class="box facet h-100 is-flex is-flex-direction-column">
+                                <h2 class="title is-4 cinzel facet-title">Chalice Telemetry</h2>
+                                <div class="log-container flex-grow-1" id="log-container">
+                                    <div class="log-entry system">Waiting for agent telemetry stream...</div>
+                                </div>
                             </div>
                         </div>
-
                     </div>
+                </main>
 
-                    <!-- Right Column: Telemetry -->
-                    <div class="column is-two-thirds">
-                        <div class="box facet h-100 is-flex is-flex-direction-column">
-                            <h2 class="title is-4 cinzel facet-title">Chalice Telemetry</h2>
-                            <div class="log-container flex-grow-1" id="log-container">
-                                <div class="log-entry system">Waiting for agent telemetry stream...</div>
+                <!-- Chats View -->
+                <main class="section view-section is-hidden" id="view-chats">
+                    <div class="box facet">
+                        <h2 class="title is-3 cinzel facet-title">The Agora</h2>
+                        <div class="field">
+                            <div class="control has-icons-left">
+                                <input class="input" type="text" placeholder="Search chats by channel, thread, or content...">
+                            </div>
+                        </div>
+                        <div class="columns mt-4">
+                            <!-- Left: Chat List -->
+                            <div class="column is-4">
+                                <div class="menu">
+                                    <p class="menu-label">Active Contexts</p>
+                                    <ul class="menu-list" id="chat-list">
+                                        <li><a class="is-active">Loading networks...</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <!-- Right: Chat Interface -->
+                            <div class="column is-8">
+                                <div class="box h-100 is-flex is-flex-direction-column" style="min-height: 500px; background-color: #fafafa;">
+                                    <div class="chat-header pb-3 mb-3 border-bottom">
+                                        <h3 class="title is-5 mb-0" id="chat-title">Select a chat</h3>
+                                        <p class="subtitle is-6" id="chat-subtitle">--</p>
+                                    </div>
+                                    <div class="chat-history flex-grow-1" id="chat-history" style="overflow-y: auto;">
+                                        <!-- Messages will go here -->
+                                        <div class="has-text-centered has-text-grey mt-5">No chat selected.</div>
+                                    </div>
+                                    <div class="chat-input mt-4 pt-3 border-top">
+                                        <div class="field has-addons">
+                                            <div class="control is-expanded">
+                                                <input class="input" type="text" id="chat-input-field" placeholder="Chat natively with the executing agent...">
+                                            </div>
+                                            <div class="control">
+                                                <button class="button is-info" id="chat-send-btn">Send</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </main>
+                </main>
+
+                <!-- Settings View -->
+                <main class="section view-section is-hidden" id="view-settings">
+                    <div class="box facet">
+                        <h2 class="title is-3 cinzel facet-title">The Forge (Settings)</h2>
+                        <p class="has-text-grey">Direct manipulation of Antigravity configuration files.</p>
+                        <hr>
+                        <div class="content">
+                            <p><em>Configuration interface coming soon...</em></p>
+                        </div>
+                    </div>
+                </main>
+            </div>
         </div>
     </div>
 

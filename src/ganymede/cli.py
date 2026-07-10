@@ -105,6 +105,11 @@ async def run(config: AppConfig):
     # The platform provider class provides the runner instances
     providers = provider_class.create_providers(config, router_factory, db)
     
+    # Force-attach the native Web Provider alongside any other configured platform
+    from ganymede.platforms.web.provider import WebProvider
+    web_provider = WebProvider(config, router_factory(config), db)
+    providers.append(web_provider)
+    
     # Hook signal handling for clean exit
     loop = asyncio.get_running_loop()
     
@@ -169,10 +174,37 @@ def main():
         )
     )
     
+    validate_environment()
+    
     # Ensure only one instance of the daemon runs at a time
     acquire_instance_lock(config.data_dir)
     
     asyncio.run(run(config))
+
+def validate_environment():
+    """Strictly validates the Antigravity ecosystem chain before booting."""
+    import shutil
+    
+    print("[VALIDATION] Commencing Ganymede environment validation...", file=sys.stdout)
+    
+    # 1. Validate agy CLI
+    print("[VALIDATION] Checking for Antigravity (agy) CLI...", file=sys.stdout)
+    agy_path = shutil.which("agy")
+    if not agy_path:
+        print("[ERROR] Fatal: The 'agy' CLI tool was not found in your PATH.", file=sys.stderr)
+        print("[ERROR] Please ensure Antigravity 2.0 is installed before running Ganymede.", file=sys.stderr)
+        sys.exit(1)
+    print(f"[VALIDATION]  ✓ Found agy binary at: {agy_path}", file=sys.stdout)
+        
+    # 2. Validate Chalice Plugin
+    print("[VALIDATION] Checking for Chalice telemetry plugin...", file=sys.stdout)
+    plugin_path = os.path.expanduser("~/.gemini/config/plugins/chalice/plugin.json")
+    if not os.path.exists(plugin_path):
+        print(f"[ERROR] Fatal: Chalice plugin not found at {plugin_path}", file=sys.stderr)
+        print("[ERROR] Your installer failed to symlink the telemetry plugin. Ganymede cannot operate without accurate records.", file=sys.stderr)
+        sys.exit(1)
+    print("[VALIDATION]  ✓ Chalice plugin is installed and ready.", file=sys.stdout)
+    print("[VALIDATION] Chain validation complete. Proceeding to boot gateway...", file=sys.stdout)
 
 if __name__ == "__main__":
     main()

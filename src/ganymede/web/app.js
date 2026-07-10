@@ -135,10 +135,88 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // 4. UI Routing logic
+    function setupRouting() {
+        const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
+        const views = document.querySelectorAll('.view-section');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remove active class from all nav items
+                navItems.forEach(nav => nav.classList.remove('is-active'));
+                
+                // Add active class to clicked item
+                e.target.classList.add('is-active');
+                
+                // Hide all views
+                views.forEach(view => view.classList.add('is-hidden'));
+                
+                // Show target view
+                const targetId = e.target.getAttribute('data-target');
+                const targetView = document.getElementById(targetId);
+                if (targetView) {
+                    targetView.classList.remove('is-hidden');
+                }
+            });
+        });
+    }
+
+    // 5. Native Web Chat Invocation
+    function setupWebChat() {
+        const sendBtn = document.getElementById('chat-send-btn');
+        const inputField = document.getElementById('chat-input-field');
+        const chatHistory = document.getElementById('chat-history');
+
+        async function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text) return;
+            
+            // Clear input
+            inputField.value = '';
+            
+            // Optimistically append user message to UI
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'box has-background-white mb-3';
+            msgDiv.innerHTML = `<strong>You:</strong><br>${text}`;
+            if (chatHistory.querySelector('.has-text-grey')) {
+                chatHistory.innerHTML = ''; // clear empty state
+            }
+            chatHistory.appendChild(msgDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat/invoke', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: text,
+                        channel_id: 'web-portal-primary'
+                    })
+                });
+                
+                if (!res.ok) throw new Error("Failed to invoke agent");
+                appendLog(`Dispatched message to AgentManager via WebProvider`, 'action');
+                
+            } catch (e) {
+                console.error(e);
+                appendLog(`WebProvider Error: ${e.message}`, 'error');
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    }
+
     // Initialize
     fetchStatus();
     fetchFiles();
     connectWebSocket();
+    setupRouting();
+    setupWebChat();
     
     // Poll for new files every 30s
     setInterval(fetchFiles, 30000);
