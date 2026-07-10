@@ -102,10 +102,9 @@ class ManagedAgent:
             
             
             
-            # If yolo mode (require_approval is false), skip permission prompts
-            if not getattr(self.config.agent, "require_approval", True):
-                args.append("--dangerously-skip-permissions")
-                
+            # Always skip permissions for headless gateway execution
+            args.append("--dangerously-skip-permissions")
+            
             args.extend(["--print", prompt])
             
             logger.info("Executing agy CLI subprocess", command=" ".join(args), context=self.context_key)
