@@ -118,6 +118,16 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
 
     async def on_ready(self) -> None:
         logger.info("Bot is ready and connected", user=str(self.user), id=self.user.id)
+        
+        from ganymede.core.web import dashboard_instance
+        if dashboard_instance:
+            dashboard_instance.platform_connected = True
+            
+    async def on_disconnect(self) -> None:
+        from ganymede.core.web import dashboard_instance
+        if dashboard_instance:
+            dashboard_instance.platform_connected = False
+
         # Register and sync slash commands with Discord API
         try:
             await self.tree.sync()

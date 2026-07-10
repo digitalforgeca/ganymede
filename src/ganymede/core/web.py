@@ -56,8 +56,9 @@ class DashboardServer:
         return web.json_response({"error": "WebProvider not initialized"}, status=503)
 
     async def handle_status(self, request):
+        status_str = "online" if getattr(self, "platform_connected", False) else "offline"
         return web.json_response({
-            "status": "online",
+            "status": status_str,
             "platform": self.config.platform,
             "data_dir": self.config.data_dir,
             "log_level": self.config.log_level
@@ -75,14 +76,14 @@ class DashboardServer:
     async def handle_config_post(self, request):
         import yaml
         data = await request.json()
-        config_path = os.path.expanduser("~/.ganymede/config.yaml")
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        with open(config_path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False)
             
         # Update in-memory config for immediate application (basic fields)
         if "log_level" in data:
             self.config.log_level = data["log_level"]
+        if "platform" in data:
+            self.config.platform = data["platform"]
+            
+        return web.json_response({"status": "applied_to_memory"})
             
         return web.json_response({"status": "saved"})
 

@@ -57,8 +57,8 @@
                     <p class="menu-label">Administration</p>
                     <ul class="menu-list sidebar-nav">
                         <li><a class="is-active nav-item" data-target="view-dashboard">Dashboard</a></li>
-                        <li><a class="nav-item" data-target="view-chats">Chats</a></li>
-                        <li><a class="nav-item" data-target="view-settings">Settings</a></li>
+                        <li><a class="nav-item" data-target="view-chats">Projects</a></li>
+                        <li><a class="nav-item" data-target="view-settings">Global Settings</a></li>
                     </ul>
                 </aside>
             </div>
@@ -90,32 +90,39 @@
                     </div>
                 </main>
 
-                <!-- Chats View -->
+                <!-- Projects View (formerly Chats) -->
                 <main class="section view-section is-hidden pt-5" id="view-chats">
                     <div class="box facet">
-                        <h2 class="title is-3 cinzel facet-title">The Agora</h2>
+                        <h2 class="title is-3 cinzel facet-title">Projects</h2>
                         <div class="field">
                             <div class="control has-icons-left">
-                                <input class="input" type="text" placeholder="Search chats by channel, thread, or content...">
+                                <input class="input" type="text" placeholder="Search projects by channel, thread, or context...">
                             </div>
                         </div>
                         <div class="columns mt-4">
-                            <!-- Left: Chat List & Artifacts -->
+                            <!-- Left: Project List & Artifacts -->
                             <div class="column is-4">
                                 <div class="menu mb-5">
-                                    <p class="menu-label">Active Contexts</p>
+                                    <p class="menu-label">Active Projects</p>
                                     <ul class="menu-list" id="chat-list">
-                                        <li><a class="is-active">Loading networks...</a></li>
+                                        <li><a class="is-active">Loading projects...</a></li>
                                     </ul>
                                 </div>
                                 
                                 <div class="box facet mt-5 has-background-white-bis">
-                                    <h2 class="title is-5 cinzel facet-title" style="border-bottom: 1px solid #ddd; padding-bottom: 10px;">Workspace Artifacts</h2>
+                                    <h2 class="title is-5 cinzel facet-title" style="border-bottom: 1px solid #ddd; padding-bottom: 10px;">Project Artifacts</h2>
                                     <div class="content">
-                                        <p class="is-size-7 has-text-grey" id="artifacts-subtitle">Select a chat to view files.</p>
+                                        <p class="is-size-7 has-text-grey" id="artifacts-subtitle">Select a project to view files.</p>
                                         <ul class="file-list" id="file-list" style="list-style: none; margin: 0; font-size: 0.9rem;">
                                             <!-- Files will go here -->
                                         </ul>
+                                    </div>
+                                </div>
+
+                                <div class="box facet mt-5 has-background-white-bis">
+                                    <h2 class="title is-5 cinzel facet-title" style="border-bottom: 1px solid #ddd; padding-bottom: 10px;">Project Settings</h2>
+                                    <div class="content">
+                                        <p class="is-size-7 has-text-grey">Project-specific configuration (Agent overrides, tools, constraints) will appear here.</p>
                                     </div>
                                 </div>
                             </div>

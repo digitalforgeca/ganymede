@@ -203,11 +203,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     chatList.appendChild(li);
                 });
             } else {
-                chatList.innerHTML = '<li><a>No active chats found.</a></li>';
+                chatList.innerHTML = '<li><a>No active projects found.</a></li>';
             }
         } catch (e) {
             console.error(e);
-            document.getElementById('chat-list').innerHTML = '<li><a>Error loading chats</a></li>';
+            document.getElementById('chat-list').innerHTML = '<li><a>Error loading projects</a></li>';
         }
     }
     
