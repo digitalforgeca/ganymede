@@ -90,10 +90,7 @@ class ManagedAgent:
                 "--conversation", self.conversation_id,
             ]
             
-            # Ensure the configured workspace exists
-            workspace_dir = os.path.expanduser(getattr(self.config.agent, 'workspace', '~/.ganymede/workspace'))
-            os.makedirs(workspace_dir, exist_ok=True)
-            args.extend(["--workspace", workspace_dir])
+            
             
             # If yolo mode (require_approval is false), skip permission prompts
             if not getattr(self.config.agent, "require_approval", True):
