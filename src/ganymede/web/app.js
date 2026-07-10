@@ -341,6 +341,26 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmBtn.addEventListener('click', confirmMerge);
     }
 
+    // 6. Export Telemetry
+    function setupTelemetryExport() {
+        const btnExport = document.getElementById('btn-export-telemetry');
+        if (btnExport) {
+            btnExport.addEventListener('click', () => {
+                const logs = Array.from(logContainer.querySelectorAll('.log-entry')).map(entry => {
+                    return entry.textContent;
+                }).join('\n');
+                
+                const blob = new Blob([logs], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ganymede-telemetry-${new Date().toISOString().replace(/:/g, '-')}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+    }
+
     // Initialize
     fetchStatus();
     fetchFiles();
@@ -349,6 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupRouting();
     setupWebChat();
     setupContextMerge();
+    setupTelemetryExport();
     
     // Poll for new files and chats periodically
     setInterval(fetchFiles, 30000);

@@ -39,8 +39,11 @@ class WebAdapter(PlatformAdapter):
             # Formulate the platform message
             msg = PlatformMessage(
                 context=context,
-                user="Human Operator",
-                content=prompt
+                author_id="web_user",
+                author_name="Web UI",
+                content=prompt,
+                is_bot=False,
+                mentions_us=True
             )
             
             if self.on_message_callback:

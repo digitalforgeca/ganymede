@@ -94,6 +94,16 @@ class DashboardServer:
             data = await request.json()
             logger.debug("Chalice Telemetry via POST", payload=data)
             
+            # Log telemetry to disk
+            try:
+                log_dir = os.path.join(self.config.data_dir, "telemetry")
+                os.makedirs(log_dir, exist_ok=True)
+                log_file = os.path.join(log_dir, "telemetry.jsonl")
+                with open(log_file, "a") as f:
+                    f.write(json.dumps(data) + "\n")
+            except Exception as e:
+                logger.error("Failed to write telemetry to disk", error=str(e))
+            
             # Broadcast to all connected dashboard clients
             for client in self.dashboard_clients:
                 if not client.closed:

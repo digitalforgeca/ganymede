@@ -96,7 +96,10 @@
                         <!-- Right Column: Telemetry -->
                         <div class="column is-two-thirds">
                             <div class="box facet h-100 is-flex is-flex-direction-column">
-                                <h2 class="title is-4 cinzel facet-title">Chalice Telemetry</h2>
+                                <div class="is-flex is-justify-content-space-between is-align-items-center facet-title">
+                                    <h2 class="title is-4 cinzel mb-0" style="border-bottom: none; padding-bottom: 0;">Chalice Telemetry</h2>
+                                    <button class="button is-small is-outlined is-info" id="btn-export-telemetry">Export JSON</button>
+                                </div>
                                 <div class="log-container flex-grow-1" id="log-container">
                                     <div class="log-entry system">Waiting for agent telemetry stream...</div>
                                 </div>
