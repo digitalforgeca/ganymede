@@ -3,7 +3,23 @@ import argparse
 import yaml
 from dataclasses import dataclass, field
 from typing import Any
-from google.antigravity import CapabilitiesConfig
+
+class SyncedPlatformsDict(dict):
+    def __init__(self, config_inst, *args, **kwargs):
+        self._config = config_inst
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        if hasattr(self, "_config") and self._config is not None:
+            if hasattr(self._config, "bot") and self._config.bot is not None:
+                if key == self._config.platform:
+                    if isinstance(value, dict):
+                        # Save current platform type to preserve it across dict re-assignments
+                        p_type = self._config.bot.provider.get("type", "discord")
+                        self._config.bot.provider.clear()
+                        self._config.bot.provider.update(value)
+                        self._config.bot.provider["type"] = p_type
 
 @dataclass
 class AgentConfig:
@@ -37,14 +53,37 @@ class ActivationConfig:
     per_channel: dict[str, str] = field(default_factory=dict)
 
 @dataclass
+class BotConfig:
+    provider: dict[str, Any] = field(default_factory=lambda: {
+        "type": "discord",
+        "token": "",
+        "allowed_guilds": [],
+        "name": "ganymede",
+        "namespace": None
+    })
+
+@dataclass
 class AppConfig:
-    platform: str = "discord"
-    platforms: dict[str, Any] = field(default_factory=dict)
+    bot: BotConfig = field(default_factory=BotConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
     quota: QuotaConfig = field(default_factory=QuotaConfig)
     activation: ActivationConfig = field(default_factory=ActivationConfig)
     data_dir: str = ""
     log_level: str = "INFO"
+    platforms: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        self.platforms = SyncedPlatformsDict(self, self.platforms)
+        p_type = self.bot.provider.get("type", "discord")
+        self.platforms[p_type] = self.bot.provider
+
+    @property
+    def platform(self) -> str:
+        return self.bot.provider.get("type", "discord")
+
+    @platform.setter
+    def platform(self, val: str):
+        self.bot.provider["type"] = val
 
 def get_default_data_dir() -> str:
     # Resolve $ANTIGRAVITY_EXECUTABLE_DATA_DIR with fallback to ~/.gemini/antigravity-cli/plugins/ganymede/data/
@@ -78,7 +117,7 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
 
     env_token = os.environ.get("DISCORD_TOKEN") or os.environ.get("AGYD_DISCORD_TOKEN")
     if env_token:
-        config.platforms.setdefault("discord", {})["token"] = env_token
+        config.bot.provider["token"] = env_token
 
     env_log_level = os.environ.get("AGY_DISCORD_LOG_LEVEL") or os.environ.get("AGYD_LOG_LEVEL")
     if env_log_level:
@@ -102,14 +141,28 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
 def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
     if "platform" in data:
         config.platform = data["platform"]
+
+    if "bot" in data:
+        b = data["bot"]
+        if isinstance(b, dict) and "provider" in b:
+            config.bot.provider.update(b["provider"])
+
+    # For backwards compatibility with legacy YAML structures:
+    # If the YAML defines `discord:` directly at top-level, merge its keys into bot.provider
+    if "discord" in data and isinstance(data["discord"], dict):
+        d = data["discord"]
+        config.bot.provider.update(d)
+        config.bot.provider["type"] = "discord"
+
     # Merge platform-specific config keys into config.platforms dict
-    core_keys = {"agent", "quota", "activation", "log_level", "platform"}
+    core_keys = {"agent", "quota", "activation", "log_level", "platform", "bot", "discord"}
     for k, v in data.items():
         if k not in core_keys:
             if isinstance(v, dict) and k in config.platforms and isinstance(config.platforms[k], dict):
                 config.platforms[k].update(v)
             else:
                 config.platforms[k] = v
+
     if "agent" in data:
         a = data["agent"]
         config.agent.system_instructions = a.get("system_instructions", config.agent.system_instructions)

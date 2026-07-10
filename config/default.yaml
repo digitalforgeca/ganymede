@@ -1,7 +1,9 @@
 # default config settings for ganymede
-discord:
-  token: ""
-  allowed_guilds: []
+bot:
+  provider:
+    type: "discord"
+    token: ""
+    allowed_guilds: []
 
 agent:
   mission_statement: "developing, auditing, and managing the Sulcus persistent context layer and the Antigravity developer ecosystem"
