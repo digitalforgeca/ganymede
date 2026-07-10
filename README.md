@@ -8,7 +8,9 @@
   <img src="https://img.shields.io/badge/Platform-Console_/_Discord-green?style=for-the-badge" alt="Platform" />
 </p>
 
-**Ganymede** is a production-grade Discord integration and productivity harness for the Google Antigravity Agent. It enables users to converse with, schedule, and delegate background tasks to their Antigravity agent directly inside Discord channels and threads, complete with real-time feedback loops and safety checks.
+**Ganymede** is a standalone, production-grade communication gateway and productivity harness for the Google Antigravity ecosystem. It connects platforms like Discord to your local autonomous agents, enabling you to converse with, schedule, and delegate background tasks seamlessly, complete with real-time feedback loops and safety checks.
+
+Ganymede also features a built-in lightweight web dashboard (glassmorphic aesthetic) running natively on port `8080` to monitor telemetry, configurations, and agent statuses.
 
 ---
 
@@ -37,7 +39,23 @@
 
 ## 🛠️ Configuration
 
-Ganymede loads a default YAML configuration from `config/default.yaml` and merges environment variables.
+Ganymede uses a singular, consistent user configuration file stored at `~/.ganymede/config.yaml`.
+If this file does not exist on your first run, Ganymede will automatically safely copy a default template to this location.
+
+---
+
+## 🍷 The Chalice Plugin (Full-Circle Architecture)
+
+While Ganymede operates outside the Antigravity CLI lifecycle as a robust standalone daemon, it maintains a two-way real-time telemetry and feedback loop directly with the active Antigravity instances using the **Chalice** plugin. 
+
+Found in `plugins/chalice`, this Antigravity-native sidecar lives inside the agent instance. It establishes a persistent WebSocket conduit (`conduit.py`) to the Ganymede gateway's port `8080` interface. This allows Ganymede to receive real-time streams of agent execution events and dispatch direct feedback on demand, bridging the standalone gateway seamlessly with the agent lifecycle.
+
+To install the Chalice plugin into your Antigravity environment:
+```bash
+ln -s $(pwd)/plugins/chalice ~/.gemini/config/plugins/chalice
+```
+
+---
 
 ### Status Verbosity levels
 You can control the level of feedback printed in Discord during agent turns via `status_verbosity` under `agent:` settings:
@@ -52,31 +70,44 @@ You can control the level of feedback printed in Discord during agent turns via 
 
 ---
 
-## 🏃 Running the Standalone Binary (Quick Start)
+## 💻 Installation
 
-If you have downloaded the pre-compiled `ganymede` binary from the [GitHub Releases](https://github.com/digitalforgeca/ganymede/releases), use these instructions. No Python environment is required to run the bin.
+We provide streamlined installation processes tailored to your operating system. Because Ganymede is a standalone executable gateway, it manages its own Python virtual environment safely outside of your system paths.
 
-### 1. Run the Console Platform Provider
-To run Ganymede on the local terminal command-line platform using standard input/output:
+### macOS (Homebrew)
+You can install Ganymede natively using Homebrew by building our included formula from source. This sets up a virtual environment in `libexec` and symlinks the binary:
 ```bash
-./ganymede --platform console
+brew install --build-from-source brew/ganymede.rb
 ```
-Type your query and press **Enter** to talk to the agent. Type `/exit` to quit.
 
-### 2. Run the Discord Platform Provider
-To run Ganymede as a sidecar bridge connected to the Discord chat network:
+### Linux (Systemd)
+Run our provided bash script (requires `sudo`) to install Ganymede into `/opt/ganymede`, link it to `/usr/local/bin`, and register a persistent `systemd` service for automatic startup:
 ```bash
-DISCORD_TOKEN="your-discord-bot-token" ./ganymede
+sudo ./scripts/install_linux.sh
 ```
-*(You can also save the required platform configurations in a local `.env` file in the same directory as the executable).*
 
-### 3. Run the Stdio MCP Server
-To run the stdio JSON-RPC Model Context Protocol server (for integration into an MCP host like Claude Desktop or Antigravity):
-```bash
-./ganymede mcp
+### Windows (PowerShell)
+Execute our PowerShell script. It isolates the build in your `LOCALAPPDATA` directory and places a convenient `Start-Ganymede.bat` launcher right on your desktop:
+```powershell
+.\scripts\install_windows.ps1
 ```
 
 ---
+
+## 🏃 Running the Gateway
+
+Once installed, simply start the daemon:
+```bash
+# Terminal execution
+ganymede run
+```
+You can access the real-time telemetry dashboard at `http://localhost:8080`.
+
+To run the stdio JSON-RPC Model Context Protocol server (for integration into an MCP host like Claude Desktop or Antigravity):
+```bash
+ganymede mcp
+```
+----
 
 ## 💻 Development & Compiling from Source
 

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ganymede Gateway Dashboard</title>
+    <meta name="description" content="Dashboard for Ganymede, the Antigravity communication gateway.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-gradient"></div>
+    <div class="background-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <main class="dashboard-container">
+        <header class="glass-panel header">
+            <h1>Ganymede <span class="badge">Gateway</span></h1>
+            <div class="status-indicator">
+                <div class="pulse-ring"></div>
+                <div class="pulse-dot"></div>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <section class="metrics-grid">
+            <div class="glass-panel metric-card">
+                <h3>Platform</h3>
+                <div class="metric-value" id="platform-val">--</div>
+            </div>
+            <div class="glass-panel metric-card">
+                <h3>Log Level</h3>
+                <div class="metric-value" id="log-level-val">--</div>
+            </div>
+            <div class="glass-panel metric-card">
+                <h3>Uptime</h3>
+                <div class="metric-value" id="uptime-val">--</div>
+            </div>
+        </section>
+
+        <section class="glass-panel details-panel">
+            <h2>System Details</h2>
+            <div class="details-content">
+                <div class="detail-row">
+                    <span class="detail-label">Data Directory:</span>
+                    <span class="detail-value" id="data-dir-val">--</span>
+                </div>
+            </div>
+            <button class="primary-btn" id="refresh-btn">Refresh Status</button>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

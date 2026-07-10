@@ -367,5 +367,30 @@ discord:
             if os.path.exists(temp_name):
                 os.remove(temp_name)
 
+    def test_single_instance_lock(self):
+        from ganymede.cli import acquire_instance_lock
+        import ganymede.cli
+        import tempfile
+        import shutil
+        
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # First lock acquisition should succeed
+            acquire_instance_lock(temp_dir)
+            
+            # Keep a reference to the first lock file so it does not get garbage-collected and closed
+            first_lock_file = ganymede.cli._lock_file
+            
+            # Second lock acquisition on the same directory should raise SystemExit
+            with self.assertRaises(SystemExit) as ctx:
+                acquire_instance_lock(temp_dir)
+                
+            self.assertEqual(ctx.exception.code, 1)
+        finally:
+            if ganymede.cli._lock_file:
+                ganymede.cli._lock_file.close()
+                ganymede.cli._lock_file = None
+            shutil.rmtree(temp_dir)
+
 if __name__ == '__main__':
     unittest.main()

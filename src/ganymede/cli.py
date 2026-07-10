@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os
 import signal
+import sys
 import structlog
 from dotenv import load_dotenv
 from ganymede.config import load_config, AppConfig
@@ -12,6 +13,13 @@ from ganymede.core.router import Router
 from ganymede.core.activation import ActivationManager
 from ganymede.core.db import Database
 from ganymede.core import ContextKey
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
+
+_lock_file = None
 
 # Setup structured logging
 structlog.configure(
@@ -23,6 +31,52 @@ structlog.configure(
 )
 
 logger = structlog.get_logger()
+
+def acquire_instance_lock(data_dir: str):
+    global _lock_file
+    lock_path = os.path.join(data_dir, "ganymede.lock")
+    if fcntl is None:
+        logger.warning("fcntl module not available; single-instance execution cannot be strictly guaranteed.")
+        return
+
+    try:
+        _lock_file = open(lock_path, "a+")
+        fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        
+        # Read old PID if any to log stale locks gracefully
+        _lock_file.seek(0)
+        old_pid = _lock_file.read().strip()
+        
+        # Write our PID to lock file
+        _lock_file.seek(0)
+        _lock_file.truncate()
+        _lock_file.write(f"{os.getpid()}\n")
+        _lock_file.flush()
+        
+        if old_pid:
+            logger.debug("Acquired single-instance lock, replacing stale PID", old_pid=old_pid, new_pid=os.getpid())
+        else:
+            logger.debug("Acquired single-instance lock", pid=os.getpid())
+            
+    except (OSError, IOError) as e:
+        other_pid = "unknown"
+        try:
+            _lock_file.seek(0)
+            pid_str = _lock_file.read().strip()
+            if pid_str.isdigit():
+                other_pid = pid_str
+        except Exception:
+            pass
+            
+        logger.error(
+            "Another instance of ganymede is already running",
+            pid=other_pid,
+            lock_path=lock_path,
+            error=str(e)
+        )
+        print(f"Error: Another instance of ganymede is already running (PID {other_pid}). Exiting.", file=sys.stderr)
+        sys.exit(1)
+
 
 async def dummy_schedule_callback(cron, prompt, channel_id):
     logger.info("Dummy scheduler callback triggered", cron=cron, prompt=prompt, channel_id=channel_id)
@@ -56,6 +110,8 @@ async def run(config: AppConfig):
     
     async def shutdown():
         logger.info("Received shutdown request, cleaning up...")
+        if 'dashboard' in locals():
+            await dashboard.stop()
         for provider in providers:
             if provider.router and provider.router.agent_manager:
                 await provider.router.agent_manager.destroy_all()
@@ -70,6 +126,11 @@ async def run(config: AppConfig):
             # Signal handlers only work in main thread, ignore if tested/spawned elsewhere
             pass
             
+    # Start dashboard web server
+    from ganymede.core.web import DashboardServer
+    dashboard = DashboardServer(config)
+    await dashboard.start()
+    
     # Start platform provider services concurrently
     tasks = []
     for provider in providers:
@@ -107,6 +168,9 @@ def main():
             getattr(logging, config.log_level.upper(), logging.INFO) if hasattr(logging, config.log_level.upper()) else logging.INFO
         )
     )
+    
+    # Ensure only one instance of the daemon runs at a time
+    acquire_instance_lock(config.data_dir)
     
     asyncio.run(run(config))
 

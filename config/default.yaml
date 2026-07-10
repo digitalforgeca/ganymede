@@ -22,7 +22,7 @@ agent:
     - Use Discord Markdown syntax (e.g., **bold**, *italics*, `code blocks`). Never use HTML.
     - Do not print entire files; print targeted diffs or snippets.
     - End task completions with a clear, user-friendly summary.
-  workspace: "~/.gemini/antigravity-cli/plugins/ganymede/workspace"
+  workspace: "~/.ganymede/workspace"
   capabilities:
     read_tools: true
     write_tools: false

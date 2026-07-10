@@ -1,7 +1,7 @@
 [project]
 name = "ganymede"
 version = "0.1.0"
-description = "Discord communications and productivity bridge plugin for Antigravity"
+description = "Discord communications and productivity gateway for Antigravity"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -23,3 +23,9 @@ ganymede = "ganymede.cli:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ganymede"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"config/default.yaml" = "ganymede/config/default.yaml"

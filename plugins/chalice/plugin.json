@@ -1,0 +1,11 @@
+{
+  "name": "chalice",
+  "version": "0.1.0",
+  "description": "Two-way communication conduit bridging the Antigravity instance with the standalone Ganymede gateway.",
+  "author": "Digital Forge",
+  "sidecars": {
+    "chalice-conduit": {
+      "command": ["python3", "-u", "${PLUGIN_DIR}/sidecars/conduit.py"]
+    }
+  }
+}

@@ -86,29 +86,38 @@ class AppConfig:
         self.bot.provider["type"] = val
 
 def get_default_data_dir() -> str:
-    # Resolve $ANTIGRAVITY_EXECUTABLE_DATA_DIR with fallback to ~/.gemini/antigravity-cli/plugins/ganymede/data/
-    data_dir = os.environ.get("ANTIGRAVITY_EXECUTABLE_DATA_DIR")
+    # Resolve $GANYMEDE_DATA_DIR with fallback to ~/.ganymede/data/
+    data_dir = os.environ.get("GANYMEDE_DATA_DIR")
     if not data_dir:
-        data_dir = os.path.expanduser("~/.gemini/antigravity-cli/plugins/ganymede/data")
+        data_dir = os.path.expanduser("~/.ganymede/data")
     return os.path.abspath(data_dir)
 
 def load_config(args: argparse.Namespace = None) -> AppConfig:
     config = AppConfig(data_dir=get_default_data_dir())
 
-    # 1. Load default yaml if exists
-    default_yaml_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "default.yaml")
-    if os.path.exists(default_yaml_path):
-        with open(default_yaml_path, "r") as f:
+    # 1. Determine singular user config file path
+    user_config_path = os.path.expanduser(args.config) if (args and getattr(args, "config", None)) else os.path.expanduser("~/.ganymede/config.yaml")
+
+    # 2. If it doesn't exist, try to seed it from the default yaml shipped with the package
+    if not os.path.exists(user_config_path):
+        os.makedirs(os.path.dirname(user_config_path), exist_ok=True)
+        # Check adjacent directory for local development, or package data
+        possible_defaults = [
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "config", "default.yaml"), # Dev root
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "default.yaml"), # Packaged via hatchling
+        ]
+        for def_path in possible_defaults:
+            if os.path.exists(def_path):
+                import shutil
+                shutil.copy(def_path, user_config_path)
+                break
+
+    # 3. Load the singular user config file
+    if os.path.exists(user_config_path):
+        with open(user_config_path, "r") as f:
             yaml_data = yaml.safe_load(f) or {}
             _merge_dict_into_config(config, yaml_data)
 
-    # 2. Load specified user config if passed
-    if args and getattr(args, "config", None):
-        user_config_path = os.path.expanduser(args.config)
-        if os.path.exists(user_config_path):
-            with open(user_config_path, "r") as f:
-                yaml_data = yaml.safe_load(f) or {}
-                _merge_dict_into_config(config, yaml_data)
 
     # 3. Environment overrides (e.g. DISCORD_TOKEN)
     env_platform = os.environ.get("GAN_PLATFORM") or os.environ.get("AGY_PLATFORM")
