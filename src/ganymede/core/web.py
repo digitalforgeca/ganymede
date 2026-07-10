@@ -56,7 +56,17 @@ class DashboardServer:
         return web.json_response({"error": "WebProvider not initialized"}, status=503)
 
     async def handle_status(self, request):
-        status_str = "online" if getattr(self, "platform_connected", False) else "offline"
+        status_str = "offline"
+        if getattr(self, "providers", None):
+            for p in self.providers:
+                if hasattr(p.adapter, "is_ready"):
+                    if p.adapter.is_ready():
+                        status_str = "online"
+                        break
+                elif getattr(p.adapter, "is_connected", False):
+                    status_str = "online"
+                    break
+                    
         return web.json_response({
             "status": status_str,
             "platform": self.config.platform,

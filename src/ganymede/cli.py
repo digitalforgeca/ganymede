@@ -134,6 +134,7 @@ async def run(config: AppConfig):
     # Start dashboard web server
     from ganymede.core.web import DashboardServer
     dashboard = DashboardServer(config)
+    dashboard.providers = providers
     await dashboard.start()
     
     # Start platform provider services concurrently
