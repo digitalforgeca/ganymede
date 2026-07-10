@@ -23,6 +23,8 @@ class DashboardServer:
         self.app.router.add_post('/api/chats/{id}/merge', self.handle_chat_merge)
         self.app.router.add_post('/api/telemetry', self.handle_telemetry_post)
         self.app.router.add_post('/api/chat/invoke', self.handle_chat_invoke)
+        self.app.router.add_get('/api/config', self.handle_config_get)
+        self.app.router.add_post('/api/config', self.handle_config_post)
         self.app.router.add_get('/ws/telemetry', self.handle_telemetry_ws)
         self.app.router.add_get('/ws/dashboard', self.handle_dashboard_ws)
         
@@ -59,6 +61,29 @@ class DashboardServer:
             "data_dir": self.config.data_dir,
             "log_level": self.config.log_level
         })
+
+    async def handle_config_get(self, request):
+        import yaml
+        config_path = os.path.expanduser("~/.ganymede/config.yaml")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                data = yaml.safe_load(f) or {}
+                return web.json_response(data)
+        return web.json_response({})
+        
+    async def handle_config_post(self, request):
+        import yaml
+        data = await request.json()
+        config_path = os.path.expanduser("~/.ganymede/config.yaml")
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False)
+            
+        # Update in-memory config for immediate application (basic fields)
+        if "log_level" in data:
+            self.config.log_level = data["log_level"]
+            
+        return web.json_response({"status": "saved"})
 
     async def handle_telemetry_ws(self, request):
         ws = web.WebSocketResponse()

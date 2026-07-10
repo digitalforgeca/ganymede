@@ -12,7 +12,36 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="columns is-gapless is-fullheight">
+    <!-- Top Inline Status Bar -->
+    <nav class="navbar is-dark has-shadow is-fixed-top" style="z-index: 100; min-height: 2.5rem;">
+        <div class="navbar-brand">
+            <div class="navbar-item cinzel has-text-weight-bold" style="color: var(--accent-gold); font-size: 1.1rem;">
+                Ganymede Gateway
+            </div>
+        </div>
+        <div class="navbar-menu is-active">
+            <div class="navbar-end pr-4">
+                <div class="navbar-item is-size-7">
+                    <span class="pulse offline mr-2" id="pulse-indicator"></span>
+                    <span id="status-text" class="has-text-weight-semibold mr-4">Disconnected</span>
+                </div>
+                <div class="navbar-item is-size-7">
+                    <span class="has-text-grey mr-1">Platform:</span> <span id="val-platform" class="has-text-info">--</span>
+                </div>
+                <div class="navbar-item is-size-7">
+                    <span class="has-text-grey mr-1">Log Level:</span> <span id="val-loglevel" class="has-text-warning">--</span>
+                </div>
+                <div class="navbar-item is-size-7">
+                    <span class="has-text-grey mr-1">Data:</span> <span id="val-datadir" class="has-text-primary">--</span>
+                </div>
+                <div class="navbar-item is-size-7">
+                    <span class="has-text-grey mr-1">Workspace:</span> <span id="val-workspace" class="has-text-success" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="columns is-gapless is-fullheight" style="margin-top: 2.5rem;">
         <!-- Sidebar Navigation -->
         <aside class="column is-2 olympus-sidebar">
             <div class="account-badge section">
@@ -37,51 +66,12 @@
 
         <!-- Main Content Area -->
         <div class="column is-10 main-content" style="overflow-y: auto;">
-            <!-- Header -->
-            <header class="section olympus-header">
-                <div class="level">
-                    <div class="level-left">
-                        <div>
-                            <h1 class="title is-1 cinzel">Ganymede</h1>
-                            <p class="subtitle is-6 is-uppercase">Communications Gateway & Telemetry</p>
-                        </div>
-                    </div>
-                    <div class="level-right">
-                        <div class="status-indicator level-item" id="connection-status">
-                            <span class="pulse offline mr-2"></span>
-                            <span id="status-text" class="has-text-weight-semibold">Disconnected</span>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
             <div class="view-container">
                 <!-- Dashboard View -->
-                <main class="section view-section" id="view-dashboard">
+                <main class="section view-section pt-5" id="view-dashboard">
                     <div class="columns">
                         <!-- Left Column: Config & Files -->
                         <div class="column is-one-third">
-                            <div class="box facet">
-                                <h2 class="title is-4 cinzel facet-title">Gateway Status</h2>
-                                <div class="content">
-                                    <div class="metric mb-3">
-                                        <p class="heading mb-1">Platform Provider</p>
-                                        <p class="title is-5" id="val-platform">--</p>
-                                    </div>
-                                    <div class="metric mb-3">
-                                        <p class="heading mb-1">Log Level</p>
-                                        <p class="title is-5" id="val-loglevel">--</p>
-                                    </div>
-                                    <div class="metric mb-3">
-                                        <p class="heading mb-1">Data Directory</p>
-                                        <p class="title is-5" id="val-datadir">--</p>
-                                    </div>
-                                    <div class="metric">
-                                        <p class="heading mb-1">Active Workspace</p>
-                                        <p class="title is-5" id="val-workspace" style="word-break: break-all;">--</p>
-                                    </div>
-                                </div>
-                            </div>
 
                             <div class="box facet mt-5">
                                 <h2 class="title is-4 cinzel facet-title">Workspace Artifacts</h2>
@@ -183,13 +173,24 @@
                 </div>
 
                 <!-- Settings View -->
-                <main class="section view-section is-hidden" id="view-settings">
+                <main class="section view-section is-hidden pt-5" id="view-settings">
                     <div class="box facet">
                         <h2 class="title is-3 cinzel facet-title">The Forge (Settings)</h2>
-                        <p class="has-text-grey">Direct manipulation of Antigravity configuration files.</p>
-                        <hr>
-                        <div class="content">
-                            <p><em>Configuration interface coming soon...</em></p>
+                        <p class="has-text-grey mb-4">Direct manipulation of Antigravity configuration files. These settings reflect exactly what is loaded from <code>~/.ganymede/config.yaml</code>.</p>
+                        
+                        <div class="field">
+                            <div class="control">
+                                <textarea class="textarea has-background-light" id="config-editor" rows="18" style="font-family: monospace; font-size: 0.9rem;" placeholder="Loading config..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="field is-grouped mt-4">
+                            <div class="control">
+                                <button class="button is-primary" id="btn-save-config">Save Configuration</button>
+                            </div>
+                            <div class="control">
+                                <button class="button is-light" id="btn-reload-config">Discard Changes</button>
+                            </div>
                         </div>
                     </div>
                 </main>

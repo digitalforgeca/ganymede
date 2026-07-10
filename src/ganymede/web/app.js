@@ -361,6 +361,58 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // 7. Settings Config Editor
+    function setupConfigEditor() {
+        const editor = document.getElementById('config-editor');
+        const btnSave = document.getElementById('btn-save-config');
+        const btnReload = document.getElementById('btn-reload-config');
+        
+        if (!editor || !btnSave || !btnReload) return;
+
+        async function loadConfig() {
+            try {
+                editor.value = "Loading config...";
+                const res = await fetch('/api/config');
+                if (!res.ok) throw new Error("Failed to load config");
+                const data = await res.json();
+                editor.value = JSON.stringify(data, null, 2);
+            } catch (e) {
+                console.error(e);
+                editor.value = "Error loading config: " + e.message;
+            }
+        }
+
+        async function saveConfig() {
+            try {
+                const text = editor.value;
+                const data = JSON.parse(text); // validate JSON before sending
+                
+                btnSave.classList.add('is-loading');
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!res.ok) throw new Error("Failed to save config");
+                alert("Configuration saved successfully!");
+                // Refresh status metrics to reflect changes
+                fetchStatus(); 
+            } catch (e) {
+                console.error(e);
+                alert("Invalid configuration JSON or save failed: " + e.message);
+            } finally {
+                btnSave.classList.remove('is-loading');
+            }
+        }
+
+        btnReload.addEventListener('click', loadConfig);
+        btnSave.addEventListener('click', saveConfig);
+
+        // Load initially
+        loadConfig();
+    }
+
     // Initialize
     fetchStatus();
     fetchFiles();
@@ -370,6 +422,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupWebChat();
     setupContextMerge();
     setupTelemetryExport();
+    setupConfigEditor();
     
     // Poll for new files and chats periodically
     setInterval(fetchFiles, 30000);
