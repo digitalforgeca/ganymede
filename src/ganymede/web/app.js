@@ -40,29 +40,31 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 2. Fetch Brain Files API
-    async function fetchFiles() {
+    // 2. Fetch Chat Files API
+    async function fetchChatFiles(chatId) {
+        if (!chatId) return;
+        
         try {
-            const res = await fetch('/api/files');
+            const res = await fetch(`/api/chats/${chatId}/files`);
             if (!res.ok) throw new Error("Files API failed");
             const data = await res.json();
             
-            valWorkspace.textContent = data.workspace || "Not Configured";
+            document.getElementById('artifacts-subtitle').textContent = `Brain Directory: ${data.workspace || "Unknown"}`;
             
             fileList.innerHTML = '';
             if (data.files && data.files.length > 0) {
                 data.files.forEach(f => {
                     const li = document.createElement('li');
-                    li.innerHTML = `<span class="file-name">${f.name}</span><span class="file-size">${formatBytes(f.size)}</span>`;
-                    // Could add click handler here to open file via a new API if needed
+                    li.className = 'is-flex is-justify-content-space-between mb-1';
+                    li.innerHTML = `<span class="file-name has-text-info" style="word-break: break-all; margin-right: 10px;">${f.name}</span><span class="file-size has-text-grey">${formatBytes(f.size)}</span>`;
                     fileList.appendChild(li);
                 });
             } else {
-                fileList.innerHTML = '<li class="empty-state">No files found in workspace.</li>';
+                fileList.innerHTML = '<li class="empty-state has-text-grey">No artifacts found.</li>';
             }
         } catch (e) {
             console.error("Failed to fetch files", e);
-            fileList.innerHTML = '<li class="empty-state">Error loading artifacts.</li>';
+            fileList.innerHTML = '<li class="empty-state has-text-danger">Error loading artifacts.</li>';
         }
     }
 
@@ -194,6 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         document.getElementById('chat-subtitle').textContent = `Thread: ${chat.thread_id || 'main'}`;
                         document.getElementById('btn-merge-context').classList.remove('is-hidden');
                         loadChatHistory(chat.id);
+                        fetchChatFiles(chat.id);
                     });
                     
                     li.appendChild(a);
@@ -415,7 +418,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initialize
     fetchStatus();
-    fetchFiles();
     fetchChats();
     connectWebSocket();
     setupRouting();
@@ -424,7 +426,9 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTelemetryExport();
     setupConfigEditor();
     
-    // Poll for new files and chats periodically
-    setInterval(fetchFiles, 30000);
+    // Poll for new chats and files periodically
+    setInterval(() => {
+        if (currentChatId) fetchChatFiles(currentChatId);
+    }, 30000);
     setInterval(fetchChats, 10000);
 });

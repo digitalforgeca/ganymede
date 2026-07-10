@@ -72,15 +72,7 @@
                     <div class="columns">
                         <!-- Left Column: Config & Files -->
                         <div class="column is-one-third">
-
-                            <div class="box facet mt-5">
-                                <h2 class="title is-4 cinzel facet-title">Workspace Artifacts</h2>
-                                <div class="content">
-                                    <ul class="file-list" id="file-list" style="list-style: none; margin: 0;">
-                                        <li class="empty-state">Loading artifacts...</li>
-                                    </ul>
-                                </div>
-                            </div>
+                            <!-- Removed: Moved to Chats view -->
                         </div>
 
                         <!-- Right Column: Telemetry -->
@@ -99,7 +91,7 @@
                 </main>
 
                 <!-- Chats View -->
-                <main class="section view-section is-hidden" id="view-chats">
+                <main class="section view-section is-hidden pt-5" id="view-chats">
                     <div class="box facet">
                         <h2 class="title is-3 cinzel facet-title">The Agora</h2>
                         <div class="field">
@@ -108,13 +100,23 @@
                             </div>
                         </div>
                         <div class="columns mt-4">
-                            <!-- Left: Chat List -->
+                            <!-- Left: Chat List & Artifacts -->
                             <div class="column is-4">
-                                <div class="menu">
+                                <div class="menu mb-5">
                                     <p class="menu-label">Active Contexts</p>
                                     <ul class="menu-list" id="chat-list">
                                         <li><a class="is-active">Loading networks...</a></li>
                                     </ul>
+                                </div>
+                                
+                                <div class="box facet mt-5 has-background-white-bis">
+                                    <h2 class="title is-5 cinzel facet-title" style="border-bottom: 1px solid #ddd; padding-bottom: 10px;">Workspace Artifacts</h2>
+                                    <div class="content">
+                                        <p class="is-size-7 has-text-grey" id="artifacts-subtitle">Select a chat to view files.</p>
+                                        <ul class="file-list" id="file-list" style="list-style: none; margin: 0; font-size: 0.9rem;">
+                                            <!-- Files will go here -->
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                             <!-- Right: Chat Interface -->

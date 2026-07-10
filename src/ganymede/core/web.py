@@ -20,6 +20,7 @@ class DashboardServer:
         self.app.router.add_get('/api/files', self.handle_files)
         self.app.router.add_get('/api/chats', self.handle_chats)
         self.app.router.add_get('/api/chats/{id}/history', self.handle_chat_history)
+        self.app.router.add_get('/api/chats/{id}/files', self.handle_chat_files)
         self.app.router.add_post('/api/chats/{id}/merge', self.handle_chat_merge)
         self.app.router.add_post('/api/telemetry', self.handle_telemetry_post)
         self.app.router.add_post('/api/chat/invoke', self.handle_chat_invoke)
@@ -230,6 +231,52 @@ class DashboardServer:
                         })
                         
         return web.json_response({"messages": history})
+
+    async def handle_chat_files(self, request):
+        context_id = request.match_info.get('id', '')
+        parts = context_id.split('_')
+        if len(parts) < 3:
+            return web.json_response({"error": "Invalid context ID format"}, status=400)
+            
+        platform = parts[0]
+        channel_id = parts[1]
+        thread_id = parts[2] if parts[2] != 'main' else None
+        
+        db_path = os.path.join(self.config.data_dir, "ganymede.db")
+        conversation_id = f"ganymede_{platform}_{channel_id}"
+        if thread_id:
+            conversation_id += f"_{thread_id}"
+            
+        # Check mapping table to resolve merged context
+        if os.path.exists(db_path):
+            import aiosqlite
+            async with aiosqlite.connect(db_path) as conn:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute(
+                    "SELECT conversation_id FROM conversation_mappings WHERE platform = ? AND channel_id = ? AND (thread_id = ? OR (thread_id IS NULL AND ? IS NULL))",
+                    (platform, channel_id, thread_id, thread_id)
+                ) as cursor:
+                    row = await cursor.fetchone()
+                    if row and row["conversation_id"]:
+                        conversation_id = row["conversation_id"]
+                        
+        # The default AGY workspace path for artifacts
+        # We can also check if there's a local .gemini folder or use the default global
+        # Let's check ~/.gemini/antigravity-cli/brain/{conversation_id}
+        agy_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
+        files_data = []
+        
+        if os.path.exists(agy_brain_dir):
+            for root, dirs, files in os.walk(agy_brain_dir):
+                # Optionally exclude logs
+                if ".system_generated" in root: continue
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(full_path, agy_brain_dir)
+                    size = os.path.getsize(full_path)
+                    files_data.append({"name": file, "path": rel_path, "size": size})
+                    
+        return web.json_response({"files": files_data, "workspace": agy_brain_dir})
 
     async def handle_chat_merge(self, request):
         context_id = request.match_info.get('id', '')
