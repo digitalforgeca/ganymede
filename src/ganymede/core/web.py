@@ -6,8 +6,12 @@ from ganymede.config import AppConfig
 
 logger = structlog.get_logger()
 
+dashboard_instance = None
+
 class DashboardServer:
     def __init__(self, config: AppConfig):
+        global dashboard_instance
+        dashboard_instance = self
         self.config = config
         self.app = web.Application()
         
@@ -73,6 +77,15 @@ class DashboardServer:
             logger.info("Chalice plugin disconnected")
             
         return ws
+
+    async def broadcast_telemetry(self, data: dict):
+        # Broadcast to all connected dashboard clients
+        for client in list(self.dashboard_clients):
+            if not client.closed:
+                try:
+                    await client.send_json(data)
+                except Exception as e:
+                    logger.warning("Failed to send telemetry to dashboard client", error=str(e))
 
     async def handle_dashboard_ws(self, request):
         ws = web.WebSocketResponse()

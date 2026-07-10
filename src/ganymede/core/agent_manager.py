@@ -1,6 +1,7 @@
 import asyncio
 import time
 import os
+import json
 import structlog
 from typing import Any
 from google.antigravity.types import Text
@@ -28,11 +29,20 @@ class CliResponse:
 
     async def _read_chunks(self):
         # Read from stdout in chunks to provide real-time streaming feedback
-        while True:
-            data = await self.process.stdout.read(128)
-            if not data:
-                break
-            text = data.decode(errors="replace")
+        from ganymede.core.web import dashboard_instance
+        async for line in self.process.stdout:
+            try:
+                decoded = line.decode('utf-8').strip()
+                if decoded and dashboard_instance:
+                    try:
+                        data = json.loads(decoded)
+                        asyncio.create_task(dashboard_instance.broadcast_telemetry(data))
+                    except json.JSONDecodeError:
+                        asyncio.create_task(dashboard_instance.broadcast_telemetry({"event": "Agent Log", "payload": decoded}))
+            except Exception:
+                pass
+            
+            text = line.decode(errors="replace")
             self.response_text += text
             yield Text(text=text, step_index=0)
 
