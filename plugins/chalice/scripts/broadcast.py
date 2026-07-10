@@ -9,11 +9,16 @@ def main():
         try:
             # Antigravity CLI passes context JSON into the hook's stdin
             hook_context = json.load(sys.stdin)
+            hook_type = os.environ.get("AGY_HOOK_EVENT", "Agent Lifecycle Hook")
+            
+            # Extract basic context ID if present
+            conversation_id = hook_context.get("conversation_id", "unknown")
             
             # Formulate the telemetry payload
             payload = {
-                "event": "Tool Execution Hook",
+                "event": hook_type,
                 "level": "info",
+                "context": conversation_id,
                 "payload": hook_context
             }
             

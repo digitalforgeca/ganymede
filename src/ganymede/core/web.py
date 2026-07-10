@@ -21,6 +21,8 @@ class DashboardServer:
         self.app.router.add_get('/api/chats', self.handle_chats)
         self.app.router.add_get('/api/chats/{id}/history', self.handle_chat_history)
         self.app.router.add_post('/api/chats/{id}/merge', self.handle_chat_merge)
+        self.app.router.add_post('/api/telemetry', self.handle_telemetry_post)
+        self.app.router.add_post('/api/chat/invoke', self.handle_chat_invoke)
         self.app.router.add_get('/ws/telemetry', self.handle_telemetry_ws)
         self.app.router.add_get('/ws/dashboard', self.handle_dashboard_ws)
         
@@ -37,12 +39,18 @@ class DashboardServer:
             
         self.runner = None
         self.site = None
+        self.web_invoke_callback = None
 
     async def handle_index(self, request):
         index_path = os.path.join(self.web_dir, 'index.html')
         if os.path.exists(index_path):
             return web.FileResponse(index_path)
         return web.Response(text="Dashboard initializing...", status=404)
+
+    async def handle_chat_invoke(self, request):
+        if self.web_invoke_callback:
+            return await self.web_invoke_callback(request)
+        return web.json_response({"error": "WebProvider not initialized"}, status=503)
 
     async def handle_status(self, request):
         return web.json_response({
@@ -80,6 +88,21 @@ class DashboardServer:
             logger.info("Chalice plugin disconnected")
             
         return ws
+
+    async def handle_telemetry_post(self, request):
+        try:
+            data = await request.json()
+            logger.debug("Chalice Telemetry via POST", payload=data)
+            
+            # Broadcast to all connected dashboard clients
+            for client in self.dashboard_clients:
+                if not client.closed:
+                    await client.send_json(data)
+                    
+            return web.json_response({"status": "received", "event": data.get("event", "unknown")})
+        except json.JSONDecodeError:
+            logger.warning("Received invalid JSON from Chalice POST")
+            return web.json_response({"error": "Invalid JSON"}, status=400)
 
     async def broadcast_telemetry(self, data: dict):
         # Broadcast to all connected dashboard clients

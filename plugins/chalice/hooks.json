@@ -1,6 +1,12 @@
 {
   "chalice-telemetry": {
     "enabled": true,
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python3 ~/.gemini/config/plugins/chalice/scripts/broadcast.py"
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": ".*",
@@ -10,6 +16,23 @@
             "command": "python3 ~/.gemini/config/plugins/chalice/scripts/broadcast.py"
           }
         ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.gemini/config/plugins/chalice/scripts/broadcast.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python3 ~/.gemini/config/plugins/chalice/scripts/broadcast.py"
       }
     ]
   }

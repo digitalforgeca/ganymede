@@ -19,9 +19,8 @@ class WebAdapter(PlatformAdapter):
         
         # Attach routes to the globally running dashboard instance
         if gweb.dashboard_instance:
-            app = gweb.dashboard_instance.app
-            app.router.add_post('/api/chat/invoke', self.handle_invoke)
-            logger.info("Registered /api/chat/invoke endpoint")
+            gweb.dashboard_instance.web_invoke_callback = self.handle_invoke
+            logger.info("Registered web invoke callback with dashboard instance")
             
     async def stop(self) -> None:
         pass
@@ -89,8 +88,8 @@ class WebProvider(BasePlatformProvider):
         
     async def start(self) -> None:
         logger.info("Starting WebProvider", platform="web")
-        self.adapter.register_on_message(self.router.dispatch_message)
-        self.router.register_adapter(self.adapter)
+        self.adapter.register_on_message(self.router.handle_message)
+        self.router.set_adapter(self.adapter)
         await self.adapter.start()
         
     async def stop(self) -> None:
