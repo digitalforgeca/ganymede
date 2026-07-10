@@ -1,0 +1,5 @@
+{
+  "name": "chalice",
+  "description": "Telemetry and metrics broadcaster for the Ganymede gateway",
+  "version": "1.0.0"
+}
