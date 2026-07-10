@@ -13,7 +13,12 @@ class DashboardServer:
         
         # API Routes
         self.app.router.add_get('/api/status', self.handle_status)
+        self.app.router.add_get('/api/files', self.handle_files)
         self.app.router.add_get('/ws/telemetry', self.handle_telemetry_ws)
+        self.app.router.add_get('/ws/dashboard', self.handle_dashboard_ws)
+        
+        # Track connected frontend clients
+        self.dashboard_clients = set()
         
         # Static Dashboard Routes
         self.web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web')
@@ -51,9 +56,13 @@ class DashboardServer:
                 if msg.type == web.WSMsgType.TEXT:
                     try:
                         data = json.loads(msg.data)
-                        # Here we can broadcast data to dashboard clients or process it
                         logger.debug("Chalice Telemetry", payload=data)
                         
+                        # Broadcast to all connected dashboard clients
+                        for client in self.dashboard_clients:
+                            if not client.closed:
+                                await client.send_json(data)
+                                
                         # Echo acknowledgement for 2-way sync
                         await ws.send_json({"status": "received", "event": data.get("event", "unknown")})
                     except json.JSONDecodeError:
@@ -64,6 +73,33 @@ class DashboardServer:
             logger.info("Chalice plugin disconnected")
             
         return ws
+
+    async def handle_dashboard_ws(self, request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        self.dashboard_clients.add(ws)
+        
+        try:
+            async for msg in ws:
+                pass # Dashboard only listens
+        finally:
+            self.dashboard_clients.remove(ws)
+            
+        return ws
+
+    async def handle_files(self, request):
+        workspace = self.config.workspace if hasattr(self.config, 'workspace') else os.path.expanduser("~/.ganymede/workspace")
+        files_data = []
+        
+        if os.path.exists(workspace):
+            for root, dirs, files in os.walk(workspace):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(full_path, workspace)
+                    size = os.path.getsize(full_path)
+                    files_data.append({"name": file, "path": rel_path, "size": size})
+                    
+        return web.json_response({"files": files_data, "workspace": workspace})
 
     async def start(self):
         logger.info("Starting Ganymede dashboard on http://0.0.0.0:8080")

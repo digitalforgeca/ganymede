@@ -3,55 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ganymede Gateway Dashboard</title>
-    <meta name="description" content="Dashboard for Ganymede, the Antigravity communication gateway.">
+    <title>Ganymede Gateway</title>
+    <!-- Use classic, airy serif typography for headers and clean sans-serif for legibility -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="background-gradient"></div>
-    <div class="background-shapes">
-        <div class="shape shape-1"></div>
-        <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
-    </div>
+    <header class="olympus-header">
+        <div class="header-content">
+            <h1>Ganymede</h1>
+            <p class="subtitle">Communications Gateway & Telemetry</p>
+        </div>
+        <div class="status-indicator" id="connection-status">
+            <span class="pulse offline"></span>
+            <span id="status-text">Disconnected</span>
+        </div>
+    </header>
 
-    <main class="dashboard-container">
-        <header class="glass-panel header">
-            <h1>Ganymede <span class="badge">Gateway</span></h1>
-            <div class="status-indicator">
-                <div class="pulse-ring"></div>
-                <div class="pulse-dot"></div>
-                <span id="status-text">Connecting...</span>
-            </div>
-        </header>
-
-        <section class="metrics-grid">
-            <div class="glass-panel metric-card">
-                <h3>Platform</h3>
-                <div class="metric-value" id="platform-val">--</div>
-            </div>
-            <div class="glass-panel metric-card">
-                <h3>Log Level</h3>
-                <div class="metric-value" id="log-level-val">--</div>
-            </div>
-            <div class="glass-panel metric-card">
-                <h3>Uptime</h3>
-                <div class="metric-value" id="uptime-val">--</div>
-            </div>
-        </section>
-
-        <section class="glass-panel details-panel">
-            <h2>System Details</h2>
-            <div class="details-content">
-                <div class="detail-row">
-                    <span class="detail-label">Data Directory:</span>
-                    <span class="detail-value" id="data-dir-val">--</span>
+    <main class="dashboard-grid">
+        <!-- Configuration & Metrics Facet -->
+        <section class="facet config-facet">
+            <h2>Gateway Status</h2>
+            <div class="facet-body">
+                <div class="metric">
+                    <span class="label">Platform Provider</span>
+                    <span class="value" id="val-platform">--</span>
+                </div>
+                <div class="metric">
+                    <span class="label">Log Level</span>
+                    <span class="value" id="val-loglevel">--</span>
+                </div>
+                <div class="metric">
+                    <span class="label">Data Directory</span>
+                    <span class="value" id="val-datadir">--</span>
+                </div>
+                <div class="metric">
+                    <span class="label">Active Workspace</span>
+                    <span class="value" id="val-workspace">--</span>
                 </div>
             </div>
-            <button class="primary-btn" id="refresh-btn">Refresh Status</button>
+        </section>
+
+        <!-- Brain Files Facet -->
+        <section class="facet files-facet">
+            <h2>Brain & Workspace Artifacts</h2>
+            <div class="facet-body">
+                <ul class="file-list" id="file-list">
+                    <li class="empty-state">Loading artifacts...</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Telemetry & Logs Facet -->
+        <section class="facet logs-facet">
+            <h2>Chalice Telemetry</h2>
+            <div class="facet-body log-container" id="log-container">
+                <div class="log-entry system">Waiting for agent telemetry stream...</div>
+            </div>
         </section>
     </main>
+
     <script src="app.js"></script>
 </body>
 </html>
