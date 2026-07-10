@@ -29,4 +29,3 @@ packages = ["src/ganymede"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "config/default.yaml" = "ganymede/config/default.yaml"
-"plugins/chalice" = "ganymede/plugins/chalice"

@@ -145,20 +145,6 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
     config.agent.workspace = os.path.expanduser(config.agent.workspace)
     os.makedirs(config.data_dir, exist_ok=True)
 
-    # Install or update Chalice plugin for the local Antigravity instance
-    import shutil
-    try:
-        plugin_src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugins", "chalice")
-        agy_plugin_dir = os.path.expanduser("~/.gemini/config/plugins/chalice")
-        if os.path.exists(plugin_src_dir):
-            if os.path.exists(agy_plugin_dir):
-                shutil.rmtree(agy_plugin_dir)
-            os.makedirs(os.path.dirname(agy_plugin_dir), exist_ok=True)
-            shutil.copytree(plugin_src_dir, agy_plugin_dir)
-    except Exception as e:
-        import structlog
-        structlog.get_logger().error("Failed to auto-install Chalice plugin", error=str(e))
-
     return config
 
 def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
