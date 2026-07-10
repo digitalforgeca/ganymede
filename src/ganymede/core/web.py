@@ -18,6 +18,9 @@ class DashboardServer:
         # API Routes
         self.app.router.add_get('/api/status', self.handle_status)
         self.app.router.add_get('/api/files', self.handle_files)
+        self.app.router.add_get('/api/chats', self.handle_chats)
+        self.app.router.add_get('/api/chats/{id}/history', self.handle_chat_history)
+        self.app.router.add_post('/api/chats/{id}/merge', self.handle_chat_merge)
         self.app.router.add_get('/ws/telemetry', self.handle_telemetry_ws)
         self.app.router.add_get('/ws/dashboard', self.handle_dashboard_ws)
         
@@ -99,6 +102,110 @@ class DashboardServer:
             self.dashboard_clients.remove(ws)
             
         return ws
+
+    async def handle_chats(self, request):
+        # Return all unique contexts from the conversations table by doing a group by
+        db = self.config.db if hasattr(self.config, 'db') else None
+        
+        # We need a reference to DB. Let's see if we can get it from the globally injected db or router
+        from ganymede.core.agent_manager import AgentManager
+        
+        # We will just fetch directly from DB if available, else return empty
+        # Wait, the DashboardServer doesn't have db injected in __init__ currently.
+        # Let's import it or just query the sqlite directly since we have data_dir
+        import aiosqlite
+        db_path = os.path.join(self.config.data_dir, "ganymede.db")
+        
+        chats = []
+        if os.path.exists(db_path):
+            async with aiosqlite.connect(db_path) as conn:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute("""
+                    SELECT context_platform, context_channel, context_thread, MAX(created_at) as last_active, COUNT(id) as msg_count
+                    FROM conversations 
+                    GROUP BY context_platform, context_channel, context_thread
+                    ORDER BY last_active DESC
+                """) as cursor:
+                    rows = await cursor.fetchall()
+                    for r in rows:
+                        chats.append({
+                            "platform": r["context_platform"],
+                            "channel_id": r["context_channel"],
+                            "thread_id": r["context_thread"],
+                            "last_active": r["last_active"],
+                            "msg_count": r["msg_count"],
+                            "id": f"{r['context_platform']}_{r['context_channel']}_{r['context_thread'] or 'main'}"
+                        })
+        return web.json_response({"chats": chats})
+
+    async def handle_chat_history(self, request):
+        context_id = request.match_info.get('id', '')
+        parts = context_id.split('_')
+        if len(parts) < 3:
+            return web.json_response({"error": "Invalid context ID format"}, status=400)
+            
+        platform = parts[0]
+        channel_id = parts[1]
+        thread_id = parts[2] if parts[2] != 'main' else None
+        
+        db_path = os.path.join(self.config.data_dir, "ganymede.db")
+        history = []
+        if os.path.exists(db_path):
+            import aiosqlite
+            async with aiosqlite.connect(db_path) as conn:
+                conn.row_factory = aiosqlite.Row
+                
+                query = """
+                    SELECT author_id, role, content, tokens, created_at
+                    FROM conversations
+                    WHERE context_platform = ? AND context_channel = ? AND (context_thread = ? OR (context_thread IS NULL AND ? IS NULL))
+                    ORDER BY created_at ASC
+                """
+                async with conn.execute(query, (platform, channel_id, thread_id, thread_id)) as cursor:
+                    rows = await cursor.fetchall()
+                    for r in rows:
+                        history.append({
+                            "author_id": r["author_id"],
+                            "role": r["role"],
+                            "content": r["content"],
+                            "created_at": r["created_at"]
+                        })
+                        
+        return web.json_response({"messages": history})
+
+    async def handle_chat_merge(self, request):
+        context_id = request.match_info.get('id', '')
+        data = await request.json()
+        target_conversation_id = data.get('target_conversation_id')
+        
+        if not target_conversation_id:
+            return web.json_response({"error": "Missing target_conversation_id"}, status=400)
+            
+        parts = context_id.split('_')
+        if len(parts) < 3:
+            return web.json_response({"error": "Invalid context ID format"}, status=400)
+            
+        platform = parts[0]
+        channel_id = parts[1]
+        thread_id = parts[2] if parts[2] != 'main' else None
+        
+        db_path = os.path.join(self.config.data_dir, "ganymede.db")
+        if os.path.exists(db_path):
+            import aiosqlite
+            async with aiosqlite.connect(db_path) as conn:
+                # Merge logic: We explicitly map this (platform, channel, thread) to the target_conversation_id
+                await conn.execute(
+                    """
+                    INSERT INTO conversation_mappings (platform, channel_id, thread_id, conversation_id)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(platform, channel_id, thread_id) DO UPDATE SET
+                        conversation_id = excluded.conversation_id
+                    """,
+                    (platform, channel_id, thread_id, target_conversation_id)
+                )
+                await conn.commit()
+        
+        return web.json_response({"status": "merged", "target_conversation_id": target_conversation_id})
 
     async def handle_files(self, request):
         workspace = self.config.workspace if hasattr(self.config, 'workspace') else os.path.expanduser("~/.ganymede/workspace")

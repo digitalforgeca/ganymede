@@ -127,9 +127,12 @@
                             <!-- Right: Chat Interface -->
                             <div class="column is-8">
                                 <div class="box h-100 is-flex is-flex-direction-column" style="min-height: 500px; background-color: #fafafa;">
-                                    <div class="chat-header pb-3 mb-3 border-bottom">
-                                        <h3 class="title is-5 mb-0" id="chat-title">Select a chat</h3>
-                                        <p class="subtitle is-6" id="chat-subtitle">--</p>
+                                    <div class="chat-header pb-3 mb-3 border-bottom is-flex is-justify-content-space-between is-align-items-center">
+                                        <div>
+                                            <h3 class="title is-5 mb-0" id="chat-title">Select a chat</h3>
+                                            <p class="subtitle is-6" id="chat-subtitle">--</p>
+                                        </div>
+                                        <button class="button is-small is-warning is-outlined is-hidden" id="btn-merge-context">Merge Context</button>
                                     </div>
                                     <div class="chat-history flex-grow-1" id="chat-history" style="overflow-y: auto;">
                                         <!-- Messages will go here -->
@@ -150,6 +153,31 @@
                         </div>
                     </div>
                 </main>
+
+                <!-- Merge Context Modal -->
+                <div class="modal" id="modal-merge">
+                    <div class="modal-background"></div>
+                    <div class="modal-content">
+                        <div class="box">
+                            <h3 class="title is-4 cinzel">Merge Contexts</h3>
+                            <p class="mb-4">Enter a target Antigravity <code>conversation_id</code> to merge this network channel into.</p>
+                            <div class="field">
+                                <label class="label">Target Conversation ID</label>
+                                <div class="control">
+                                    <input class="input" type="text" id="input-merge-target" placeholder="e.g. 5a1b2c3d-...">
+                                </div>
+                            </div>
+                            <div class="field is-grouped is-grouped-right mt-5">
+                                <p class="control">
+                                    <button class="button is-light" id="btn-merge-cancel">Cancel</button>
+                                </p>
+                                <p class="control">
+                                    <button class="button is-warning" id="btn-merge-confirm">Force Merge</button>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Settings View -->
                 <main class="section view-section is-hidden" id="view-settings">

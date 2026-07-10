@@ -93,14 +93,17 @@ class Database:
             )
         """)
 
-        # Conversation Mappings Table
+        # Conversation Mappings Table (Many-to-One network contexts to one Antigravity conversation)
+        await self._conn.execute("DROP TABLE IF EXISTS conversation_mappings")
         await self._conn.execute("""
-            CREATE TABLE IF NOT EXISTS conversation_mappings (
-                conversation_id TEXT PRIMARY KEY,
+            CREATE TABLE conversation_mappings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 platform TEXT NOT NULL,
                 channel_id TEXT NOT NULL,
                 thread_id TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                conversation_id TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(platform, channel_id, thread_id)
             )
         """)
 
@@ -259,27 +262,23 @@ class Database:
             """
             INSERT INTO conversation_mappings (conversation_id, platform, channel_id, thread_id)
             VALUES (?, ?, ?, ?)
-            ON CONFLICT(conversation_id) DO UPDATE SET
-                platform = excluded.platform,
-                channel_id = excluded.channel_id,
-                thread_id = excluded.thread_id
+            ON CONFLICT(platform, channel_id, thread_id) DO UPDATE SET
+                conversation_id = excluded.conversation_id
             """,
             (conversation_id, context.platform, context.channel_id, context.thread_id)
         )
         await self._conn.commit()
         logger.debug("Conversation mapping saved", conversation_id=conversation_id, context=context)
 
-    async def get_conversation_context(self, conversation_id: str) -> ContextKey | None:
+    async def get_conversation_contexts(self, conversation_id: str) -> List[ContextKey]:
         if not self._conn:
             raise RuntimeError("Database not initialized. Call init() first.")
         async with self._conn.execute(
             "SELECT platform, channel_id, thread_id FROM conversation_mappings WHERE conversation_id = ?",
             (conversation_id,)
         ) as cursor:
-            row = await cursor.fetchone()
-            if row:
-                return ContextKey(platform=row["platform"], channel_id=row["channel_id"], thread_id=row["thread_id"])
-            return None
+            rows = await cursor.fetchall()
+            return [ContextKey(platform=row["platform"], channel_id=row["channel_id"], thread_id=row["thread_id"]) for row in rows]
 
     async def get_conversation_id_by_context(self, context: ContextKey) -> str | None:
         if not self._conn:

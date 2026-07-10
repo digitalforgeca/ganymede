@@ -281,10 +281,14 @@ class DiscordIPCServer:
             return str(channel_id)
         
         conversation_id = data.get("conversation_id")
-        if conversation_id and self.db:
-            context = await self.db.get_conversation_context(conversation_id)
-            if context:
-                return context.channel_id
+        # Map conversation ID back to network context
+        contexts = await self.db.get_conversation_contexts(conversation_id)
+        if not contexts:
+            logger.warning("Received event for unknown conversation", conversation_id=conversation_id)
+            return None
+            
+        for context in contexts:
+            return context.channel_id
         return None
 
     async def _resolve_messageable(self, cid: str) -> discord.abc.Messageable | None:
@@ -309,7 +313,9 @@ class DiscordIPCServer:
                 
             context = None
             if self.db:
-                context = await self.db.get_conversation_context(conversation_id)
+                contexts = await self.db.get_conversation_contexts(conversation_id)
+                if contexts:
+                    context = contexts[0]
                 
             if not context:
                 # Fallback pattern matching for channel ID in friendly name

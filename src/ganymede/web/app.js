@@ -164,6 +164,81 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 5. Native Web Chat Invocation
+    let currentChatId = null;
+    
+    async function fetchChats() {
+        try {
+            const res = await fetch('/api/chats');
+            if (!res.ok) throw new Error("Failed to load chats");
+            const data = await res.json();
+            
+            const chatList = document.getElementById('chat-list');
+            chatList.innerHTML = '';
+            
+            if (data.chats && data.chats.length > 0) {
+                data.chats.forEach(chat => {
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    const threadInfo = chat.thread_id ? ` / ${chat.thread_id}` : '';
+                    a.textContent = `${chat.platform} - ${chat.channel_id}${threadInfo}`;
+                    
+                    if (currentChatId === chat.id) {
+                        a.classList.add('is-active');
+                    }
+                    
+                    a.addEventListener('click', () => {
+                        document.querySelectorAll('#chat-list a').forEach(el => el.classList.remove('is-active'));
+                        a.classList.add('is-active');
+                        currentChatId = chat.id;
+                        document.getElementById('chat-title').textContent = `${chat.platform} - ${chat.channel_id}`;
+                        document.getElementById('chat-subtitle').textContent = `Thread: ${chat.thread_id || 'main'}`;
+                        document.getElementById('btn-merge-context').classList.remove('is-hidden');
+                        loadChatHistory(chat.id);
+                    });
+                    
+                    li.appendChild(a);
+                    chatList.appendChild(li);
+                });
+            } else {
+                chatList.innerHTML = '<li><a>No active chats found.</a></li>';
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('chat-list').innerHTML = '<li><a>Error loading chats</a></li>';
+        }
+    }
+    
+    async function loadChatHistory(chatId) {
+        const chatHistory = document.getElementById('chat-history');
+        chatHistory.innerHTML = '<div class="has-text-centered has-text-grey mt-5">Loading history...</div>';
+        
+        try {
+            const res = await fetch(`/api/chats/${chatId}/history`);
+            if (!res.ok) throw new Error("Failed to load chat history");
+            const data = await res.json();
+            
+            chatHistory.innerHTML = '';
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = `box mb-3 ${msg.role === 'assistant' ? 'has-background-light' : 'has-background-white'}`;
+                    
+                    // Convert markdown to minimal HTML for safety, but for now just plain text
+                    const safeContent = msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                    
+                    msgDiv.innerHTML = `<strong>${msg.role === 'assistant' ? 'Agent' : 'User'}:</strong><br>${safeContent}`;
+                    chatHistory.appendChild(msgDiv);
+                });
+            } else {
+                chatHistory.innerHTML = '<div class="has-text-centered has-text-grey mt-5">No history yet. Say hello!</div>';
+            }
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        } catch (e) {
+            console.error(e);
+            chatHistory.innerHTML = `<div class="has-text-centered has-text-danger mt-5">Error: ${e.message}</div>`;
+        }
+    }
+
     function setupWebChat() {
         const sendBtn = document.getElementById('chat-send-btn');
         const inputField = document.getElementById('chat-input-field');
@@ -173,13 +248,21 @@ document.addEventListener("DOMContentLoaded", () => {
             const text = inputField.value.trim();
             if (!text) return;
             
+            if (!currentChatId) {
+                alert("Please select or start a chat first.");
+                return;
+            }
+            
+            const parts = currentChatId.split('_');
+            const channel_id = parts[1] || 'web-portal';
+            
             // Clear input
             inputField.value = '';
             
             // Optimistically append user message to UI
             const msgDiv = document.createElement('div');
             msgDiv.className = 'box has-background-white mb-3';
-            msgDiv.innerHTML = `<strong>You:</strong><br>${text}`;
+            msgDiv.innerHTML = `<strong>You:</strong><br>${text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}`;
             if (chatHistory.querySelector('.has-text-grey')) {
                 chatHistory.innerHTML = ''; // clear empty state
             }
@@ -192,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         prompt: text,
-                        channel_id: 'web-portal-primary'
+                        channel_id: channel_id
                     })
                 });
                 
@@ -211,13 +294,63 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function setupContextMerge() {
+        const mergeBtn = document.getElementById('btn-merge-context');
+        const modal = document.getElementById('modal-merge');
+        const modalBg = modal.querySelector('.modal-background');
+        const cancelBtn = document.getElementById('btn-merge-cancel');
+        const confirmBtn = document.getElementById('btn-merge-confirm');
+        const targetInput = document.getElementById('input-merge-target');
+
+        function openModal() {
+            if (!currentChatId) return;
+            targetInput.value = '';
+            modal.classList.add('is-active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('is-active');
+        }
+
+        async function confirmMerge() {
+            const targetId = targetInput.value.trim();
+            if (!targetId || !currentChatId) return;
+
+            try {
+                confirmBtn.classList.add('is-loading');
+                const res = await fetch(`/api/chats/${currentChatId}/merge`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_conversation_id: targetId })
+                });
+
+                if (!res.ok) throw new Error("Merge API failed");
+                appendLog(`Merged network context [${currentChatId}] into [${targetId}]`, 'action');
+                closeModal();
+            } catch (e) {
+                console.error(e);
+                alert("Failed to merge context: " + e.message);
+            } finally {
+                confirmBtn.classList.remove('is-loading');
+            }
+        }
+
+        mergeBtn.addEventListener('click', openModal);
+        modalBg.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        confirmBtn.addEventListener('click', confirmMerge);
+    }
+
     // Initialize
     fetchStatus();
     fetchFiles();
+    fetchChats();
     connectWebSocket();
     setupRouting();
     setupWebChat();
+    setupContextMerge();
     
-    // Poll for new files every 30s
+    // Poll for new files and chats periodically
     setInterval(fetchFiles, 30000);
+    setInterval(fetchChats, 10000);
 });
