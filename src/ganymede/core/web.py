@@ -43,6 +43,10 @@ class DashboardServer:
         self.runner = None
         self.site = None
         self.web_invoke_callback = None
+        self.platform_states = {}
+
+    def set_platform_status(self, platform: str, is_connected: bool) -> None:
+        self.platform_states[platform] = is_connected
 
     async def handle_index(self, request):
         index_path = os.path.join(self.web_dir, 'index.html')
@@ -56,16 +60,7 @@ class DashboardServer:
         return web.json_response({"error": "WebProvider not initialized"}, status=503)
 
     async def handle_status(self, request):
-        status_str = "offline"
-        if getattr(self, "providers", None):
-            for p in self.providers:
-                if hasattr(p.adapter, "is_ready"):
-                    if p.adapter.is_ready():
-                        status_str = "online"
-                        break
-                elif getattr(p.adapter, "is_connected", False):
-                    status_str = "online"
-                    break
+        status_str = "online" if any(self.platform_states.values()) else "offline"
                     
         return web.json_response({
             "status": status_str,

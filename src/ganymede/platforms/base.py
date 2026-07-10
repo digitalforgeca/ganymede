@@ -47,6 +47,10 @@ class PlatformAdapter(Protocol):
         """Register the router callback for processing inbound messages."""
         ...
 
+    def register_status_callback(self, callback: Callable[[str, bool], None]) -> None:
+        """Register a callback to emit connection state changes."""
+        ...
+
     def get_conversation_id(self, context: ContextKey) -> str:
         """Generate a unique, stable conversation identifier for the given context key."""
         ...

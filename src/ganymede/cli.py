@@ -134,12 +134,14 @@ async def run(config: AppConfig):
     # Start dashboard web server
     from ganymede.core.web import DashboardServer
     dashboard = DashboardServer(config)
-    dashboard.providers = providers
     await dashboard.start()
     
     # Start platform provider services concurrently
     tasks = []
     for provider in providers:
+        if hasattr(provider, "adapter") and provider.adapter:
+            if hasattr(provider.adapter, "register_status_callback"):
+                provider.adapter.register_status_callback(dashboard.set_platform_status)
         tasks.append(provider.start())
         
     try:

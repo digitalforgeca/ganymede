@@ -34,6 +34,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         self._active_streamers: dict[str, DiscordStreamer] = {}
         self.ipc_server = None
         self.schedule_callback = None
+        self._status_callback: Callable[[str, bool], None] | None = None
 
         from ganymede.platforms.discord.commands import setup_commands
         setup_commands(self)
@@ -94,6 +95,9 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
     def register_on_message(self, callback: Callable[[PlatformMessage], Awaitable[None]]) -> None:
         self._on_message_callback = callback
 
+    def register_status_callback(self, callback: Callable[[str, bool], None]) -> None:
+        self._status_callback = callback
+
     def get_bot_namespace(self) -> str:
         # Check if namespace is explicitly configured
         if getattr(self.discord_config, "namespace", None):
@@ -118,12 +122,19 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
 
     async def on_ready(self) -> None:
         logger.info("Bot is ready and connected", user=str(self.user), id=self.user.id)
+        if self._status_callback:
+            self._status_callback("discord", True)
+            
         # Register and sync slash commands with Discord API
         try:
             await self.tree.sync()
             logger.info("Slash command tree synced successfully.")
         except Exception as e:
             logger.error("Failed to sync slash command tree", error=str(e))
+
+    async def on_disconnect(self) -> None:
+        if self._status_callback:
+            self._status_callback("discord", False)
 
         # Open DM with default developer to initialize the "home DM channel"
         try:
