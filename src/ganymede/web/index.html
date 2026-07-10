@@ -4,66 +4,109 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ganymede Gateway</title>
-    <!-- Use classic, airy serif typography for headers and clean sans-serif for legibility -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Bulma Opinionated Layout Library -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="olympus-header">
-        <div class="header-content">
-            <h1>Ganymede</h1>
-            <p class="subtitle">Communications Gateway & Telemetry</p>
+    <div class="columns is-gapless is-fullheight">
+        <!-- Sidebar Navigation -->
+        <aside class="column is-2 olympus-sidebar">
+            <div class="account-badge section">
+                <div class="avatar">I</div>
+                <div class="account-info mt-2">
+                    <p class="title is-5 mb-0 cinzel">Icarus</p>
+                    <p class="subtitle is-6">Gateway Admin</p>
+                </div>
+            </div>
+            
+            <div class="section pt-0">
+                <aside class="menu">
+                    <p class="menu-label">Administration</p>
+                    <ul class="menu-list">
+                        <li><a class="is-active">Dashboard</a></li>
+                        <li><a>Chats</a></li>
+                        <li><a>Settings</a></li>
+                    </ul>
+                </aside>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="column is-10 main-content">
+            <!-- Header -->
+            <header class="section olympus-header">
+                <div class="level">
+                    <div class="level-left">
+                        <div>
+                            <h1 class="title is-1 cinzel">Ganymede</h1>
+                            <p class="subtitle is-6 is-uppercase">Communications Gateway & Telemetry</p>
+                        </div>
+                    </div>
+                    <div class="level-right">
+                        <div class="status-indicator level-item" id="connection-status">
+                            <span class="pulse offline mr-2"></span>
+                            <span id="status-text" class="has-text-weight-semibold">Disconnected</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Grid -->
+            <main class="section">
+                <div class="columns">
+                    <!-- Left Column: Config & Files -->
+                    <div class="column is-one-third">
+                        
+                        <div class="box facet">
+                            <h2 class="title is-4 cinzel facet-title">Gateway Status</h2>
+                            <div class="content">
+                                <div class="metric mb-3">
+                                    <p class="heading mb-1">Platform Provider</p>
+                                    <p class="title is-5" id="val-platform">--</p>
+                                </div>
+                                <div class="metric mb-3">
+                                    <p class="heading mb-1">Log Level</p>
+                                    <p class="title is-5" id="val-loglevel">--</p>
+                                </div>
+                                <div class="metric mb-3">
+                                    <p class="heading mb-1">Data Directory</p>
+                                    <p class="title is-5" id="val-datadir">--</p>
+                                </div>
+                                <div class="metric">
+                                    <p class="heading mb-1">Active Workspace</p>
+                                    <p class="title is-5" id="val-workspace" style="word-break: break-all;">--</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="box facet mt-5">
+                            <h2 class="title is-4 cinzel facet-title">Workspace Artifacts</h2>
+                            <div class="content">
+                                <ul class="file-list" id="file-list" style="list-style: none; margin: 0;">
+                                    <li class="empty-state">Loading artifacts...</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column: Telemetry -->
+                    <div class="column is-two-thirds">
+                        <div class="box facet h-100 is-flex is-flex-direction-column">
+                            <h2 class="title is-4 cinzel facet-title">Chalice Telemetry</h2>
+                            <div class="log-container flex-grow-1" id="log-container">
+                                <div class="log-entry system">Waiting for agent telemetry stream...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
-        <div class="status-indicator" id="connection-status">
-            <span class="pulse offline"></span>
-            <span id="status-text">Disconnected</span>
-        </div>
-    </header>
-
-    <main class="dashboard-grid">
-        <!-- Configuration & Metrics Facet -->
-        <section class="facet config-facet">
-            <h2>Gateway Status</h2>
-            <div class="facet-body">
-                <div class="metric">
-                    <span class="label">Platform Provider</span>
-                    <span class="value" id="val-platform">--</span>
-                </div>
-                <div class="metric">
-                    <span class="label">Log Level</span>
-                    <span class="value" id="val-loglevel">--</span>
-                </div>
-                <div class="metric">
-                    <span class="label">Data Directory</span>
-                    <span class="value" id="val-datadir">--</span>
-                </div>
-                <div class="metric">
-                    <span class="label">Active Workspace</span>
-                    <span class="value" id="val-workspace">--</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- Brain Files Facet -->
-        <section class="facet files-facet">
-            <h2>Brain & Workspace Artifacts</h2>
-            <div class="facet-body">
-                <ul class="file-list" id="file-list">
-                    <li class="empty-state">Loading artifacts...</li>
-                </ul>
-            </div>
-        </section>
-
-        <!-- Telemetry & Logs Facet -->
-        <section class="facet logs-facet">
-            <h2>Chalice Telemetry</h2>
-            <div class="facet-body log-container" id="log-container">
-                <div class="log-entry system">Waiting for agent telemetry stream...</div>
-            </div>
-        </section>
-    </main>
+    </div>
 
     <script src="app.js"></script>
 </body>
