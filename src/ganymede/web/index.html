@@ -34,9 +34,6 @@
                 <div class="navbar-item is-size-7">
                     <span class="has-text-grey mr-1">Data:</span> <span id="val-datadir" class="has-text-primary">--</span>
                 </div>
-                <div class="navbar-item is-size-7">
-                    <span class="has-text-grey mr-1">Workspace:</span> <span id="val-workspace" class="has-text-success" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</span>
-                </div>
             </div>
         </div>
     </nav>
@@ -65,7 +62,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div class="column is-10 main-content" style="overflow-y: auto;">
+        <div class="column is-10 main-content" style="overflow-y: auto; height: calc(100vh - 2.5rem);">
             <div class="view-container">
                 <!-- Dashboard View -->
                 <main class="section view-section pt-5" id="view-dashboard">
@@ -128,15 +125,18 @@
                             </div>
                             <!-- Right: Chat Interface -->
                             <div class="column is-8">
-                                <div class="box h-100 is-flex is-flex-direction-column" style="min-height: 500px; background-color: #fafafa;">
+                                <div class="box is-flex is-flex-direction-column" style="height: calc(100vh - 250px); background-color: #fafafa; overflow: hidden;">
                                     <div class="chat-header pb-3 mb-3 border-bottom is-flex is-justify-content-space-between is-align-items-center">
                                         <div>
                                             <h3 class="title is-5 mb-0" id="chat-title">Select a chat</h3>
                                             <p class="subtitle is-6" id="chat-subtitle">--</p>
                                         </div>
-                                        <button class="button is-small is-warning is-outlined is-hidden" id="btn-merge-context">Merge Context</button>
+                                        <div>
+                                            <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-export-chat">Export Markdown</button>
+                                            <button class="button is-small is-warning is-outlined is-hidden" id="btn-merge-context">Merge Context</button>
+                                        </div>
                                     </div>
-                                    <div class="chat-history flex-grow-1" id="chat-history" style="overflow-y: auto;">
+                                    <div class="chat-history flex-grow-1 content" id="chat-history" style="overflow-y: auto;">
                                         <!-- Messages will go here -->
                                         <div class="has-text-centered has-text-grey mt-5">No chat selected.</div>
                                     </div>
@@ -207,6 +207,8 @@
         </div>
     </div>
 
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -6,12 +6,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const valPlatform = document.getElementById("val-platform");
     const valLoglevel = document.getElementById("val-loglevel");
     const valDatadir = document.getElementById("val-datadir");
-    const valWorkspace = document.getElementById("val-workspace");
     
     const fileList = document.getElementById("file-list");
     const logContainer = document.getElementById("log-container");
 
     let ws = null;
+    let currentChatHistoryData = []; // Store the messages to export later
 
     // Format bytes to human readable
     function formatBytes(bytes) {
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
             valLoglevel.textContent = data.log_level || "Unknown";
             valDatadir.textContent = data.data_dir || "Unknown";
             
-            setOnline(true);
+            setOnline(data.status === "online");
         } catch (e) {
             console.error("Failed to fetch status", e);
             setOnline(false);
@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         ws.onopen = () => {
             appendLog('Connected to Ganymede Telemetry Stream.', 'system');
-            setOnline(true);
+            // Do not force setOnline(true) here; let /api/status dictate it
         };
         
         ws.onmessage = (event) => {
@@ -99,7 +99,6 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         
         ws.onclose = () => {
-            setOnline(false);
             appendLog('Connection to telemetry stream lost. Reconnecting in 5s...', 'error');
             setTimeout(connectWebSocket, 5000);
         };
@@ -195,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         document.getElementById('chat-title').textContent = `${chat.platform} - ${chat.channel_id}`;
                         document.getElementById('chat-subtitle').textContent = `Thread: ${chat.thread_id || 'main'}`;
                         document.getElementById('btn-merge-context').classList.remove('is-hidden');
+                        document.getElementById('btn-export-chat').classList.remove('is-hidden');
                         loadChatHistory(chat.id);
                         fetchChatFiles(chat.id);
                     });
@@ -220,14 +220,21 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!res.ok) throw new Error("Failed to load chat history");
             const data = await res.json();
             
+            currentChatHistoryData = data.messages || [];
+            
             chatHistory.innerHTML = '';
-            if (data.messages && data.messages.length > 0) {
-                data.messages.forEach(msg => {
+            if (currentChatHistoryData.length > 0) {
+                currentChatHistoryData.forEach(msg => {
                     const msgDiv = document.createElement('div');
                     msgDiv.className = `box mb-3 ${msg.role === 'assistant' ? 'has-background-light' : 'has-background-white'}`;
                     
-                    // Convert markdown to minimal HTML for safety, but for now just plain text
-                    const safeContent = msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                    // Convert markdown to HTML using marked.js
+                    let safeContent = "";
+                    if (window.marked) {
+                        safeContent = marked.parse(msg.content);
+                    } else {
+                        safeContent = msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                    }
                     
                     msgDiv.innerHTML = `<strong>${msg.role === 'assistant' ? 'Agent' : 'User'}:</strong><br>${safeContent}`;
                     chatHistory.appendChild(msgDiv);
@@ -239,6 +246,32 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) {
             console.error(e);
             chatHistory.innerHTML = `<div class="has-text-centered has-text-danger mt-5">Error: ${e.message}</div>`;
+        }
+    }
+
+    function setupChatExport() {
+        const btnExportChat = document.getElementById('btn-export-chat');
+        if (btnExportChat) {
+            btnExportChat.addEventListener('click', () => {
+                if (!currentChatId || currentChatHistoryData.length === 0) {
+                    alert("No chat history to export.");
+                    return;
+                }
+                
+                let markdownContent = `# Chat Export: ${currentChatId}\n\n`;
+                currentChatHistoryData.forEach(msg => {
+                    const role = msg.role === 'assistant' ? 'Agent' : 'User';
+                    markdownContent += `## ${role}\n${msg.content}\n\n---\n\n`;
+                });
+                
+                const blob = new Blob([markdownContent], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${currentChatId}-export-${new Date().toISOString().replace(/:/g, '-')}.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
         }
     }
 
@@ -425,6 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupContextMerge();
     setupTelemetryExport();
     setupConfigEditor();
+    setupChatExport();
     
     // Poll for new chats and files periodically
     setInterval(() => {
