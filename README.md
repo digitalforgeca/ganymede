@@ -3,9 +3,11 @@
 <p align="left">
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/Discord.py-2.4%2B-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord.py" />
+  <img src="https://img.shields.io/badge/Aiohttp-Web_Server-purple?style=for-the-badge&logo=aiohttp&logoColor=white" alt="Aiohttp" />
   <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
+  <img src="https://img.shields.io/badge/Homebrew-Formula-F2B50F?style=for-the-badge&logo=homebrew&logoColor=black" alt="Homebrew" />
+  <img src="https://img.shields.io/badge/Hatch-Build_System-4B32C3?style=for-the-badge&logo=python&logoColor=white" alt="Hatchling" />
   <img src="https://img.shields.io/badge/MCP-FastMCP-orange?style=for-the-badge&logo=json&logoColor=white" alt="Model Context Protocol" />
-  <img src="https://img.shields.io/badge/Platform-Console_/_Discord-green?style=for-the-badge" alt="Platform" />
 </p>
 
 **Ganymede** is a standalone, production-grade communication gateway and productivity harness for the Google Antigravity ecosystem. It connects platforms like Discord to your local autonomous agents, enabling you to converse with, schedule, and delegate background tasks seamlessly, complete with real-time feedback loops and safety checks.
