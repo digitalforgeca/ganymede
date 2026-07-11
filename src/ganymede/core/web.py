@@ -457,12 +457,27 @@ class DashboardServer:
         channel_id = parts[1]
         thread_id = parts[2] if parts[2] != 'main' else None
         
+        actual_conv_id = channel_id if platform == "cli" else None
+        
+        if platform != "cli":
+            db_path = os.path.join(self.config.data_dir, "ganymede.db")
+            if os.path.exists(db_path):
+                import aiosqlite
+                async with aiosqlite.connect(db_path) as conn:
+                    conn.row_factory = aiosqlite.Row
+                    async with conn.execute(
+                        "SELECT conversation_id FROM conversation_mappings WHERE platform = ? AND channel_id = ? AND (thread_id = ? OR (thread_id IS NULL AND ? IS NULL))",
+                        (platform, channel_id, thread_id, thread_id)
+                    ) as cursor:
+                        row = await cursor.fetchone()
+                        if row:
+                            actual_conv_id = row["conversation_id"]
+
         history = []
-        if platform == "cli":
-            # For native CLI chats, channel_id is the full actual_conv_id
-            transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{channel_id}/.system_generated/logs/transcript_full.jsonl")
+        if actual_conv_id:
+            transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{actual_conv_id}/.system_generated/logs/transcript_full.jsonl")
             if not os.path.exists(transcript_path):
-                transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{channel_id}/.system_generated/logs/transcript.jsonl")
+                transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{actual_conv_id}/.system_generated/logs/transcript.jsonl")
             
             if os.path.exists(transcript_path):
                 import json
@@ -483,6 +498,11 @@ class DashboardServer:
                                 })
                             elif data.get("type") == "PLANNER_RESPONSE" or data.get("type") == "TEXT_RESPONSE":
                                 content = data.get("content", "")
+                                tool_calls = data.get("tool_calls", [])
+                                if tool_calls:
+                                    tool_text = "\n\n*⚒️ Tools Used:*\n" + "\n".join([f"- `{t.get('name') or t.get('function', {}).get('name') or 'tool'}`" for t in tool_calls])
+                                    content = (content + tool_text) if content else tool_text.strip()
+                                
                                 if content:
                                     history.append({
                                         "author_id": "Antigravity",
@@ -492,30 +512,30 @@ class DashboardServer:
                                     })
                 except Exception as e:
                     print(f"Error reading transcript: {e}")
-            return web.json_response({"messages": history})
-            
-        db_path = os.path.join(self.config.data_dir, "ganymede.db")
-        if os.path.exists(db_path):
-            import aiosqlite
-            async with aiosqlite.connect(db_path) as conn:
-                conn.row_factory = aiosqlite.Row
-                
-                query = """
-                    SELECT author_id, role, content, tokens, created_at
-                    FROM conversations
-                    WHERE context_platform = ? AND context_channel = ? AND (context_thread = ? OR (context_thread IS NULL AND ? IS NULL))
-                    ORDER BY created_at ASC
-                """
-                async with conn.execute(query, (platform, channel_id, thread_id, thread_id)) as cursor:
-                    rows = await cursor.fetchall()
-                    for r in rows:
-                        history.append({
-                            "author_id": r["author_id"],
-                            "role": r["role"],
-                            "content": r["content"],
-                            "created_at": r["created_at"]
-                        })
-                        
+
+        # Fallback to database if no transcript history found
+        if not history and platform != "cli":
+            db_path = os.path.join(self.config.data_dir, "ganymede.db")
+            if os.path.exists(db_path):
+                import aiosqlite
+                async with aiosqlite.connect(db_path) as conn:
+                    conn.row_factory = aiosqlite.Row
+                    query = """
+                        SELECT author_id, role, content, tokens, created_at
+                        FROM conversations
+                        WHERE context_platform = ? AND context_channel = ? AND (context_thread = ? OR (context_thread IS NULL AND ? IS NULL))
+                        ORDER BY created_at ASC
+                    """
+                    async with conn.execute(query, (platform, channel_id, thread_id, thread_id)) as cursor:
+                        rows = await cursor.fetchall()
+                        for r in rows:
+                            history.append({
+                                "author_id": r["author_id"],
+                                "role": r["role"],
+                                "content": r["content"],
+                                "created_at": r["created_at"]
+                            })
+                            
         return web.json_response({"messages": history})
 
     async def handle_chat_files(self, request):
