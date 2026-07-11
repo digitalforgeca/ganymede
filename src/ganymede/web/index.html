@@ -193,6 +193,26 @@
                     </div>
                 </main>
 
+                <!-- Artifacts Modal -->
+                <div class="modal" id="modal-artifacts">
+                    <div class="modal-background" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')"></div>
+                    <div class="modal-card">
+                        <header class="modal-card-head">
+                            <p class="modal-card-title cinzel">Project Artifacts</p>
+                            <button class="delete" aria-label="close" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')"></button>
+                        </header>
+                        <section class="modal-card-body">
+                            <p class="is-size-7 has-text-grey mb-3" id="artifacts-subtitle">Select a project to view files.</p>
+                            <ul class="file-list" id="file-list" style="list-style: none; margin: 0; font-size: 0.9rem;">
+                                <!-- Files will go here -->
+                            </ul>
+                        </section>
+                        <footer class="modal-card-foot">
+                            <button class="button" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')">Close</button>
+                        </footer>
+                    </div>
+                </div>
+
                 <!-- Merge Context Modal -->
                 <div class="modal" id="modal-merge">
                     <div class="modal-background"></div>

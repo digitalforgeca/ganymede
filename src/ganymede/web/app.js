@@ -101,6 +101,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.payload) message += ` - ${JSON.stringify(data.payload)}`;
                 
                 appendLog(message, style);
+                
+                // Handle streaming to active chat
+                if (data.context && data.context === currentChatId) {
+                    if (data.event === "Agent Stream Start") {
+                        const msgDiv = document.createElement('div');
+                        msgDiv.className = 'box has-background-light mb-3';
+                        msgDiv.id = data.payload.msg_id;
+                        let safeContent = data.payload.content || "⏳ *Thinking...*";
+                        if (window.marked) safeContent = marked.parse(safeContent);
+                        else safeContent = safeContent.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                        msgDiv.innerHTML = `<strong>Agent:</strong><br>${safeContent}`;
+                        
+                        if (document.getElementById('chat-history').querySelector('.has-text-grey')) {
+                            document.getElementById('chat-history').innerHTML = ''; // clear empty state
+                        }
+                        document.getElementById('chat-history').appendChild(msgDiv);
+                        document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
+                    } else if (data.event === "Agent Stream Edit") {
+                        const msgDiv = document.getElementById(data.payload.msg_id);
+                        if (msgDiv) {
+                            let safeContent = data.payload.content;
+                            if (window.marked) safeContent = marked.parse(safeContent);
+                            else safeContent = safeContent.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                            msgDiv.innerHTML = `<strong>Agent:</strong><br>${safeContent}`;
+                            document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
+                        }
+                    } else if (data.event === "Agent Stream End" || data.event === "Agent Response") {
+                        // Reload full chat history to get the finalized database entry and correct markdown
+                        setTimeout(() => loadChatHistory(currentChatId), 500);
+                    }
+                }
             } catch (e) {
                 appendLog(event.data, 'event');
             }

@@ -233,7 +233,7 @@ class Router:
                     if len(lines) > 15:
                         lines = ["..."] + lines[-14:]
                     formatted_thought = "\n".join(f"> {line}" for line in lines)
-                    await self.adapter.edit_streaming(context, msg_id, f"💭 *Thinking...*\n{formatted_thought}")
+                    await self.adapter.edit_streaming(context, msg_id, f"💭 *Thinking...*\n{formatted_thought}" + status_text)
             
             elif isinstance(chunk, Text):
                 response_text += chunk.text

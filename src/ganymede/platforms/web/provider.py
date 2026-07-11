@@ -60,18 +60,39 @@ class WebAdapter(PlatformAdapter):
             await gweb.dashboard_instance.broadcast_telemetry({
                 "event": "Agent Response",
                 "level": "info",
-                "context": str(context),
+                "context": f"{context.platform}_{context.channel_id}_{context.thread_id or 'main'}",
                 "payload": {"content": content, "metadata": metadata}
             })
 
     async def send_streaming_start(self, context: ContextKey, initial_text: str | None = None, persist_header: str | None = None) -> str:
-        return "web-msg-id"
+        import uuid
+        msg_id = f"web-msg-{uuid.uuid4().hex[:8]}"
+        if gweb.dashboard_instance:
+            await gweb.dashboard_instance.broadcast_telemetry({
+                "event": "Agent Stream Start",
+                "level": "info",
+                "context": f"{context.platform}_{context.channel_id}_{context.thread_id or 'main'}",
+                "payload": {"msg_id": msg_id, "content": initial_text or "⏳ *Thinking...*"}
+            })
+        return msg_id
         
     async def edit_streaming(self, context: ContextKey, message_id: str, content: str) -> None:
-        pass
+        if gweb.dashboard_instance:
+            await gweb.dashboard_instance.broadcast_telemetry({
+                "event": "Agent Stream Edit",
+                "level": "info",
+                "context": f"{context.platform}_{context.channel_id}_{context.thread_id or 'main'}",
+                "payload": {"msg_id": message_id, "content": content}
+            })
         
     async def send_streaming_end(self, context: ContextKey, message_id: str, metadata: dict[str, Any]) -> None:
-        pass
+        if gweb.dashboard_instance:
+            await gweb.dashboard_instance.broadcast_telemetry({
+                "event": "Agent Stream End",
+                "level": "info",
+                "context": f"{context.platform}_{context.channel_id}_{context.thread_id or 'main'}",
+                "payload": {"msg_id": message_id, "metadata": metadata}
+            })
 
     async def update_streaming_status(self, context: ContextKey, status_text: str) -> None:
         pass
