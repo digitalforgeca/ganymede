@@ -425,12 +425,19 @@ document.addEventListener("DOMContentLoaded", () => {
             a.className = "is-flex is-justify-content-space-between is-align-items-center";
             const displayName = chat.project_name || `${chat.platform}-${chat.channel_id}${chat.thread_id ? `-${chat.thread_id}` : ''}`;
             a.innerHTML = `
-                <span>
-                    <span class="icon is-small"><i class="fas ${chat.platform === 'discord' ? 'fa-discord' : 'fa-terminal'}"></i></span>
-                    <span class="chat-name">${displayName}</span>
-                    <span class="is-size-7 has-text-grey ml-1">(${chat.platform === 'discord' ? '#' : ''}${chat.channel_id})</span>
-                </span>
-                <span class="tag is-dark is-rounded">${chat.msg_count}</span>
+                <div class="is-flex is-flex-direction-column" style="width: 100%;">
+                    <div class="is-flex is-justify-content-space-between is-align-items-center mb-1">
+                        <span>
+                            <span class="icon is-small"><i class="fas ${chat.platform === 'discord' ? 'fa-discord' : 'fa-terminal'}"></i></span>
+                            <span class="chat-name has-text-weight-semibold">${displayName}</span>
+                        </span>
+                        <span class="tag is-dark is-rounded" style="transform: scale(0.8);">${chat.msg_count}</span>
+                    </div>
+                    <div class="is-size-7 has-text-grey">
+                        <span class="icon is-small" style="font-size: 0.6rem;"><i class="fas fa-fingerprint"></i></span>
+                        <span class="is-family-code" style="font-size: 0.7rem;">${chat.actual_conv_id}</span>
+                    </div>
+                </div>
             `;
             
             if (currentChatId === chat.id) {
@@ -443,7 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 a.classList.add('is-active');
                 currentChatId = chat.id;
                 document.getElementById('chat-title').textContent = displayName;
-                document.getElementById('chat-subtitle').textContent = `Platform: ${chat.platform} | Channel: ${chat.channel_id}`;
+                document.getElementById('chat-subtitle').textContent = `Platform: ${chat.platform} | Channel: ${chat.channel_id} | AGY ID: ${chat.actual_conv_id}`;
                 document.getElementById('btn-export-chat').classList.remove('is-hidden');
                 document.getElementById('btn-fork-chat').classList.remove('is-hidden');
                 document.getElementById('btn-view-artifacts').classList.remove('is-hidden');
