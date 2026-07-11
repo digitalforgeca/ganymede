@@ -35,8 +35,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return `<strong>Agent:</strong><br>`;
     }
     
+    let userInfo = null;
+
     function getUserHeaderHtml() {
-        // Fallback user icon SVG
+        if (userInfo) {
+            const avatarHtml = userInfo.avatar_url ? `<img src="${userInfo.avatar_url}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: #ddd; fill: #666; padding: 4px;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            return `<div style="margin-bottom: 8px; display: flex; align-items: center;">
+                        ${avatarHtml}
+                        <strong>${userInfo.name}</strong>
+                    </div>`;
+        }
         const defaultUserIcon = `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: #ddd; fill: #666; padding: 4px;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
         return `<div style="margin-bottom: 8px; display: flex; align-items: center;">
                     ${defaultUserIcon}
@@ -582,6 +590,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.agent) {
                     if (globalModelSelect) globalModelSelect.value = data.agent.model || "";
                     if (globalSystemInstructions) globalSystemInstructions.value = data.agent.system_instructions || "";
+                    const globalBotName = document.getElementById('global-bot-name');
+                    if (globalBotName) globalBotName.value = data.agent.name || "Agent";
+                    const globalMissionStatement = document.getElementById('global-mission-statement');
+                    if (globalMissionStatement) globalMissionStatement.value = data.agent.mission_statement || "";
                 }
             } catch (e) {
                 console.error(e);
@@ -633,6 +645,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 loadedConfig.agent.system_instructions = globalSystemInstructions.value;
                 
+                const globalBotName = document.getElementById('global-bot-name');
+                if (globalBotName && globalBotName.value) {
+                    loadedConfig.agent.name = globalBotName.value;
+                } else {
+                    delete loadedConfig.agent.name;
+                }
+                
+                const globalMissionStatement = document.getElementById('global-mission-statement');
+                if (globalMissionStatement && globalMissionStatement.value) {
+                    loadedConfig.agent.mission_statement = globalMissionStatement.value;
+                }
+                
                 saveConfigData(loadedConfig, btnSaveGlobal);
             });
         }
@@ -653,6 +677,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Initialize
+    async function fetchUserInfo() {
+        try {
+            const res = await fetch('/api/user');
+            if (res.ok) {
+                userInfo = await res.json();
+                const badgeAvatar = document.querySelector('.account-badge .avatar');
+                const badgeTitle = document.querySelector('.account-badge .title');
+                if (badgeAvatar && userInfo.avatar_url) {
+                    badgeAvatar.innerHTML = `<img src="${userInfo.avatar_url}" style="width: 100%; height: 100%; border-radius: 50%;">`;
+                }
+                if (badgeTitle && userInfo.name) {
+                    badgeTitle.textContent = userInfo.name;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch user info", e);
+        }
+    }
+    
+    fetchUserInfo();
     fetchStatus();
     fetchChats();
     connectWebSocket();

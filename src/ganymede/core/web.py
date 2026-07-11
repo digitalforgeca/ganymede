@@ -27,6 +27,7 @@ class DashboardServer:
         self.app.router.add_post('/api/chat/invoke', self.handle_chat_invoke)
         self.app.router.add_get('/api/config', self.handle_config_get)
         self.app.router.add_post('/api/config', self.handle_config_post)
+        self.app.router.add_get('/api/user', self.handle_user_info)
         self.app.router.add_get('/ws/telemetry', self.handle_telemetry_ws)
         self.app.router.add_get('/ws/dashboard', self.handle_dashboard_ws)
         
@@ -93,6 +94,14 @@ class DashboardServer:
                         }
                     except Exception:
                         pass
+                        
+        if not bot_info:
+            bot_info = {
+                "name": getattr(self.config.agent, "name", "Agent"),
+                "discriminator": "",
+                "id": "web-console",
+                "avatar_url": None
+            }
                     
         return web.json_response({
             "status": status_str,
@@ -130,6 +139,28 @@ class DashboardServer:
         return web.json_response({"status": "applied_to_memory"})
             
         return web.json_response({"status": "saved"})
+
+    async def handle_user_info(self, request):
+        import base64
+        import json
+        creds_path = os.path.expanduser("~/.gemini/oauth_creds.json")
+        user_info = {"name": "Operator", "avatar_url": None}
+        if os.path.exists(creds_path):
+            try:
+                with open(creds_path, "r") as f:
+                    creds = json.load(f)
+                if "id_token" in creds:
+                    token = creds["id_token"]
+                    payload_b64 = token.split(".")[1]
+                    payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
+                    payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
+                    if "name" in payload:
+                        user_info["name"] = payload["name"]
+                    if "picture" in payload:
+                        user_info["avatar_url"] = payload["picture"]
+            except Exception as e:
+                logger.error("Failed to parse oauth_creds.json", error=str(e))
+        return web.json_response(user_info)
 
     async def handle_telemetry_ws(self, request):
         ws = web.WebSocketResponse()

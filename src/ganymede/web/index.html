@@ -56,7 +56,8 @@
                     <ul class="menu-list sidebar-nav">
                         <li><a class="is-active nav-item" data-target="view-dashboard">Dashboard</a></li>
                         <li><a class="nav-item" data-target="view-chats">Projects</a></li>
-                        <li><a class="nav-item" data-target="view-settings">Global Settings</a></li>
+                        <li><a class="nav-item" data-target="view-bots">Bots</a></li>
+                        <li><a class="nav-item" data-target="view-settings">Settings</a></li>
                     </ul>
                 </aside>
             </div>
@@ -246,6 +247,17 @@
                     </div>
                 </div>
 
+                <!-- Bots View -->
+                <main class="section view-section is-hidden pt-5" id="view-bots">
+                    <div class="box facet">
+                        <h2 class="title is-3 cinzel facet-title">Bots</h2>
+                        <p class="has-text-grey mb-4">Manage connected bot identities and their associated providers.</p>
+                        <div class="notification is-info is-light">
+                            <strong>Note:</strong> Currently, Ganymede runs a single primary Discord bot gateway and a Web Console bot. Multi-bot support is in active development.
+                        </div>
+                    </div>
+                </main>
+
                 <!-- Settings View -->
                 <main class="section view-section is-hidden pt-5" id="view-settings">
                     <div class="box facet">
@@ -255,6 +267,12 @@
                         <div class="columns">
                             <div class="column is-6">
                                 <h4 class="title is-5 cinzel">Global Project Settings</h4>
+                                <div class="field">
+                                    <label class="label is-small">Web Console Bot Name</label>
+                                    <div class="control">
+                                        <input class="input is-small" type="text" id="global-bot-name" placeholder="Agent">
+                                    </div>
+                                </div>
                                 <div class="field">
                                     <label class="label is-small">Global Model Override</label>
                                     <div class="control">
@@ -270,9 +288,15 @@
                                     </div>
                                 </div>
                                 <div class="field">
-                                    <label class="label is-small">System Instructions</label>
+                                    <label class="label is-small">Mission Statement</label>
                                     <div class="control">
-                                        <textarea class="textarea is-small" id="global-system-instructions" rows="4" placeholder="Agent mission statement and instructions..."></textarea>
+                                        <textarea class="textarea is-small" id="global-mission-statement" rows="2" placeholder="assisting the user..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label is-small">System Instructions Base</label>
+                                    <div class="control">
+                                        <textarea class="textarea is-small" id="global-system-instructions" rows="4" placeholder="Agent base instructions..."></textarea>
                                     </div>
                                 </div>
                                 <button class="button is-small is-primary mt-2" id="btn-save-global-settings">Save Global Settings</button>

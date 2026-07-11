@@ -23,6 +23,7 @@ class SyncedPlatformsDict(dict):
 
 @dataclass
 class AgentConfig:
+    name: str = "Agent"
     system_instructions: str = "You are a helpful coding assistant."
     workspace: str = "~/dev"
     capabilities: dict[str, bool] = field(default_factory=lambda: {
@@ -174,6 +175,9 @@ def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
 
     if "agent" in data:
         a = data["agent"]
+        config.agent.name = a.get("name", config.agent.name)
+        if "model" in a:
+            config.agent.model = a["model"]
         config.agent.system_instructions = a.get("system_instructions", config.agent.system_instructions)
         config.agent.workspace = a.get("workspace", config.agent.workspace)
         if "capabilities" in a:
