@@ -149,8 +149,8 @@
                                 <div class="box is-flex is-flex-direction-column" style="height: calc(100vh - 250px); background-color: #fafafa; overflow: hidden;">
                                     <div class="chat-header pb-3 mb-3 border-bottom is-flex is-justify-content-space-between is-align-items-center">
                                         <div>
-                                            <h3 class="title is-5 mb-0" id="chat-title">Select a chat</h3>
-                                            <p class="subtitle is-6" id="chat-subtitle">--</p>
+                                            <h3 class="title is-5 mb-0" id="chat-title">Select or start a chat</h3>
+                                            <p class="subtitle is-6" id="chat-subtitle"></p>
                                         </div>
                                         <div>
                                             <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-view-artifacts">View Artifacts</button>
@@ -170,7 +170,7 @@
 
                                     <div class="chat-history flex-grow-1 content" id="chat-history" style="overflow-y: auto;">
                                         <!-- Messages will go here -->
-                                        <div class="has-text-centered has-text-grey mt-5">No chat selected.</div>
+                                        <div class="has-text-centered has-text-grey mt-5" id="chat-empty-state"></div>
                                     </div>
                                     
                                     <div class="chat-settings is-hidden" id="chat-settings-view" style="flex: 1; padding: 20px; overflow-y: auto;">
