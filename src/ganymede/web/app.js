@@ -87,6 +87,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     const pct = (data.metrics.quota_used / Math.max(1, data.metrics.quota_limit)) * 100;
                     quotaBar.value = pct;
                 }
+                
+                const sidebarTokens = document.getElementById('sidebar-tokens-left');
+                if (sidebarTokens) {
+                    const tokensRemaining = Math.max(0, data.metrics.token_limit - data.metrics.tokens_hour);
+                    sidebarTokens.textContent = tokensRemaining.toLocaleString();
+                }
             }
             
             if (data.bot_info) {
