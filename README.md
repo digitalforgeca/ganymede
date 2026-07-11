@@ -54,6 +54,17 @@ If this file does not exist on your first run, Ganymede will automatically safel
 
 ---
 
+## 🖥️ Local Web Console
+
+Ganymede boots with a lightweight, glassmorphic Web Console natively bound to `http://localhost:8080`. This unified dashboard provides:
+*   **System Metrics**: Real-time token usage, active instances, and quota status.
+*   **Project Ledgers**: View active and historical chat histories (both Discord and native CLI) synced natively with Antigravity transcripts.
+*   **Tool Executions**: Fully collapsible JSON payloads detailing exact arguments used when agents invoke internal tools (e.g. `replace_file_content`).
+*   **Live Settings Configuration**: Hot-swap configuration values (log levels, global model overrides) without restarting the daemon.
+*   **Native Web Chat**: Spin up entirely new agent instances directly within the browser UI for out-of-band debugging and task scheduling.
+
+---
+
 ## 🍷 The Chalice Plugin (Full-Circle Architecture)
 
 While Ganymede operates outside the Antigravity CLI lifecycle as a robust standalone daemon, it maintains a two-way real-time telemetry and feedback loop directly with the active Antigravity instances using the **Chalice** plugin. 
