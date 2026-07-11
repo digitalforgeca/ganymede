@@ -122,19 +122,14 @@
                             <div class="column is-4">
                                 <div class="menu mb-5">
                                     <p class="menu-label">Active Projects</p>
+                                    <div class="tabs is-small is-toggle is-fullwidth mb-3">
+                                        <ul id="project-tabs">
+                                            <li class="is-active"><a>Loading...</a></li>
+                                        </ul>
+                                    </div>
                                     <ul class="menu-list" id="chat-list">
                                         <li><a class="is-active">Loading projects...</a></li>
                                     </ul>
-                                </div>
-                                
-                                <div class="box facet mt-5 has-background-white-bis">
-                                    <h2 class="title is-5 cinzel facet-title" style="border-bottom: 1px solid #ddd; padding-bottom: 10px;">Project Artifacts</h2>
-                                    <div class="content">
-                                        <p class="is-size-7 has-text-grey" id="artifacts-subtitle">Select a project to view files.</p>
-                                        <ul class="file-list" id="file-list" style="list-style: none; margin: 0; font-size: 0.9rem;">
-                                            <!-- Files will go here -->
-                                        </ul>
-                                    </div>
                                 </div>
 
                                 <div class="box facet mt-5 has-background-white-bis">
@@ -173,6 +168,7 @@
                                             <p class="subtitle is-6" id="chat-subtitle">--</p>
                                         </div>
                                         <div>
+                                            <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-view-artifacts">View Artifacts</button>
                                             <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-export-chat">Export Markdown</button>
                                             <button class="button is-small is-warning is-outlined is-hidden" id="btn-merge-context">Merge Context</button>
                                         </div>

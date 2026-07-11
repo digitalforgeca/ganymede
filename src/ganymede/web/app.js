@@ -183,40 +183,79 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const chatList = document.getElementById('chat-list');
             if (data.chats && data.chats.length > 0) {
-                chatList.innerHTML = '';
+                // Group by platform
+                const groups = {};
                 data.chats.forEach(chat => {
-                    const li = document.createElement('li');
-                    const a = document.createElement('a');
-                    a.className = "is-flex is-justify-content-space-between is-align-items-center";
-                    const displayName = chat.project_name || `${chat.platform}-${chat.channel_id}${chat.thread_id ? `-${chat.thread_id}` : ''}`;
-                    a.innerHTML = `
-                        <span>
-                            <span class="icon is-small"><i class="fas ${chat.platform === 'discord' ? 'fa-discord' : 'fa-terminal'}"></i></span>
-                            <span class="chat-name">${displayName}</span>
-                            <span class="is-size-7 has-text-grey ml-1">(${chat.platform === 'discord' ? '#' : ''}${chat.channel_id})</span>
-                        </span>
-                        <span class="tag is-dark is-rounded">${chat.msg_count}</span>
-                    `;
-                    
-                    if (currentChatId === chat.id) {
-                        a.classList.add('is-active');
+                    if (!groups[chat.platform]) groups[chat.platform] = [];
+                    groups[chat.platform].push(chat);
+                });
+                
+                // Build tabs
+                const tabsList = document.getElementById('project-tabs');
+                if (tabsList) {
+                    let activeTab = document.querySelector('#project-tabs li.is-active')?.dataset?.platform;
+                    if (!activeTab || !groups[activeTab]) {
+                        activeTab = Object.keys(groups)[0];
                     }
                     
-                    a.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        document.querySelectorAll('#chat-list a').forEach(el => el.classList.remove('is-active'));
-                        a.classList.add('is-active');
-                        currentChatId = chat.id;
-                        document.getElementById('chat-header-title').textContent = displayName;
-                        document.getElementById('btn-export-chat').classList.remove('is-hidden');
-                        loadChatHistory(chat.id);
-                        fetchChatFiles(chat.id);
-                        fetchChatSettings(chat.id);
+                    tabsList.innerHTML = '';
+                    Object.keys(groups).forEach(platform => {
+                        const li = document.createElement('li');
+                        li.dataset.platform = platform;
+                        if (platform === activeTab) li.classList.add('is-active');
+                        li.innerHTML = `<a><span>${platform.toUpperCase()}</span></a>`;
+                        li.addEventListener('click', () => {
+                            document.querySelectorAll('#project-tabs li').forEach(el => el.classList.remove('is-active'));
+                            li.classList.add('is-active');
+                            renderChats(groups[platform]);
+                        });
+                        tabsList.appendChild(li);
                     });
                     
-                    li.appendChild(a);
-                    chatList.appendChild(li);
-                });
+                    renderChats(groups[activeTab]);
+                } else {
+                    renderChats(data.chats);
+                }
+                
+                function renderChats(chatsToRender) {
+                    chatList.innerHTML = '';
+                    chatsToRender.forEach(chat => {
+                        const li = document.createElement('li');
+                        const a = document.createElement('a');
+                        a.className = "is-flex is-justify-content-space-between is-align-items-center";
+                        const displayName = chat.project_name || `${chat.platform}-${chat.channel_id}${chat.thread_id ? `-${chat.thread_id}` : ''}`;
+                        a.innerHTML = `
+                            <span>
+                                <span class="icon is-small"><i class="fas ${chat.platform === 'discord' ? 'fa-discord' : 'fa-terminal'}"></i></span>
+                                <span class="chat-name">${displayName}</span>
+                                <span class="is-size-7 has-text-grey ml-1">(${chat.platform === 'discord' ? '#' : ''}${chat.channel_id})</span>
+                            </span>
+                            <span class="tag is-dark is-rounded">${chat.msg_count}</span>
+                        `;
+                        
+                        if (currentChatId === chat.id) {
+                            a.classList.add('is-active');
+                        }
+                        
+                        a.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            document.querySelectorAll('#chat-list a').forEach(el => el.classList.remove('is-active'));
+                            a.classList.add('is-active');
+                            currentChatId = chat.id;
+                            document.getElementById('chat-title').textContent = displayName;
+                            document.getElementById('chat-subtitle').textContent = `Platform: ${chat.platform} | Channel: ${chat.channel_id}`;
+                            document.getElementById('btn-export-chat').classList.remove('is-hidden');
+                            document.getElementById('btn-view-artifacts').classList.remove('is-hidden');
+                            document.getElementById('btn-merge-context').classList.remove('is-hidden');
+                            loadChatHistory(chat.id);
+                            fetchChatFiles(chat.id);
+                            fetchChatSettings(chat.id);
+                        });
+                        
+                        li.appendChild(a);
+                        chatList.appendChild(li);
+                    });
+                }
             } else {
                 chatList.innerHTML = '<li><a>No active projects found.</a></li>';
             }
@@ -320,7 +359,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                     if (res.ok) {
                         alert("Project settings saved successfully!");
-                        document.getElementById('chat-header-title').textContent = projectName;
+                        document.getElementById('chat-title').textContent = projectName;
                         loadChatHistory(currentChatId); // reload history to show the logged message
                         fetchChats(); // Refresh sidebar names
                     } else {
@@ -510,6 +549,17 @@ document.addEventListener("DOMContentLoaded", () => {
         loadConfig();
     }
 
+    function setupArtifactsModal() {
+        const btnViewArtifacts = document.getElementById('btn-view-artifacts');
+        if (btnViewArtifacts) {
+            btnViewArtifacts.addEventListener('click', () => {
+                if (currentChatId) {
+                    document.getElementById('modal-artifacts').classList.add('is-active');
+                }
+            });
+        }
+    }
+
     // Initialize
     fetchStatus();
     fetchChats();
@@ -521,6 +571,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupConfigEditor();
     setupChatExport();
     setupProjectSettings();
+    setupArtifactsModal();
     
     // Poll for new chats and files periodically
     setInterval(() => {
