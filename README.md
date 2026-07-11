@@ -1,4 +1,10 @@
-# 🏛️ Ganymede
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/ganymede/web/ganymede-logo-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="src/ganymede/web/ganymede-logo-light.png">
+    <img alt="Ganymede Logo" src="src/ganymede/web/ganymede-logo-light.png" width="400">
+  </picture>
+</p>
 
 <p align="left">
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
