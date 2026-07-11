@@ -290,13 +290,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (mainToggleBtn && olympusSidebar && mainContent) {
             mainToggleBtn.addEventListener('click', () => {
                 olympusSidebar.classList.toggle('is-hidden');
-                if (olympusSidebar.classList.contains('is-hidden')) {
-                    mainContent.classList.remove('is-10');
-                    mainContent.classList.add('is-12');
-                } else {
-                    mainContent.classList.remove('is-12');
-                    mainContent.classList.add('is-10');
-                }
             });
         }
     }

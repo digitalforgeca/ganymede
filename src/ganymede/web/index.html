@@ -40,9 +40,9 @@
         </div>
     </nav>
 
-    <div class="columns is-gapless is-fullheight" style="margin-top: 2.5rem;">
+    <div class="is-flex is-fullheight" style="margin-top: 2.5rem; height: calc(100vh - 2.5rem);">
         <!-- Sidebar Navigation -->
-        <aside class="column is-2 olympus-sidebar">
+        <aside class="olympus-sidebar" style="width: 250px; min-width: 150px; max-width: 50%; resize: horizontal; overflow-y: auto; overflow-x: hidden; flex-shrink: 0; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color);">
             <div class="account-badge section">
                 <div class="avatar">OP</div>
                 <div class="account-info mt-2">
@@ -64,7 +64,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div class="column is-10 main-content" style="overflow-y: auto; height: calc(100vh - 2.5rem);">
+        <div class="main-content" style="flex: 1; min-width: 0; overflow-y: auto;">
             <div class="view-container">
                 <!-- Dashboard View -->
                 <main class="section view-section pt-5" id="view-dashboard">
