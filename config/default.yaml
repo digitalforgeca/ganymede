@@ -31,7 +31,7 @@ agent:
   status_verbosity: "normal"
   require_approval: false
   elevated_users:
-    - "1196796156638920754" # Pre-elevated developer user ID
+    - "YOUR_DISCORD_USER_ID" # Place your Discord User ID here to grant admin rights
   auto_approve_tools:
     - "view_file"
     - "grep_search"

@@ -40,6 +40,8 @@ Ganymede also features a built-in lightweight web dashboard (glassmorphic aesthe
     *   `/teamwork-preview [prompt]`: Preview teamwork options with a team of autonomous subagents.
     *   `/stop`: Abruptly terminate the active agent execution in this channel.
     *   `/about`: Display metadata about the bot, active workspace, and credits.
+*   **Web Console UI**: A sleek, resizable tab-based control panel running on `localhost:8080` allowing real-time config management, model overrides, agent metrics tracking, and direct chat interactions.
+*   **Transcript Ledgers**: Merges native Antigravity CLI session transcripts directly into the Web dashboard so users can browse historical tool execution ledgers spanning different platforms seamlessly.
 *   **Stdio MCP Server**: Exposes 7 Discord manipulation tools to the Antigravity Agent to let it read, write, and manage Discord channels.
 *   **Robust Persistence**: Utilizes SQLite to log historical turn contexts, scheduled jobs, tool audits, background tasks, and quota usage.
 
