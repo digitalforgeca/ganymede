@@ -182,3 +182,13 @@ For maintainers publishing a new version, Ganymede uses automated scripts in the
 - **Auto-Detect Local Models**: Intelligently auto-detect the available models defined in the `~/.gemini/models` folder and populate them in the UI for the user to work with seamlessly.
 - **Enhanced Multi-Bot Provisioning**: Formalize full multi-bot orchestration directly within the Ganymede UI to allow spanning multiple identity gateways concurrently.
 - **Plugin Registry Integration**: Seamless UI-driven installations of community Antigravity plugins.
+
+---
+
+## 🤝 Support & Credits
+
+Ganymede is proudly developed and maintained by **Digital Forge Studios Inc.** 
+If you love what we're building and want to support the continued development of next-gen autonomous AI tools, consider supporting us on Patreon!
+
+* 🌐 **Website**: [digitalforgestudios.com](https://digitalforgestudios.com)
+* ❤️ **Patreon**: [Support us on Patreon](https://www.patreon.com/c/DigitalForgeStudios)
