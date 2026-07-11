@@ -67,6 +67,7 @@ class DashboardServer:
         tokens_hour = 0
         quota_used = 0
         quota_limit = 0
+        bot_info = None
         
         if getattr(self, "providers", None):
             for p in self.providers:
@@ -80,12 +81,25 @@ class DashboardServer:
                         tokens_hour += sum(tok for t, tok in qt._global_usage_history if t >= hour_ago)
                         quota_used += qt._count_daily_requests()
                         quota_limit = getattr(self.config.quota, "max_requests_per_day", 18)
+                
+                adapter = getattr(p, "adapter", None)
+                if adapter and hasattr(adapter, "user") and adapter.user:
+                    try:
+                        bot_info = {
+                            "name": adapter.user.name,
+                            "discriminator": getattr(adapter.user, "discriminator", ""),
+                            "id": str(adapter.user.id),
+                            "avatar_url": adapter.user.display_avatar.url if getattr(adapter.user, "display_avatar", None) else None
+                        }
+                    except Exception:
+                        pass
                     
         return web.json_response({
             "status": status_str,
             "platform": self.config.platform,
             "data_dir": self.config.data_dir,
             "log_level": self.config.log_level,
+            "bot_info": bot_info,
             "metrics": {
                 "active_instances": active_instances,
                 "tokens_hour": tokens_hour,

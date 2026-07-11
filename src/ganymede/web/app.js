@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let ws = null;
     let currentChatHistoryData = []; // Store the messages to export later
+    let botInfo = null;
 
     // Format bytes to human readable
     function formatBytes(bytes) {
@@ -20,6 +21,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function getAgentHeaderHtml() {
+        if (botInfo) {
+            const avatarHtml = botInfo.avatar_url ? `<img src="${botInfo.avatar_url}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : '';
+            return `<div style="margin-bottom: 8px; display: flex; align-items: center;">
+                        ${avatarHtml}
+                        <strong>${botInfo.name}</strong>
+                        <span class="has-text-grey ml-2 is-size-7" style="font-family: monospace;">(${botInfo.id})</span>
+                    </div>`;
+        }
+        return `<strong>Agent:</strong><br>`;
     }
 
     // 1. Fetch Configuration API
@@ -39,6 +52,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('metric-quota-text').textContent = `${data.metrics.quota_used} / ${data.metrics.quota_limit} reqs`;
                 const pct = (data.metrics.quota_used / Math.max(1, data.metrics.quota_limit)) * 100;
                 document.getElementById('metric-quota-bar').value = pct;
+            }
+            
+            if (data.bot_info) {
+                botInfo = data.bot_info;
             }
             
             setOnline(data.status === "online");
@@ -111,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         let safeContent = data.payload.content || "⏳ *Thinking...*";
                         if (window.marked) safeContent = marked.parse(safeContent);
                         else safeContent = safeContent.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                        msgDiv.innerHTML = `<strong>Agent:</strong><br>${safeContent}`;
+                        msgDiv.innerHTML = `${getAgentHeaderHtml()}${safeContent}`;
                         
                         if (document.getElementById('chat-history').querySelector('.has-text-grey')) {
                             document.getElementById('chat-history').innerHTML = ''; // clear empty state
@@ -124,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             let safeContent = data.payload.content;
                             if (window.marked) safeContent = marked.parse(safeContent);
                             else safeContent = safeContent.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                            msgDiv.innerHTML = `<strong>Agent:</strong><br>${safeContent}`;
+                            msgDiv.innerHTML = `${getAgentHeaderHtml()}${safeContent}`;
                             document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
                         }
                     } else if (data.event === "Agent Stream End" || data.event === "Agent Response") {
@@ -321,7 +338,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         safeContent = msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
                     }
                     
-                    msgDiv.innerHTML = `<strong>${msg.role === 'assistant' ? 'Agent' : 'User'}:</strong><br>${safeContent}`;
+                    const roleLabel = msg.role === 'assistant' ? getAgentHeaderHtml() : '<strong>You:</strong><br>';
+                    msgDiv.innerHTML = `${roleLabel}${safeContent}`;
+                    
                     chatHistory.appendChild(msgDiv);
                 });
             } else {
