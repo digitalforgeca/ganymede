@@ -165,6 +165,16 @@ Run the unittest suite verifying database, safety hooks, quota tracking, and age
 python3 -m unittest tests/test_ganymede.py
 ```
 
+### 5. Automated Release Pipeline
+For maintainers publishing a new version, Ganymede uses automated scripts in the `scripts/` directory to safely version and deploy:
+1. **Testing First**: The release script will automatically run the full suite of unit tests.
+2. **Bump Semantic Tag**: Use `scripts/bump_tag.sh <patch|minor|major>` to safely inject the new version into `pyproject.toml`, commit it, and spawn a new Git tag.
+3. **Deploy Build**: If you are pushing an official release to PyPi and GitHub, run `scripts/deploy.sh`. This script:
+   - Validates the environment
+   - Builds the Python `sdist` and `wheel`
+   - Bumps the tag safely
+   - Pushes the new commits and tags to `origin`
+
 ---
 
 ## 🗺️ Roadmap & Future Developments
