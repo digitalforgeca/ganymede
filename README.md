@@ -60,10 +60,7 @@ While Ganymede operates outside the Antigravity CLI lifecycle as a robust standa
 
 Found in `plugins/chalice`, this Antigravity-native sidecar lives inside the agent instance. It establishes a persistent WebSocket conduit (`conduit.py`) to the Ganymede gateway's port `8080` interface. This allows Ganymede to receive real-time streams of agent execution events and dispatch direct feedback on demand, bridging the standalone gateway seamlessly with the agent lifecycle.
 
-To install the Chalice plugin into your Antigravity environment:
-```bash
-ln -s $(pwd)/plugins/chalice ~/.gemini/config/plugins/chalice
-```
+> **Note:** Ganymede will automatically install and symlink the Chalice plugin into your `~/.gemini/config/plugins` directory upon its first boot. You do not need to perform any manual linking!
 
 ---
 

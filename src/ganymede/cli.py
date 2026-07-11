@@ -202,12 +202,30 @@ def validate_environment():
         
     # 2. Validate Chalice Plugin
     print("[VALIDATION] Checking for Chalice telemetry plugin...", file=sys.stdout)
-    plugin_path = os.path.expanduser("~/.gemini/config/plugins/chalice/plugin.json")
-    if not os.path.exists(plugin_path):
-        print(f"[ERROR] Fatal: Chalice plugin not found at {plugin_path}", file=sys.stderr)
-        print("[ERROR] Your installer failed to symlink the telemetry plugin. Ganymede cannot operate without accurate records.", file=sys.stderr)
-        sys.exit(1)
-    print("[VALIDATION]  ✓ Chalice plugin is installed and ready.", file=sys.stdout)
+    plugin_path_target = os.path.expanduser("~/.gemini/config/plugins/chalice")
+    plugin_path_json = os.path.join(plugin_path_target, "plugin.json")
+    
+    if not os.path.exists(plugin_path_json):
+        # Auto-install it!
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        source_chalice_path = os.path.join(repo_root, "plugins", "chalice")
+        
+        if os.path.exists(os.path.join(source_chalice_path, "plugin.json")):
+            print("[VALIDATION]  - Chalice plugin not found in ~/.gemini. Auto-installing...", file=sys.stdout)
+            os.makedirs(os.path.dirname(plugin_path_target), exist_ok=True)
+            try:
+                os.symlink(source_chalice_path, plugin_path_target)
+                print(f"[VALIDATION]  ✓ Successfully symlinked Chalice plugin to {plugin_path_target}", file=sys.stdout)
+            except Exception as e:
+                print(f"[ERROR] Fatal: Could not create symlink for Chalice plugin: {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            print(f"[ERROR] Fatal: Chalice plugin not found at {plugin_path_json}", file=sys.stderr)
+            print("[ERROR] Your installer failed to symlink the telemetry plugin. Ganymede cannot operate without accurate records.", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("[VALIDATION]  ✓ Chalice plugin is installed and ready.", file=sys.stdout)
+        
     print("[VALIDATION] Chain validation complete. Proceeding to boot gateway...", file=sys.stdout)
 
 if __name__ == "__main__":
