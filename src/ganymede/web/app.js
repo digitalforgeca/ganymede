@@ -33,6 +33,14 @@ document.addEventListener("DOMContentLoaded", () => {
             valLoglevel.textContent = data.log_level || "Unknown";
             valDatadir.textContent = data.data_dir || "Unknown";
             
+            if (data.metrics) {
+                document.getElementById('metric-active-instances').textContent = data.metrics.active_instances || 0;
+                document.getElementById('metric-tokens-hour').textContent = data.metrics.tokens_hour || 0;
+                document.getElementById('metric-quota-text').textContent = `${data.metrics.quota_used} / ${data.metrics.quota_limit}`;
+                const pct = (data.metrics.quota_used / Math.max(1, data.metrics.quota_limit)) * 100;
+                document.getElementById('metric-quota-bar').value = pct;
+            }
+            
             setOnline(data.status === "online");
         } catch (e) {
             console.error("Failed to fetch status", e);
@@ -197,6 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         document.getElementById('btn-export-chat').classList.remove('is-hidden');
                         loadChatHistory(chat.id);
                         fetchChatFiles(chat.id);
+                        fetchChatModel(chat.id);
                     });
                     
                     li.appendChild(a);
@@ -271,6 +280,48 @@ document.addEventListener("DOMContentLoaded", () => {
                 a.download = `${currentChatId}-export-${new Date().toISOString().replace(/:/g, '-')}.md`;
                 a.click();
                 URL.revokeObjectURL(url);
+            });
+        }
+    }
+
+    async function fetchChatModel(chatId) {
+        if (!chatId) return;
+        try {
+            const res = await fetch(`/api/chats/${chatId}/model`);
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('chat-model-select').value = data.model || "";
+            }
+        } catch (e) {
+            console.error("Failed to fetch chat model", e);
+        }
+    }
+
+    function setupProjectSettings() {
+        const btnSave = document.getElementById('btn-save-project-settings');
+        if (btnSave) {
+            btnSave.addEventListener('click', async () => {
+                if (!currentChatId) return;
+                const model = document.getElementById('chat-model-select').value;
+                try {
+                    btnSave.classList.add('is-loading');
+                    const res = await fetch(`/api/chats/${currentChatId}/model`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model: model })
+                    });
+                    if (res.ok) {
+                        alert("Project settings saved successfully!");
+                        loadChatHistory(currentChatId); // reload history to show the logged message
+                    } else {
+                        throw new Error("Failed to save project settings");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Error: " + e.message);
+                } finally {
+                    btnSave.classList.remove('is-loading');
+                }
             });
         }
     }
@@ -459,6 +510,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTelemetryExport();
     setupConfigEditor();
     setupChatExport();
+    setupProjectSettings();
     
     // Poll for new chats and files periodically
     setInterval(() => {

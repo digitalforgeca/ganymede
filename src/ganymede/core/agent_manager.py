@@ -100,7 +100,16 @@ class ManagedAgent:
                 "--conversation", self.conversation_id,
             ]
             
-            
+            brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.conversation_id}")
+            model_path = os.path.join(brain_dir, "model.txt")
+            if os.path.exists(model_path):
+                try:
+                    with open(model_path, "r") as f:
+                        model_override = f.read().strip()
+                    if model_override:
+                        args.extend(["--model", model_override])
+                except Exception:
+                    pass
             
             # Always skip permissions for headless gateway execution
             args.append("--dangerously-skip-permissions")

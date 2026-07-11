@@ -21,7 +21,8 @@ class DashboardServer:
         self.app.router.add_get('/api/chats', self.handle_chats)
         self.app.router.add_get('/api/chats/{id}/history', self.handle_chat_history)
         self.app.router.add_get('/api/chats/{id}/files', self.handle_chat_files)
-        self.app.router.add_post('/api/chats/{id}/merge', self.handle_chat_merge)
+        self.app.router.add_get('/api/chats/{id}/model', self.handle_chat_model_get)
+        self.app.router.add_post('/api/chats/{id}/model', self.handle_chat_model_post)
         self.app.router.add_post('/api/telemetry', self.handle_telemetry_post)
         self.app.router.add_post('/api/chat/invoke', self.handle_chat_invoke)
         self.app.router.add_get('/api/config', self.handle_config_get)
@@ -61,12 +62,36 @@ class DashboardServer:
 
     async def handle_status(self, request):
         status_str = "online" if any(self.platform_states.values()) else "offline"
+        
+        active_instances = 0
+        tokens_hour = 0
+        quota_used = 0
+        quota_limit = 0
+        
+        if getattr(self, "providers", None):
+            for p in self.providers:
+                if hasattr(p, "router") and p.router and p.router.agent_manager:
+                    active_instances += len(p.router.agent_manager._agents)
+                    qt = p.router.agent_manager.quota_tracker
+                    if qt:
+                        import time
+                        now = time.time()
+                        hour_ago = now - 3600
+                        tokens_hour += sum(tok for t, tok in qt._global_usage_history if t >= hour_ago)
+                        quota_used += qt._count_daily_requests()
+                        quota_limit = getattr(self.config.quota, "max_requests_per_day", 18)
                     
         return web.json_response({
             "status": status_str,
             "platform": self.config.platform,
             "data_dir": self.config.data_dir,
-            "log_level": self.config.log_level
+            "log_level": self.config.log_level,
+            "metrics": {
+                "active_instances": active_instances,
+                "tokens_hour": tokens_hour,
+                "quota_used": quota_used,
+                "quota_limit": quota_limit
+            }
         })
 
     async def handle_config_get(self, request):
@@ -317,6 +342,91 @@ class DashboardServer:
                 await conn.commit()
         
         return web.json_response({"status": "merged", "target_conversation_id": target_conversation_id})
+
+    async def _resolve_conversation_id(self, context_id: str) -> str:
+        parts = context_id.split('_')
+        if len(parts) < 3:
+            return None
+        platform = parts[0]
+        channel_id = parts[1]
+        thread_id = parts[2] if parts[2] != 'main' else None
+        
+        conversation_id = f"ganymede_{platform}_{channel_id}"
+        if thread_id:
+            conversation_id += f"_{thread_id}"
+            
+        db_path = os.path.join(self.config.data_dir, "ganymede.db")
+        if os.path.exists(db_path):
+            import aiosqlite
+            async with aiosqlite.connect(db_path) as conn:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute(
+                    "SELECT conversation_id FROM conversation_mappings WHERE platform = ? AND channel_id = ? AND (thread_id = ? OR (thread_id IS NULL AND ? IS NULL))",
+                    (platform, channel_id, thread_id, thread_id)
+                ) as cursor:
+                    row = await cursor.fetchone()
+                    if row and row["conversation_id"]:
+                        conversation_id = row["conversation_id"]
+        return conversation_id
+
+    async def handle_chat_model_get(self, request):
+        context_id = request.match_info.get('id', '')
+        conversation_id = await self._resolve_conversation_id(context_id)
+        if not conversation_id:
+            return web.json_response({"error": "Invalid context ID format"}, status=400)
+            
+        brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
+        model_path = os.path.join(brain_dir, "model.txt")
+        model_override = ""
+        if os.path.exists(model_path):
+            with open(model_path, "r") as f:
+                model_override = f.read().strip()
+                
+        return web.json_response({"model": model_override})
+        
+    async def handle_chat_model_post(self, request):
+        context_id = request.match_info.get('id', '')
+        conversation_id = await self._resolve_conversation_id(context_id)
+        if not conversation_id:
+            return web.json_response({"error": "Invalid context ID format"}, status=400)
+            
+        data = await request.json()
+        model_override = data.get("model", "").strip()
+        
+        brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
+        os.makedirs(brain_dir, exist_ok=True)
+        model_path = os.path.join(brain_dir, "model.txt")
+        
+        if model_override:
+            with open(model_path, "w") as f:
+                f.write(model_override)
+        elif os.path.exists(model_path):
+            os.remove(model_path)
+            
+        # Log this change directly into the chat history for visibility
+        try:
+            db_path = os.path.join(self.config.data_dir, "ganymede.db")
+            if os.path.exists(db_path):
+                import aiosqlite
+                parts = context_id.split('_')
+                platform = parts[0]
+                channel_id = parts[1]
+                thread_id = parts[2] if parts[2] != 'main' else None
+                async with aiosqlite.connect(db_path) as conn:
+                    model_display = model_override if model_override else "Global Default"
+                    content = f"⚙️ *Administrator changed the agent model for this project to:* `{model_display}`"
+                    await conn.execute(
+                        """
+                        INSERT INTO conversations (context_platform, context_channel, context_thread, author_id, role, content, tokens)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (platform, channel_id, thread_id, "system", "system", content, 0)
+                    )
+                    await conn.commit()
+        except Exception as e:
+            logger.error("Failed to log model change to db", error=str(e))
+            
+        return web.json_response({"status": "saved", "model": model_override})
 
     async def handle_files(self, request):
         workspace = self.config.workspace if hasattr(self.config, 'workspace') else os.path.expanduser("~/.ganymede/workspace")
