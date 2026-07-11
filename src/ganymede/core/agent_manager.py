@@ -136,8 +136,17 @@ class ManagedAgent:
             # Always skip permissions for headless gateway execution
             args.append("--dangerously-skip-permissions")
             
-            args.extend(["--print", prompt])
+            # Inject system instructions for new conversations
+            final_prompt = prompt
+            if needs_rename and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
+                sys_inst = self.config.agent.system_instructions
+                sys_inst = sys_inst.replace("{bot_name}", getattr(self, "bot_namespace", "Agent"))
+                sys_inst = sys_inst.replace("{model_name}", model_override or "default model")
+                sys_inst = sys_inst.replace("{user_name}", f"User {self.context_key.user_id}")
+                sys_inst = sys_inst.replace("{mission_statement}", getattr(self.config.agent, "mission_statement", "assisting the user"))
+                final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
+            args.extend(["--print", final_prompt])
             logger.info("Executing agy CLI subprocess", command=" ".join(args), context=self.context_key)
             
             # Build environment variables copy and inject SULCUS_NAMESPACE and GANYMEDE_IPC_PORT

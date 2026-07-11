@@ -34,6 +34,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         return `<strong>Agent:</strong><br>`;
     }
+    
+    function getUserHeaderHtml() {
+        // Fallback user icon SVG
+        const defaultUserIcon = `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: #ddd; fill: #666; padding: 4px;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+        return `<div style="margin-bottom: 8px; display: flex; align-items: center;">
+                    ${defaultUserIcon}
+                    <strong>You</strong>
+                </div>`;
+    }
 
     // 1. Fetch Configuration API
     async function fetchStatus() {
@@ -338,7 +347,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         safeContent = msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
                     }
                     
-                    const roleLabel = msg.role === 'assistant' ? getAgentHeaderHtml() : '<strong>You:</strong><br>';
+                    const roleLabel = msg.role === 'assistant' ? getAgentHeaderHtml() : getUserHeaderHtml();
                     msgDiv.innerHTML = `${roleLabel}${safeContent}`;
                     
                     chatHistory.appendChild(msgDiv);
@@ -448,7 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Optimistically append user message to UI
             const msgDiv = document.createElement('div');
             msgDiv.className = 'box has-background-white mb-3';
-            msgDiv.innerHTML = `<strong>You:</strong><br>${text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}`;
+            msgDiv.innerHTML = `${getUserHeaderHtml()}${text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}`;
             if (chatHistory.querySelector('.has-text-grey')) {
                 chatHistory.innerHTML = ''; // clear empty state
             }
