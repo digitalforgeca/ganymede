@@ -119,14 +119,19 @@ class ManagedAgent:
             args.extend(["--project", project_name])
             
             model_path = os.path.join(brain_dir, "model.txt")
+            model_override = None
             if os.path.exists(model_path):
                 try:
                     with open(model_path, "r") as f:
                         model_override = f.read().strip()
-                    if model_override:
-                        args.extend(["--model", model_override])
                 except Exception:
                     pass
+            
+            if not model_override and hasattr(self.config.agent, "model"):
+                model_override = self.config.agent.model
+                
+            if model_override:
+                args.extend(["--model", model_override])
             
             # Always skip permissions for headless gateway execution
             args.append("--dangerously-skip-permissions")

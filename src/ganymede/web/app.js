@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.metrics) {
                 document.getElementById('metric-active-instances').textContent = data.metrics.active_instances || 0;
                 document.getElementById('metric-tokens-hour').textContent = data.metrics.tokens_hour || 0;
-                document.getElementById('metric-quota-text').textContent = `${data.metrics.quota_used} / ${data.metrics.quota_limit}`;
+                document.getElementById('metric-quota-text').textContent = `${data.metrics.quota_used} / ${data.metrics.quota_limit} reqs`;
                 const pct = (data.metrics.quota_used / Math.max(1, data.metrics.quota_limit)) * 100;
                 document.getElementById('metric-quota-bar').value = pct;
             }
@@ -534,6 +534,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const btnSave = document.getElementById('btn-save-config');
         const btnReload = document.getElementById('btn-reload-config');
         
+        const globalModelSelect = document.getElementById('global-model-select');
+        const globalSystemInstructions = document.getElementById('global-system-instructions');
+        const btnSaveGlobal = document.getElementById('btn-save-global-settings');
+        
+        let loadedConfig = null;
+
         if (!editor || !btnSave || !btnReload) return;
 
         async function loadConfig() {
@@ -542,19 +548,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 const res = await fetch('/api/config');
                 if (!res.ok) throw new Error("Failed to load config");
                 const data = await res.json();
+                loadedConfig = data;
                 editor.value = JSON.stringify(data, null, 2);
+                
+                if (data.agent) {
+                    if (globalModelSelect) globalModelSelect.value = data.agent.model || "";
+                    if (globalSystemInstructions) globalSystemInstructions.value = data.agent.system_instructions || "";
+                }
             } catch (e) {
                 console.error(e);
                 editor.value = "Error loading config: " + e.message;
             }
         }
 
-        async function saveConfig() {
+        async function saveConfigData(data, btn) {
             try {
-                const text = editor.value;
-                const data = JSON.parse(text); // validate JSON before sending
-                
-                btnSave.classList.add('is-loading');
+                btn.classList.add('is-loading');
                 const res = await fetch('/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -565,16 +574,40 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert("Configuration saved successfully!");
                 // Refresh status metrics to reflect changes
                 fetchStatus(); 
+                loadConfig(); // Reload to update both UIs
             } catch (e) {
                 console.error(e);
                 alert("Invalid configuration JSON or save failed: " + e.message);
             } finally {
-                btnSave.classList.remove('is-loading');
+                btn.classList.remove('is-loading');
             }
         }
 
         btnReload.addEventListener('click', loadConfig);
-        btnSave.addEventListener('click', saveConfig);
+        btnSave.addEventListener('click', () => {
+            try {
+                const text = editor.value;
+                const data = JSON.parse(text);
+                saveConfigData(data, btnSave);
+            } catch (e) {
+                alert("Invalid JSON format in the editor.");
+            }
+        });
+        
+        if (btnSaveGlobal) {
+            btnSaveGlobal.addEventListener('click', () => {
+                if (!loadedConfig) return;
+                if (!loadedConfig.agent) loadedConfig.agent = {};
+                
+                const modelVal = globalModelSelect.value;
+                if (modelVal) loadedConfig.agent.model = modelVal;
+                else delete loadedConfig.agent.model;
+                
+                loadedConfig.agent.system_instructions = globalSystemInstructions.value;
+                
+                saveConfigData(loadedConfig, btnSaveGlobal);
+            });
+        }
 
         // Load initially
         loadConfig();
@@ -600,9 +633,10 @@ document.addEventListener("DOMContentLoaded", () => {
     setupContextMerge();
     setupTelemetryExport();
     setupConfigEditor();
+    setupChatTabs();
+    setupArtifactsModal();
     setupChatExport();
     setupProjectSettings();
-    setupArtifactsModal();
     
     // Poll for new chats and files periodically
     setInterval(() => {
