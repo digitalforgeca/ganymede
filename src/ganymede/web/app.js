@@ -601,13 +601,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const text = inputField.value.trim();
             if (!text) return;
             
+            let channel_id;
             if (!currentChatId) {
-                alert("Please select or start a chat first.");
-                return;
+                // Start a new native Web Console chat
+                channel_id = `portal-${Date.now()}`;
+                currentChatId = `web_${channel_id}_main`;
+                
+                // Set up UI for the new chat
+                document.getElementById('chat-title').textContent = `web-${channel_id}`;
+                document.getElementById('chat-platform-icon').className = 'fas fa-globe';
+                chatHistory.innerHTML = '';
+            } else {
+                const parts = currentChatId.split('_');
+                channel_id = parts[1] || 'web-portal';
             }
-            
-            const parts = currentChatId.split('_');
-            const channel_id = parts[1] || 'web-portal';
             
             // Clear input
             inputField.value = '';

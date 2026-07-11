@@ -132,6 +132,14 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         except Exception as e:
             logger.error("Failed to sync slash command tree", error=str(e))
 
+    async def on_connect(self) -> None:
+        if self._status_callback:
+            self._status_callback("discord", True)
+            
+    async def on_resumed(self) -> None:
+        if self._status_callback:
+            self._status_callback("discord", True)
+
     async def on_disconnect(self) -> None:
         if self._status_callback:
             self._status_callback("discord", False)
