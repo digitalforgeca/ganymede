@@ -148,3 +148,11 @@ Run the unittest suite verifying database, safety hooks, quota tracking, and age
 ```bash
 python3 -m unittest tests/test_ganymede.py
 ```
+
+---
+
+## 🗺️ Roadmap & Future Developments
+
+- **Auto-Detect Local Models**: Intelligently auto-detect the available models defined in the `~/.gemini/models` folder and populate them in the UI for the user to work with seamlessly.
+- **Enhanced Multi-Bot Provisioning**: Formalize full multi-bot orchestration directly within the Ganymede UI to allow spanning multiple identity gateways concurrently.
+- **Plugin Registry Integration**: Seamless UI-driven installations of community Antigravity plugins.

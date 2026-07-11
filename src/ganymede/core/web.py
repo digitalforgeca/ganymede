@@ -153,16 +153,31 @@ class DashboardServer:
         import yaml
         data = await request.json()
             
-        # Update in-memory config for immediate application (basic fields)
+        # Update in-memory config for immediate application
         if "log_level" in data:
             self.config.log_level = data["log_level"]
         if "platform" in data:
             self.config.platform = data["platform"]
-            
-        return web.json_response({"status": "applied_to_memory"})
-            
-        return web.json_response({"status": "saved"})
-
+        if "agent" in data:
+            if not hasattr(self.config, "agent"):
+                class AgentConfig: pass
+                self.config.agent = AgentConfig()
+            if "model" in data["agent"]:
+                self.config.agent.model = data["agent"]["model"]
+            if "name" in data["agent"]:
+                self.config.agent.name = data["agent"]["name"]
+            if "system_instructions" in data["agent"]:
+                self.config.agent.system_instructions = data["agent"]["system_instructions"]
+            if "mission_statement" in data["agent"]:
+                self.config.agent.mission_statement = data["agent"]["mission_statement"]
+                
+        config_path = os.path.expanduser("~/.ganymede/config.yaml")
+        try:
+            with open(config_path, "w") as f:
+                yaml.dump(data, f, default_flow_style=False)
+            return web.json_response({"status": "saved"})
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
     async def handle_rules_get(self, request):
         rules_dir = os.path.expanduser("~/.gemini/rules")
         if not os.path.exists(rules_dir):
