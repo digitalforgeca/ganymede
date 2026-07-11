@@ -116,7 +116,10 @@ class ManagedAgent:
                 except Exception:
                     pass
                     
-            args.extend(["--project", project_name])
+            if needs_rename:
+                args.extend(["--new-project", project_name])
+            else:
+                args.extend(["--project", project_name])
             
             model_path = os.path.join(brain_dir, "model.txt")
             model_override = None
@@ -133,8 +136,29 @@ class ManagedAgent:
             if model_override:
                 args.extend(["--model", model_override])
             
-            # Always skip permissions for headless gateway execution
-            args.append("--dangerously-skip-permissions")
+            skip_permissions = getattr(self.config.agent, "skip_permissions", True)
+            skip_permissions_path = os.path.join(brain_dir, "skip_permissions.txt")
+            if os.path.exists(skip_permissions_path):
+                try:
+                    with open(skip_permissions_path, "r") as f:
+                        skip_permissions = f.read().strip() == "true"
+                except Exception:
+                    pass
+                    
+            if skip_permissions:
+                args.append("--dangerously-skip-permissions")
+                
+            mode = getattr(self.config.agent, "mode", "accept-edits")
+            mode_path = os.path.join(brain_dir, "mode.txt")
+            if os.path.exists(mode_path):
+                try:
+                    with open(mode_path, "r") as f:
+                        mode = f.read().strip()
+                except Exception:
+                    pass
+                    
+            if mode:
+                args.extend(["--mode", mode])
             
             # Inject system instructions for new conversations
             final_prompt = prompt

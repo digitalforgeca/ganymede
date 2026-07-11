@@ -23,10 +23,15 @@ class DashboardServer:
         self.app.router.add_get('/api/chats/{id}/files', self.handle_chat_files)
         self.app.router.add_get('/api/chats/{id}/settings', self.handle_chat_settings_get)
         self.app.router.add_post('/api/chats/{id}/settings', self.handle_chat_settings_post)
+        self.app.router.add_post('/api/chats/{id}/merge', self.handle_chat_merge)
+        self.app.router.add_post('/api/chats/{id}/fork', self.handle_chat_fork)
         self.app.router.add_post('/api/telemetry', self.handle_telemetry_post)
         self.app.router.add_post('/api/chat/invoke', self.handle_chat_invoke)
         self.app.router.add_get('/api/config', self.handle_config_get)
         self.app.router.add_post('/api/config', self.handle_config_post)
+        self.app.router.add_get('/api/rules', self.handle_rules_get)
+        self.app.router.add_post('/api/rules', self.handle_rules_post)
+        self.app.router.add_delete('/api/rules/{filename}', self.handle_rule_delete)
         self.app.router.add_get('/api/user', self.handle_user_info)
         self.app.router.add_get('/ws/telemetry', self.handle_telemetry_ws)
         self.app.router.add_get('/ws/dashboard', self.handle_dashboard_ws)
@@ -67,22 +72,38 @@ class DashboardServer:
         active_instances = 0
         tokens_hour = 0
         quota_used = 0
-        quota_limit = 0
+        quota_limit = getattr(self.config.quota, "max_requests_per_day", 18)
+        token_limit = getattr(self.config.quota, "max_tokens_global_per_hour", 200000)
         bot_info = None
         
+        try:
+            import subprocess
+            out = subprocess.check_output(["ps", "-A", "-o", "command"], text=True)
+            active_instances = sum(1 for line in out.splitlines() if line.startswith("agy ") or line.endswith("/agy") or "/agy " in line)
+        except Exception:
+            pass
+
         if getattr(self, "providers", None):
             for p in self.providers:
                 if hasattr(p, "router") and p.router and p.router.agent_manager:
-                    active_instances += len(p.router.agent_manager._agents)
-                    qt = p.router.agent_manager.quota_tracker
-                    if qt:
-                        import time
-                        now = time.time()
-                        hour_ago = now - 3600
-                        tokens_hour += sum(tok for t, tok in qt._global_usage_history if t >= hour_ago)
-                        quota_used += qt._count_daily_requests()
-                        quota_limit = getattr(self.config.quota, "max_requests_per_day", 18)
-                
+                    # Query ganymede.db for persistent tokens and requests
+                    import sqlite3
+                    import os
+                    db_path = os.path.expanduser("~/.ganymede/data/ganymede.db")
+                    if os.path.exists(db_path):
+                        try:
+                            with sqlite3.connect(db_path) as conn:
+                                c = conn.cursor()
+                                c.execute("SELECT sum(tokens) FROM conversations WHERE created_at >= datetime('now', '-1 hour')")
+                                row = c.fetchone()
+                                if row and row[0]:
+                                    tokens_hour += int(row[0])
+                                c.execute("SELECT count(*) FROM conversations WHERE role = 'assistant' AND created_at >= datetime('now', 'start of day')")
+                                row = c.fetchone()
+                                if row and row[0]:
+                                    quota_used += int(row[0])
+                        except Exception as e:
+                            print(f"Error querying DB for metrics: {e}")
                 adapter = getattr(p, "adapter", None)
                 if adapter and hasattr(adapter, "user") and adapter.user:
                     try:
@@ -106,15 +127,17 @@ class DashboardServer:
         return web.json_response({
             "status": status_str,
             "platform": self.config.platform,
-            "data_dir": self.config.data_dir,
             "log_level": self.config.log_level,
-            "bot_info": bot_info,
+            "data_dir": os.path.expanduser("~/.ganymede/data"),
+            "model": getattr(self.config.agent, "model", "default"),
             "metrics": {
                 "active_instances": active_instances,
                 "tokens_hour": tokens_hour,
+                "token_limit": token_limit,
                 "quota_used": quota_used,
                 "quota_limit": quota_limit
-            }
+            },
+            "bot_info": bot_info
         })
 
     async def handle_config_get(self, request):
@@ -139,6 +162,54 @@ class DashboardServer:
         return web.json_response({"status": "applied_to_memory"})
             
         return web.json_response({"status": "saved"})
+
+    async def handle_rules_get(self, request):
+        rules_dir = os.path.expanduser("~/.gemini/rules")
+        if not os.path.exists(rules_dir):
+            os.makedirs(rules_dir, exist_ok=True)
+            
+        filename = request.query.get("filename")
+        if filename:
+            file_path = os.path.join(rules_dir, filename)
+            if not os.path.exists(file_path):
+                return web.json_response({"error": "Rule not found"}, status=404)
+            with open(file_path, "r") as f:
+                return web.json_response({"content": f.read()})
+                
+        files = []
+        for f in os.listdir(rules_dir):
+            if f.endswith(".md"):
+                files.append(f)
+        return web.json_response({"rules": sorted(files)})
+        
+    async def handle_rules_post(self, request):
+        rules_dir = os.path.expanduser("~/.gemini/rules")
+        if not os.path.exists(rules_dir):
+            os.makedirs(rules_dir, exist_ok=True)
+            
+        data = await request.json()
+        filename = data.get("filename")
+        content = data.get("content", "")
+        
+        if not filename or not filename.endswith(".md"):
+            return web.json_response({"error": "Invalid filename. Must end with .md"}, status=400)
+            
+        file_path = os.path.join(rules_dir, filename)
+        with open(file_path, "w") as f:
+            f.write(content)
+            
+        return web.json_response({"status": "saved", "filename": filename})
+        
+    async def handle_rule_delete(self, request):
+        filename = request.match_info['filename']
+        if not filename or not filename.endswith(".md"):
+            return web.json_response({"error": "Invalid filename"}, status=400)
+            
+        file_path = os.path.join(os.path.expanduser("~/.gemini/rules"), filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return web.json_response({"status": "deleted"})
+        return web.json_response({"error": "Rule not found"}, status=404)
 
     async def handle_user_info(self, request):
         import base64
@@ -255,6 +326,8 @@ class DashboardServer:
         if os.path.exists(db_path):
             async with aiosqlite.connect(db_path) as conn:
                 conn.row_factory = aiosqlite.Row
+                
+                # Fetch Ganymede-native conversations
                 async with conn.execute("""
                     SELECT context_platform, context_channel, context_thread, MAX(created_at) as last_active, COUNT(id) as msg_count
                     FROM conversations 
@@ -267,7 +340,6 @@ class DashboardServer:
                         if r['context_thread']:
                             conversation_id += f"_{r['context_thread']}"
                             
-                        # Try to find mapping to actual conversation id
                         actual_conv_id = conversation_id
                         try:
                             async with conn.execute(
@@ -280,7 +352,6 @@ class DashboardServer:
                         except Exception:
                             pass
                             
-                        # Read project name
                         project_name = f"{r['context_platform']}-{r['context_channel']}"
                         if r['context_thread']:
                             project_name += f"-{r['context_thread']}"
@@ -303,8 +374,62 @@ class DashboardServer:
                             "last_active": r["last_active"],
                             "msg_count": r["msg_count"],
                             "id": f"{r['context_platform']}_{r['context_channel']}_{r['context_thread'] or 'main'}",
+                            "actual_conv_id": actual_conv_id,
                             "project_name": project_name
                         })
+                        
+        # Merge Antigravity CLI native conversations from brain directory
+        brain_dir = os.path.expanduser("~/.gemini/antigravity-cli/brain")
+        if os.path.exists(brain_dir):
+            ganymede_conv_ids = {c.get("actual_conv_id") for c in chats if c.get("actual_conv_id")}
+            try:
+                cli_chats = []
+                for entry in os.listdir(brain_dir):
+                    if entry in ganymede_conv_ids or entry == "telemetry.db" or not os.path.isdir(os.path.join(brain_dir, entry)):
+                        continue
+                        
+                    # Get modification time of transcript.jsonl if it exists
+                    transcript_path = os.path.join(brain_dir, entry, ".system_generated", "logs", "transcript.jsonl")
+                    last_mod = 0
+                    msg_count = 0
+                    if os.path.exists(transcript_path):
+                        last_mod = os.stat(transcript_path).st_mtime
+                        try:
+                            with open(transcript_path, 'rb') as f:
+                                msg_count = sum(1 for _ in f)
+                        except Exception:
+                            pass
+                    else:
+                        continue
+                        
+                    pname = f"cli-{entry[:8]}"
+                    pname_path = os.path.join(brain_dir, entry, "project_name.txt")
+                    if os.path.exists(pname_path):
+                        try:
+                            with open(pname_path, "r") as f:
+                                pname = f.read().strip() or pname
+                        except Exception:
+                            pass
+                            
+                    import datetime
+                    cli_chats.append({
+                        "platform": "cli",
+                        "channel_id": entry[:8],
+                        "thread_id": None,
+                        "last_active": datetime.datetime.fromtimestamp(last_mod).strftime('%Y-%m-%d %H:%M:%S'),
+                        "msg_count": msg_count,
+                        "id": f"cli_{entry}_main",
+                        "actual_conv_id": entry,
+                        "project_name": pname
+                    })
+                
+                cli_chats.sort(key=lambda x: x["last_active"], reverse=True)
+                chats.extend(cli_chats[:20])
+            except Exception as e:
+                print(f"Error fetching brain chats: {e}")
+                
+        # Re-sort combined list
+        chats.sort(key=lambda x: x["last_active"], reverse=True)
         return web.json_response({"chats": chats})
 
     async def handle_chat_history(self, request):
@@ -317,8 +442,44 @@ class DashboardServer:
         channel_id = parts[1]
         thread_id = parts[2] if parts[2] != 'main' else None
         
-        db_path = os.path.join(self.config.data_dir, "ganymede.db")
         history = []
+        if platform == "cli":
+            # For native CLI chats, channel_id is the full actual_conv_id
+            transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{channel_id}/.system_generated/logs/transcript_full.jsonl")
+            if not os.path.exists(transcript_path):
+                transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{channel_id}/.system_generated/logs/transcript.jsonl")
+            
+            if os.path.exists(transcript_path):
+                import json
+                try:
+                    with open(transcript_path, 'r') as f:
+                        for line in f:
+                            if not line.strip(): continue
+                            try:
+                                data = json.loads(line)
+                            except Exception:
+                                continue
+                            if data.get("type") == "USER_INPUT":
+                                history.append({
+                                    "author_id": "User",
+                                    "role": "user",
+                                    "content": data.get("content", ""),
+                                    "created_at": data.get("created_at", "")
+                                })
+                            elif data.get("type") == "PLANNER_RESPONSE" or data.get("type") == "TEXT_RESPONSE":
+                                content = data.get("content", "")
+                                if content:
+                                    history.append({
+                                        "author_id": "Antigravity",
+                                        "role": "assistant",
+                                        "content": content,
+                                        "created_at": data.get("created_at", "")
+                                    })
+                except Exception as e:
+                    print(f"Error reading transcript: {e}")
+            return web.json_response({"messages": history})
+            
+        db_path = os.path.join(self.config.data_dir, "ganymede.db")
         if os.path.exists(db_path):
             import aiosqlite
             async with aiosqlite.connect(db_path) as conn:
@@ -422,6 +583,48 @@ class DashboardServer:
         
         return web.json_response({"status": "merged", "target_conversation_id": target_conversation_id})
 
+    async def handle_chat_fork(self, request):
+        import uuid
+        import shutil
+        
+        context_id = request.match_info.get('id', '')
+        conversation_id = await self._resolve_conversation_id(context_id)
+        if not conversation_id:
+            return web.json_response({"error": "Invalid context ID format"}, status=400)
+            
+        parts = context_id.split('_')
+        platform = parts[0]
+        channel_id = parts[1]
+        thread_id = parts[2] if parts[2] != 'main' else None
+        
+        new_thread_id = f"fork-{uuid.uuid4().hex[:8]}"
+        new_conversation_id = f"ganymede_{platform}_{channel_id}_{new_thread_id}"
+        
+        # 1. Copy agy brain dir
+        old_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
+        new_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{new_conversation_id}")
+        if os.path.exists(old_brain_dir):
+            shutil.copytree(old_brain_dir, new_brain_dir)
+            
+        # 2. Copy DB History
+        db_path = os.path.join(self.config.data_dir, "ganymede.db")
+        if os.path.exists(db_path):
+            import aiosqlite
+            async with aiosqlite.connect(db_path) as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO conversations (context_platform, context_channel, context_thread, author_id, role, content, tokens, created_at)
+                    SELECT context_platform, context_channel, ?, author_id, role, content, tokens, created_at
+                    FROM conversations
+                    WHERE context_platform = ? AND context_channel = ? AND (context_thread = ? OR (context_thread IS NULL AND ? IS NULL))
+                    """,
+                    (new_thread_id, platform, channel_id, thread_id, thread_id)
+                )
+                await conn.commit()
+                
+        new_context_id = f"{platform}_{channel_id}_{new_thread_id}"
+        return web.json_response({"status": "forked", "new_context_id": new_context_id})
+
     async def _resolve_conversation_id(self, context_id: str) -> str:
         parts = context_id.split('_')
         if len(parts) < 3:
@@ -479,7 +682,34 @@ class DashboardServer:
             if thread_id:
                 project_name += f"-{thread_id}"
                 
-        return web.json_response({"model": model_override, "project_name": project_name})
+        # Read Mode
+        mode_path = os.path.join(brain_dir, "mode.txt")
+        mode = "accept-edits"
+        if os.path.exists(mode_path):
+            with open(mode_path, "r") as f:
+                mode = f.read().strip()
+                
+        # Read Rules
+        rules_path = os.path.join(brain_dir, "sys_instructions.txt")
+        rules = ""
+        if os.path.exists(rules_path):
+            with open(rules_path, "r") as f:
+                rules = f.read().strip()
+
+        # Read Skip Permissions
+        skip_permissions = False
+        skip_permissions_path = os.path.join(brain_dir, "skip_permissions.txt")
+        if os.path.exists(skip_permissions_path):
+            with open(skip_permissions_path, "r") as f:
+                skip_permissions = f.read().strip() == "true"
+                
+        return web.json_response({
+            "model": model_override, 
+            "project_name": project_name,
+            "mode": mode,
+            "skip_permissions": skip_permissions,
+            "rules": rules
+        })
         
     async def handle_chat_settings_post(self, request):
         context_id = request.match_info.get('id', '')
@@ -507,6 +737,32 @@ class DashboardServer:
                 f.write(project_name)
         elif os.path.exists(project_name_path):
             os.remove(project_name_path)
+            
+        mode = data.get("mode", "")
+        mode_path = os.path.join(brain_dir, "mode.txt")
+        if mode:
+            with open(mode_path, "w") as f:
+                f.write(mode)
+        elif os.path.exists(mode_path):
+            os.remove(mode_path)
+            
+        skip_permissions = data.get("skip_permissions")
+        skip_permissions_path = os.path.join(brain_dir, "skip_permissions.txt")
+        if skip_permissions is not None:
+            with open(skip_permissions_path, "w") as f:
+                f.write("true" if skip_permissions else "false")
+        elif os.path.exists(skip_permissions_path):
+            os.remove(skip_permissions_path)
+            
+        rules = data.get("rules")
+        rules_path = os.path.join(brain_dir, "sys_instructions.txt")
+        if rules is not None:
+            if rules.strip() == "":
+                if os.path.exists(rules_path):
+                    os.remove(rules_path)
+            else:
+                with open(rules_path, "w") as f:
+                    f.write(rules)
             
         # Log this change directly into the chat history for visibility
         try:

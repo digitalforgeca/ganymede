@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     function getAgentHeaderHtml() {
         if (botInfo) {
-            const avatarHtml = botInfo.avatar_url ? `<img src="${botInfo.avatar_url}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : '';
+            const avatarHtml = botInfo.avatar_url ? `<img src="${botInfo.avatar_url}" referrerpolicy="no-referrer" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : '';
             return `<div style="margin-bottom: 8px; display: flex; align-items: center;">
                         ${avatarHtml}
                         <strong>${botInfo.name}</strong>
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function getUserHeaderHtml() {
         if (userInfo) {
-            const avatarHtml = userInfo.avatar_url ? `<img src="${userInfo.avatar_url}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: #ddd; fill: #666; padding: 4px;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            const avatarHtml = userInfo.avatar_url ? `<img src="${userInfo.avatar_url}" referrerpolicy="no-referrer" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: #ddd; fill: #666; padding: 4px;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
             return `<div style="margin-bottom: 8px; display: flex; align-items: center;">
                         ${avatarHtml}
                         <strong>${userInfo.name}</strong>
@@ -59,20 +59,56 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!res.ok) throw new Error("Status API failed");
             const data = await res.json();
             
-            valPlatform.textContent = data.platform || "Unknown";
-            valLoglevel.textContent = data.log_level || "Unknown";
-            valDatadir.textContent = data.data_dir || "Unknown";
+            if (valPlatform) valPlatform.textContent = data.platform || "Unknown";
+            if (valLoglevel) valLoglevel.textContent = data.log_level || "Unknown";
+            if (valDatadir) valDatadir.textContent = data.data_dir || "Unknown";
+            
+            const modelText = document.getElementById('metric-model-text');
+            if (modelText) modelText.textContent = data.model || "Default";
             
             if (data.metrics) {
-                document.getElementById('metric-active-instances').textContent = data.metrics.active_instances || 0;
-                document.getElementById('metric-tokens-hour').textContent = data.metrics.tokens_hour || 0;
-                document.getElementById('metric-quota-text').textContent = `${data.metrics.quota_used} / ${data.metrics.quota_limit} reqs`;
-                const pct = (data.metrics.quota_used / Math.max(1, data.metrics.quota_limit)) * 100;
-                document.getElementById('metric-quota-bar').value = pct;
+                const activeEl = document.getElementById('metric-active-instances');
+                if (activeEl) activeEl.textContent = data.metrics.active_instances || 0;
+                
+                const tokenText = document.getElementById('metric-tokens-text');
+                const tokenBar = document.getElementById('metric-tokens-bar');
+                if (tokenText && tokenBar) {
+                    const tokenUsed = data.metrics.tokens_hour || 0;
+                    const tokenLimit = data.metrics.token_limit || 200000;
+                    tokenText.textContent = `${tokenUsed.toLocaleString()} / ${tokenLimit.toLocaleString()}`;
+                    const tokenPct = (tokenUsed / Math.max(1, tokenLimit)) * 100;
+                    tokenBar.value = tokenPct;
+                }
+                
+                const quotaText = document.getElementById('metric-quota-text');
+                const quotaBar = document.getElementById('metric-quota-bar');
+                if (quotaText && quotaBar) {
+                    quotaText.textContent = `${data.metrics.quota_used} / ${data.metrics.quota_limit}`;
+                    const pct = (data.metrics.quota_used / Math.max(1, data.metrics.quota_limit)) * 100;
+                    quotaBar.value = pct;
+                }
             }
             
             if (data.bot_info) {
                 botInfo = data.bot_info;
+                
+                const cardAvatar = document.getElementById('bot-card-avatar');
+                const cardName = document.getElementById('bot-card-name');
+                const cardId = document.getElementById('bot-card-id');
+                const cardPlatform = document.getElementById('bot-card-platform');
+                
+                if (cardName) {
+                    cardName.textContent = botInfo.name || "Unknown Bot";
+                    if (botInfo.avatar_url && cardAvatar) {
+                        cardAvatar.src = botInfo.avatar_url;
+                    }
+                    if (cardId) {
+                        cardId.textContent = botInfo.id || "--";
+                    }
+                    if (cardPlatform) {
+                        cardPlatform.textContent = data.platform || "--";
+                    }
+                }
             }
             
             setOnline(data.status === "online");
@@ -237,9 +273,157 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function setupPanes() {
+        const toggleBtn = document.getElementById('btn-toggle-channels');
+        const channelsPane = document.getElementById('channels-pane');
+        
+        if (toggleBtn && channelsPane) {
+            toggleBtn.addEventListener('click', () => {
+                channelsPane.classList.toggle('is-hidden');
+            });
+        }
+        
+        const mainToggleBtn = document.getElementById('main-sidebar-toggle');
+        const olympusSidebar = document.querySelector('.olympus-sidebar');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (mainToggleBtn && olympusSidebar && mainContent) {
+            mainToggleBtn.addEventListener('click', () => {
+                olympusSidebar.classList.toggle('is-hidden');
+                if (olympusSidebar.classList.contains('is-hidden')) {
+                    mainContent.classList.remove('is-10');
+                    mainContent.classList.add('is-12');
+                } else {
+                    mainContent.classList.remove('is-12');
+                    mainContent.classList.add('is-10');
+                }
+            });
+        }
+    }
+    
+    function setupChatTabs() {
+        const tabList = document.querySelectorAll('#chat-tabs-container li');
+        const viewChat = document.getElementById('chat-history');
+        const viewSettings = document.getElementById('chat-settings-view');
+        const viewRules = document.getElementById('chat-rules-view');
+        const viewInput = document.getElementById('chat-input-area');
+        
+        tabList.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabList.forEach(t => t.classList.remove('is-active'));
+                tab.classList.add('is-active');
+                
+                const target = tab.dataset.tab;
+                if (target === 'chat') {
+                    viewChat.classList.remove('is-hidden');
+                    viewInput.classList.remove('is-hidden');
+                    viewSettings.classList.add('is-hidden');
+                    viewRules.classList.add('is-hidden');
+                } else if (target === 'settings') {
+                    viewChat.classList.add('is-hidden');
+                    viewInput.classList.add('is-hidden');
+                    viewSettings.classList.remove('is-hidden');
+                    viewRules.classList.add('is-hidden');
+                } else if (target === 'rules') {
+                    viewChat.classList.add('is-hidden');
+                    viewInput.classList.add('is-hidden');
+                    viewSettings.classList.add('is-hidden');
+                    viewRules.classList.remove('is-hidden');
+                }
+            });
+        });
+    }
+
+    function setupSettingsTabs() {
+        const tabList = document.querySelectorAll('#settings-tabs-container li');
+        const viewGlobal = document.getElementById('settings-global-view');
+        const viewRules = document.getElementById('settings-rules-view');
+        const viewRaw = document.getElementById('settings-raw-view');
+        
+        tabList.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabList.forEach(t => t.classList.remove('is-active'));
+                tab.classList.add('is-active');
+                
+                const target = tab.dataset.tab;
+                viewGlobal.classList.add('is-hidden');
+                viewRules.classList.add('is-hidden');
+                viewRaw.classList.add('is-hidden');
+                
+                if (target === 'global') {
+                    viewGlobal.classList.remove('is-hidden');
+                } else if (target === 'rules') {
+                    viewRules.classList.remove('is-hidden');
+                } else if (target === 'raw') {
+                    viewRaw.classList.remove('is-hidden');
+                }
+            });
+        });
+    }
+
     // 5. Native Web Chat Invocation
     let currentChatId = null;
+    let chatGroups = {};
+    let activeChatTab = null;
+
+    function applyChatSearch() {
+        const query = document.getElementById('project-search').value.toLowerCase();
+        if (!activeChatTab || !chatGroups[activeChatTab]) return;
+        
+        let filtered = chatGroups[activeChatTab];
+        if (query) {
+            filtered = filtered.filter(chat => {
+                const searchStr = `${chat.platform} ${chat.channel_id} ${chat.thread_id || ''} ${chat.project_name || ''}`.toLowerCase();
+                return searchStr.includes(query);
+            });
+        }
+        renderChats(filtered);
+    }
     
+    document.getElementById('project-search').addEventListener('input', applyChatSearch);
+    
+    function renderChats(chatsToRender) {
+        const chatList = document.getElementById('chat-list');
+        chatList.innerHTML = '';
+        chatsToRender.forEach(chat => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.className = "is-flex is-justify-content-space-between is-align-items-center";
+            const displayName = chat.project_name || `${chat.platform}-${chat.channel_id}${chat.thread_id ? `-${chat.thread_id}` : ''}`;
+            a.innerHTML = `
+                <span>
+                    <span class="icon is-small"><i class="fas ${chat.platform === 'discord' ? 'fa-discord' : 'fa-terminal'}"></i></span>
+                    <span class="chat-name">${displayName}</span>
+                    <span class="is-size-7 has-text-grey ml-1">(${chat.platform === 'discord' ? '#' : ''}${chat.channel_id})</span>
+                </span>
+                <span class="tag is-dark is-rounded">${chat.msg_count}</span>
+            `;
+            
+            if (currentChatId === chat.id) {
+                a.classList.add('is-active');
+            }
+            
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('#chat-list a').forEach(el => el.classList.remove('is-active'));
+                a.classList.add('is-active');
+                currentChatId = chat.id;
+                document.getElementById('chat-title').textContent = displayName;
+                document.getElementById('chat-subtitle').textContent = `Platform: ${chat.platform} | Channel: ${chat.channel_id}`;
+                document.getElementById('btn-export-chat').classList.remove('is-hidden');
+                document.getElementById('btn-fork-chat').classList.remove('is-hidden');
+                document.getElementById('btn-view-artifacts').classList.remove('is-hidden');
+                document.getElementById('btn-merge-context').classList.remove('is-hidden');
+                loadChatHistory(chat.id);
+                fetchChatFiles(chat.id);
+                fetchChatSettings(chat.id);
+            });
+            
+            li.appendChild(a);
+            chatList.appendChild(li);
+        });
+    }
+
     async function fetchChats() {
         try {
             const res = await fetch('/api/chats');
@@ -249,80 +433,41 @@ document.addEventListener("DOMContentLoaded", () => {
             const chatList = document.getElementById('chat-list');
             if (data.chats && data.chats.length > 0) {
                 // Group by platform
-                const groups = {};
+                chatGroups = {};
                 data.chats.forEach(chat => {
-                    if (!groups[chat.platform]) groups[chat.platform] = [];
-                    groups[chat.platform].push(chat);
+                    if (!chatGroups[chat.platform]) chatGroups[chat.platform] = [];
+                    chatGroups[chat.platform].push(chat);
                 });
                 
                 // Build tabs
                 const tabsList = document.getElementById('project-tabs');
                 if (tabsList) {
-                    let activeTab = document.querySelector('#project-tabs li.is-active')?.dataset?.platform;
-                    if (!activeTab || !groups[activeTab]) {
-                        activeTab = Object.keys(groups)[0];
+                    activeChatTab = document.querySelector('#project-tabs li.is-active')?.dataset?.platform;
+                    if (!activeChatTab || !chatGroups[activeChatTab]) {
+                        activeChatTab = Object.keys(chatGroups)[0];
                     }
                     
                     tabsList.innerHTML = '';
-                    Object.keys(groups).forEach(platform => {
+                    Object.keys(chatGroups).forEach(platform => {
                         const li = document.createElement('li');
                         li.dataset.platform = platform;
-                        if (platform === activeTab) li.classList.add('is-active');
+                        if (platform === activeChatTab) li.classList.add('is-active');
                         li.innerHTML = `<a><span>${platform.toUpperCase()}</span></a>`;
                         li.addEventListener('click', () => {
                             document.querySelectorAll('#project-tabs li').forEach(el => el.classList.remove('is-active'));
                             li.classList.add('is-active');
-                            renderChats(groups[platform]);
+                            activeChatTab = platform;
+                            applyChatSearch();
                         });
                         tabsList.appendChild(li);
                     });
                     
-                    renderChats(groups[activeTab]);
+                    applyChatSearch();
                 } else {
                     renderChats(data.chats);
                 }
-                
-                function renderChats(chatsToRender) {
-                    chatList.innerHTML = '';
-                    chatsToRender.forEach(chat => {
-                        const li = document.createElement('li');
-                        const a = document.createElement('a');
-                        a.className = "is-flex is-justify-content-space-between is-align-items-center";
-                        const displayName = chat.project_name || `${chat.platform}-${chat.channel_id}${chat.thread_id ? `-${chat.thread_id}` : ''}`;
-                        a.innerHTML = `
-                            <span>
-                                <span class="icon is-small"><i class="fas ${chat.platform === 'discord' ? 'fa-discord' : 'fa-terminal'}"></i></span>
-                                <span class="chat-name">${displayName}</span>
-                                <span class="is-size-7 has-text-grey ml-1">(${chat.platform === 'discord' ? '#' : ''}${chat.channel_id})</span>
-                            </span>
-                            <span class="tag is-dark is-rounded">${chat.msg_count}</span>
-                        `;
-                        
-                        if (currentChatId === chat.id) {
-                            a.classList.add('is-active');
-                        }
-                        
-                        a.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            document.querySelectorAll('#chat-list a').forEach(el => el.classList.remove('is-active'));
-                            a.classList.add('is-active');
-                            currentChatId = chat.id;
-                            document.getElementById('chat-title').textContent = displayName;
-                            document.getElementById('chat-subtitle').textContent = `Platform: ${chat.platform} | Channel: ${chat.channel_id}`;
-                            document.getElementById('btn-export-chat').classList.remove('is-hidden');
-                            document.getElementById('btn-view-artifacts').classList.remove('is-hidden');
-                            document.getElementById('btn-merge-context').classList.remove('is-hidden');
-                            loadChatHistory(chat.id);
-                            fetchChatFiles(chat.id);
-                            fetchChatSettings(chat.id);
-                        });
-                        
-                        li.appendChild(a);
-                        chatList.appendChild(li);
-                    });
-                }
             } else {
-                chatList.innerHTML = '<li><a>No active projects found.</a></li>';
+                document.getElementById('chat-list').innerHTML = '<li><a>No active projects found.</a></li>';
             }
         } catch (e) {
             console.error(e);
@@ -404,6 +549,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await res.json();
                 document.getElementById('chat-model-select').value = data.model || "";
                 document.getElementById('chat-project-name').value = data.project_name || "";
+                document.getElementById('chat-mode-select').value = data.mode || "accept-edits";
+                document.getElementById('chat-skip-permissions').checked = !!data.skip_permissions;
+                document.getElementById('chat-project-rules').value = data.rules || "";
             }
         } catch (e) {
             console.error("Failed to fetch chat settings", e);
@@ -417,12 +565,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!currentChatId) return;
                 const model = document.getElementById('chat-model-select').value;
                 const projectName = document.getElementById('chat-project-name').value;
+                const mode = document.getElementById('chat-mode-select').value;
+                const skipPerms = document.getElementById('chat-skip-permissions').checked;
                 try {
                     btnSave.classList.add('is-loading');
                     const res = await fetch(`/api/chats/${currentChatId}/settings`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model: model, project_name: projectName })
+                        body: JSON.stringify({ model: model, project_name: projectName, mode: mode, skip_permissions: skipPerms })
                     });
                     if (res.ok) {
                         alert("Project settings saved successfully!");
@@ -544,6 +694,39 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmBtn.addEventListener('click', confirmMerge);
     }
 
+    function setupChatFork() {
+        const forkBtn = document.getElementById('btn-fork-chat');
+        if (forkBtn) {
+            forkBtn.addEventListener('click', async () => {
+                if (!currentChatId) return;
+                
+                if (!confirm("Are you sure you want to fork this project into a new one?")) return;
+                
+                try {
+                    forkBtn.classList.add('is-loading');
+                    const res = await fetch(`/api/chats/${currentChatId}/fork`, {
+                        method: 'POST'
+                    });
+                    
+                    if (!res.ok) throw new Error("Fork API failed");
+                    const data = await res.json();
+                    
+                    appendLog(`Forked project context [${currentChatId}] into [${data.new_context_id}]`, 'action');
+                    alert(`Project forked successfully! New Context ID: ${data.new_context_id}`);
+                    
+                    // Refresh chat list so it appears
+                    fetchChats();
+                    
+                } catch (e) {
+                    console.error(e);
+                    alert("Failed to fork project: " + e.message);
+                } finally {
+                    forkBtn.classList.remove('is-loading');
+                }
+            });
+        }
+    }
+
     // 6. Export Telemetry
     function setupTelemetryExport() {
         const btnExport = document.getElementById('btn-export-telemetry');
@@ -594,6 +777,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (globalBotName) globalBotName.value = data.agent.name || "Agent";
                     const globalMissionStatement = document.getElementById('global-mission-statement');
                     if (globalMissionStatement) globalMissionStatement.value = data.agent.mission_statement || "";
+                    const globalModeSelect = document.getElementById('global-mode-select');
+                    if (globalModeSelect) globalModeSelect.value = data.agent.mode || "accept-edits";
+                    const globalSkipPermissions = document.getElementById('global-skip-permissions');
+                    if (globalSkipPermissions) globalSkipPermissions.checked = data.agent.skip_permissions !== false;
                 }
             } catch (e) {
                 console.error(e);
@@ -657,6 +844,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     loadedConfig.agent.mission_statement = globalMissionStatement.value;
                 }
                 
+                const globalModeSelect = document.getElementById('global-mode-select');
+                if (globalModeSelect) {
+                    loadedConfig.agent.mode = globalModeSelect.value;
+                }
+                
+                const globalSkipPermissions = document.getElementById('global-skip-permissions');
+                if (globalSkipPermissions) {
+                    loadedConfig.agent.skip_permissions = globalSkipPermissions.checked;
+                }
+                
                 saveConfigData(loadedConfig, btnSaveGlobal);
             });
         }
@@ -685,7 +882,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const badgeAvatar = document.querySelector('.account-badge .avatar');
                 const badgeTitle = document.querySelector('.account-badge .title');
                 if (badgeAvatar && userInfo.avatar_url) {
-                    badgeAvatar.innerHTML = `<img src="${userInfo.avatar_url}" style="width: 100%; height: 100%; border-radius: 50%;">`;
+                    badgeAvatar.innerHTML = `<img src="${userInfo.avatar_url}" referrerpolicy="no-referrer" style="width: 100%; height: 100%; border-radius: 50%;">`;
                 }
                 if (badgeTitle && userInfo.name) {
                     badgeTitle.textContent = userInfo.name;
@@ -698,17 +895,157 @@ document.addEventListener("DOMContentLoaded", () => {
     
     fetchUserInfo();
     fetchStatus();
+    setInterval(fetchStatus, 5000); // Live updates for header and metrics
     fetchChats();
     connectWebSocket();
     setupRouting();
+    setupPanes();
     setupWebChat();
     setupContextMerge();
+    setupChatFork();
     setupTelemetryExport();
     setupConfigEditor();
     setupChatTabs();
+    setupSettingsTabs();
     setupArtifactsModal();
     setupChatExport();
     setupProjectSettings();
+    setupRulesEditor();
+    
+    // Rules & Workflows Editor
+    function setupRulesEditor() {
+        const ruleList = document.getElementById('rule-list');
+        const ruleFilename = document.getElementById('rule-filename');
+        const ruleEditor = document.getElementById('rule-editor');
+        const btnNew = document.getElementById('btn-new-rule');
+        const btnSave = document.getElementById('btn-save-rule');
+        const btnDelete = document.getElementById('btn-delete-rule');
+        
+        let currentRule = null;
+        
+        async function loadRules() {
+            try {
+                const res = await fetch('/api/rules');
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                ruleList.innerHTML = '';
+                if (data.rules && data.rules.length > 0) {
+                    data.rules.forEach(rule => {
+                        const li = document.createElement('li');
+                        const a = document.createElement('a');
+                        a.textContent = rule;
+                        if (rule === currentRule) a.classList.add('is-active');
+                        
+                        a.addEventListener('click', () => selectRule(rule));
+                        li.appendChild(a);
+                        ruleList.appendChild(li);
+                    });
+                } else {
+                    ruleList.innerHTML = '<li><a class="has-text-grey">No rules found</a></li>';
+                }
+            } catch (e) {
+                console.error("Failed to load rules", e);
+            }
+        }
+        
+        async function selectRule(filename) {
+            try {
+                const res = await fetch(`/api/rules?filename=${encodeURIComponent(filename)}`);
+                if (!res.ok) throw new Error("Failed to load rule");
+                const data = await res.json();
+                
+                currentRule = filename;
+                ruleFilename.value = filename;
+                ruleFilename.disabled = true;
+                ruleEditor.value = data.content || '';
+                ruleEditor.disabled = false;
+                btnSave.disabled = false;
+                btnDelete.disabled = false;
+                
+                loadRules(); // Update active state
+            } catch (e) {
+                console.error("Error selecting rule", e);
+            }
+        }
+        
+        btnNew.addEventListener('click', () => {
+            currentRule = null;
+            ruleFilename.value = 'new_rule.md';
+            ruleFilename.disabled = false;
+            ruleEditor.value = '<RULE[new_rule]>\n\n</RULE[new_rule]>';
+            ruleEditor.disabled = false;
+            btnSave.disabled = false;
+            btnDelete.disabled = true;
+            
+            // Remove active class from list
+            ruleList.querySelectorAll('a').forEach(a => a.classList.remove('is-active'));
+        });
+        
+        btnSave.addEventListener('click', async () => {
+            const filename = ruleFilename.value.trim();
+            if (!filename || !filename.endsWith('.md')) {
+                alert("Filename must end with .md");
+                return;
+            }
+            
+            btnSave.classList.add('is-loading');
+            try {
+                const res = await fetch('/api/rules', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        filename: filename,
+                        content: ruleEditor.value
+                    })
+                });
+                
+                if (res.ok) {
+                    currentRule = filename;
+                    ruleFilename.disabled = true;
+                    btnDelete.disabled = false;
+                    await loadRules();
+                } else {
+                    const data = await res.json();
+                    alert("Error saving: " + data.error);
+                }
+            } catch (e) {
+                console.error("Failed to save rule", e);
+            } finally {
+                btnSave.classList.remove('is-loading');
+            }
+        });
+        
+        btnDelete.addEventListener('click', async () => {
+            if (!currentRule) return;
+            if (!confirm(`Are you sure you want to delete ${currentRule}?`)) return;
+            
+            btnDelete.classList.add('is-loading');
+            try {
+                const res = await fetch(`/api/rules/${encodeURIComponent(currentRule)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    currentRule = null;
+                    ruleFilename.value = '';
+                    ruleFilename.disabled = true;
+                    ruleEditor.value = '';
+                    ruleEditor.disabled = true;
+                    btnSave.disabled = true;
+                    btnDelete.disabled = true;
+                    await loadRules();
+                }
+            } catch (e) {
+                console.error("Failed to delete rule", e);
+            } finally {
+                btnDelete.classList.remove('is-loading');
+            }
+        });
+        
+        // Initial load
+        loadRules();
+    }
     
     // Poll for new chats and files periodically
     setInterval(() => {

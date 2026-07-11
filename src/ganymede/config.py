@@ -34,6 +34,8 @@ class AgentConfig:
     max_contexts: int = 20
     status_verbosity: str = "normal"  # "none" | "minimal" | "normal" | "verbose"
     require_approval: bool = True
+    skip_permissions: bool = True
+    mode: str = "accept-edits"
     elevated_users: list[str] = field(default_factory=list)
     auto_approve_tools: list[str] = field(default_factory=lambda: ["view_file", "grep_search", "list_dir", "search_web", "read_url_content", "finish"])
     mission_statement: str = "developing, auditing, and managing the Sulcus persistent context layer and the Antigravity developer ecosystem"
@@ -43,8 +45,8 @@ class QuotaConfig:
     max_tokens_per_context_per_hour: int = 50000
     max_tokens_global_per_hour: int = 200000
     alert_threshold_pct: int = 80
-    max_requests_per_minute: int = 4
-    max_requests_per_day: int = 18  # Free tier RPD is 20; keep 2 as safety margin
+    max_requests_per_minute: int = 15
+    max_requests_per_day: int = 1450  # Free tier RPD is 1500; keep 50 as safety margin
 
 @dataclass
 class ActivationConfig:
