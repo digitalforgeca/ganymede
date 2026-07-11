@@ -42,7 +42,8 @@
 
     <div class="is-flex is-fullheight" style="margin-top: 2.5rem; height: calc(100vh - 2.5rem);">
         <!-- Sidebar Navigation -->
-        <aside class="olympus-sidebar" style="width: 250px; min-width: 150px; max-width: 50%; resize: horizontal; overflow-y: auto; overflow-x: hidden; flex-shrink: 0; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color);">
+        <aside class="olympus-sidebar" style="width: 250px; min-width: 150px; max-width: 50%; overflow-y: auto; overflow-x: hidden; flex-shrink: 0; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color);">
+            <div class="drag-handle" id="handle-main"></div>
             <div class="account-badge section">
                 <div class="avatar">OP</div>
                 <div class="account-info mt-2">
@@ -131,7 +132,8 @@
                         </div>
                         <div class="columns mt-4 is-variable is-2">
                             <!-- Left: Project List & Artifacts -->
-                            <div id="channels-pane" style="width: 330px; max-width: 50%; min-width: 200px; resize: horizontal; overflow-y: auto; overflow-x: hidden; padding-right: 15px; border-right: 1px solid #eee; height: calc(100vh - 250px); flex-shrink: 0;">
+                            <div id="channels-pane" style="width: 330px; max-width: 50%; min-width: 200px; overflow-y: auto; overflow-x: hidden; padding-right: 15px; border-right: 1px solid #eee; height: calc(100vh - 250px); flex-shrink: 0;">
+                                <div class="drag-handle" id="handle-channels"></div>
                                 <div class="menu mb-5">
                                     <p class="menu-label">Channels</p>
                                     <div class="tabs is-small is-toggle is-fullwidth mb-3">

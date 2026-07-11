@@ -276,6 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function setupPanes() {
         const toggleBtn = document.getElementById('btn-toggle-channels');
         const channelsPane = document.getElementById('channels-pane');
+        const handleChannels = document.getElementById('handle-channels');
         
         if (toggleBtn && channelsPane) {
             toggleBtn.addEventListener('click', () => {
@@ -286,12 +287,46 @@ document.addEventListener("DOMContentLoaded", () => {
         const mainToggleBtn = document.getElementById('main-sidebar-toggle');
         const olympusSidebar = document.querySelector('.olympus-sidebar');
         const mainContent = document.querySelector('.main-content');
+        const handleMain = document.getElementById('handle-main');
         
         if (mainToggleBtn && olympusSidebar && mainContent) {
             mainToggleBtn.addEventListener('click', () => {
                 olympusSidebar.classList.toggle('is-hidden');
             });
         }
+        
+        function makeResizable(pane, handle) {
+            if (!pane || !handle) return;
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+            
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = pane.offsetWidth;
+                handle.classList.add('is-dragging');
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = startWidth + (e.clientX - startX);
+                pane.style.width = `${newWidth}px`;
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    handle.classList.remove('is-dragging');
+                    document.body.style.cursor = '';
+                }
+            });
+        }
+        
+        makeResizable(channelsPane, handleChannels);
+        makeResizable(olympusSidebar, handleMain);
     }
     
     function setupChatTabs() {

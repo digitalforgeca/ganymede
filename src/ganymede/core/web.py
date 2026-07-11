@@ -500,7 +500,20 @@ class DashboardServer:
                                 content = data.get("content", "")
                                 tool_calls = data.get("tool_calls", [])
                                 if tool_calls:
-                                    tool_text = "\n\n*⚒️ Tools Used:*\n" + "\n".join([f"- `{t.get('name') or t.get('function', {}).get('name') or 'tool'}`" for t in tool_calls])
+                                    tool_text = "\n\n*⚒️ Tools Used:*\n"
+                                    for t in tool_calls:
+                                        t_name = t.get('name') or t.get('function', {}).get('name') or 'tool'
+                                        args = t.get('args') or t.get('function', {}).get('arguments') or {}
+                                        try:
+                                            if isinstance(args, str):
+                                                args_formatted = json.dumps(json.loads(args), indent=2)
+                                            else:
+                                                args_formatted = json.dumps(args, indent=2)
+                                        except Exception:
+                                            args_formatted = str(args)
+                                            
+                                        tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
+                                    
                                     content = (content + tool_text) if content else tool_text.strip()
                                 
                                 if content:
