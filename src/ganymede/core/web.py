@@ -21,8 +21,8 @@ class DashboardServer:
         self.app.router.add_get('/api/chats', self.handle_chats)
         self.app.router.add_get('/api/chats/{id}/history', self.handle_chat_history)
         self.app.router.add_get('/api/chats/{id}/files', self.handle_chat_files)
-        self.app.router.add_get('/api/chats/{id}/model', self.handle_chat_model_get)
-        self.app.router.add_post('/api/chats/{id}/model', self.handle_chat_model_post)
+        self.app.router.add_get('/api/chats/{id}/settings', self.handle_chat_settings_get)
+        self.app.router.add_post('/api/chats/{id}/settings', self.handle_chat_settings_post)
         self.app.router.add_post('/api/telemetry', self.handle_telemetry_post)
         self.app.router.add_post('/api/chat/invoke', self.handle_chat_invoke)
         self.app.router.add_get('/api/config', self.handle_config_get)
@@ -218,13 +218,47 @@ class DashboardServer:
                 """) as cursor:
                     rows = await cursor.fetchall()
                     for r in rows:
+                        conversation_id = f"{r['context_platform']}_{r['context_channel']}"
+                        if r['context_thread']:
+                            conversation_id += f"_{r['context_thread']}"
+                            
+                        # Try to find mapping to actual conversation id
+                        actual_conv_id = conversation_id
+                        try:
+                            async with conn.execute(
+                                "SELECT conversation_id FROM conversation_mappings WHERE platform = ? AND channel_id = ? AND (thread_id = ? OR (thread_id IS NULL AND ? IS NULL))",
+                                (r["context_platform"], r["context_channel"], r["context_thread"], r["context_thread"])
+                            ) as map_cursor:
+                                map_row = await map_cursor.fetchone()
+                                if map_row:
+                                    actual_conv_id = map_row["conversation_id"]
+                        except Exception:
+                            pass
+                            
+                        # Read project name
+                        project_name = f"{r['context_platform']}-{r['context_channel']}"
+                        if r['context_thread']:
+                            project_name += f"-{r['context_thread']}"
+                            
+                        brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{actual_conv_id}")
+                        project_name_path = os.path.join(brain_dir, "project_name.txt")
+                        if os.path.exists(project_name_path):
+                            try:
+                                with open(project_name_path, "r") as f:
+                                    pname = f.read().strip()
+                                if pname:
+                                    project_name = pname
+                            except Exception:
+                                pass
+                                
                         chats.append({
                             "platform": r["context_platform"],
                             "channel_id": r["context_channel"],
                             "thread_id": r["context_thread"],
                             "last_active": r["last_active"],
                             "msg_count": r["msg_count"],
-                            "id": f"{r['context_platform']}_{r['context_channel']}_{r['context_thread'] or 'main'}"
+                            "id": f"{r['context_platform']}_{r['context_channel']}_{r['context_thread'] or 'main'}",
+                            "project_name": project_name
                         })
         return web.json_response({"chats": chats})
 
@@ -369,22 +403,40 @@ class DashboardServer:
                         conversation_id = row["conversation_id"]
         return conversation_id
 
-    async def handle_chat_model_get(self, request):
+    async def handle_chat_settings_get(self, request):
         context_id = request.match_info.get('id', '')
         conversation_id = await self._resolve_conversation_id(context_id)
         if not conversation_id:
             return web.json_response({"error": "Invalid context ID format"}, status=400)
             
         brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
+        
+        # Read Model
         model_path = os.path.join(brain_dir, "model.txt")
         model_override = ""
         if os.path.exists(model_path):
             with open(model_path, "r") as f:
                 model_override = f.read().strip()
                 
-        return web.json_response({"model": model_override})
+        # Read Project Name
+        project_name_path = os.path.join(brain_dir, "project_name.txt")
+        project_name = ""
+        if os.path.exists(project_name_path):
+            with open(project_name_path, "r") as f:
+                project_name = f.read().strip()
+        else:
+            # Generate default
+            parts = context_id.split('_')
+            platform = parts[0]
+            channel_id = parts[1]
+            thread_id = parts[2] if len(parts) > 2 and parts[2] != 'main' else None
+            project_name = f"{platform}-{channel_id}"
+            if thread_id:
+                project_name += f"-{thread_id}"
+                
+        return web.json_response({"model": model_override, "project_name": project_name})
         
-    async def handle_chat_model_post(self, request):
+    async def handle_chat_settings_post(self, request):
         context_id = request.match_info.get('id', '')
         conversation_id = await self._resolve_conversation_id(context_id)
         if not conversation_id:
@@ -392,16 +444,24 @@ class DashboardServer:
             
         data = await request.json()
         model_override = data.get("model", "").strip()
+        project_name = data.get("project_name", "").strip()
         
         brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
         os.makedirs(brain_dir, exist_ok=True)
-        model_path = os.path.join(brain_dir, "model.txt")
         
+        model_path = os.path.join(brain_dir, "model.txt")
         if model_override:
             with open(model_path, "w") as f:
                 f.write(model_override)
         elif os.path.exists(model_path):
             os.remove(model_path)
+            
+        project_name_path = os.path.join(brain_dir, "project_name.txt")
+        if project_name:
+            with open(project_name_path, "w") as f:
+                f.write(project_name)
+        elif os.path.exists(project_name_path):
+            os.remove(project_name_path)
             
         # Log this change directly into the chat history for visibility
         try:
@@ -413,8 +473,14 @@ class DashboardServer:
                 channel_id = parts[1]
                 thread_id = parts[2] if parts[2] != 'main' else None
                 async with aiosqlite.connect(db_path) as conn:
-                    model_display = model_override if model_override else "Global Default"
-                    content = f"⚙️ *Administrator changed the agent model for this project to:* `{model_display}`"
+                    content = f"⚙️ *Administrator updated project settings:*"
+                    if model_override:
+                        content += f"\n- **Model**: `{model_override}`"
+                    if project_name:
+                        content += f"\n- **Project Name**: `{project_name}`"
+                    if not model_override and not project_name:
+                        content += f"\n- Restored to defaults."
+                        
                     await conn.execute(
                         """
                         INSERT INTO conversations (context_platform, context_channel, context_thread, author_id, role, content, tokens)
@@ -424,9 +490,9 @@ class DashboardServer:
                     )
                     await conn.commit()
         except Exception as e:
-            logger.error("Failed to log model change to db", error=str(e))
+            logger.error("Failed to log settings change to db", error=str(e))
             
-        return web.json_response({"status": "saved", "model": model_override})
+        return web.json_response({"status": "saved", "model": model_override, "project_name": project_name})
 
     async def handle_files(self, request):
         workspace = self.config.workspace if hasattr(self.config, 'workspace') else os.path.expanduser("~/.ganymede/workspace")

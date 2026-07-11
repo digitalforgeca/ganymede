@@ -182,30 +182,36 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
             
             const chatList = document.getElementById('chat-list');
-            chatList.innerHTML = '';
-            
             if (data.chats && data.chats.length > 0) {
+                chatList.innerHTML = '';
                 data.chats.forEach(chat => {
                     const li = document.createElement('li');
                     const a = document.createElement('a');
-                    const threadInfo = chat.thread_id ? ` / ${chat.thread_id}` : '';
-                    a.textContent = `${chat.platform} - ${chat.channel_id}${threadInfo}`;
+                    a.className = "is-flex is-justify-content-space-between is-align-items-center";
+                    const displayName = chat.project_name || `${chat.platform}-${chat.channel_id}${chat.thread_id ? `-${chat.thread_id}` : ''}`;
+                    a.innerHTML = `
+                        <span>
+                            <span class="icon is-small"><i class="fas ${chat.platform === 'discord' ? 'fa-discord' : 'fa-terminal'}"></i></span>
+                            <span class="chat-name">${displayName}</span>
+                            <span class="is-size-7 has-text-grey ml-1">(${chat.platform === 'discord' ? '#' : ''}${chat.channel_id})</span>
+                        </span>
+                        <span class="tag is-dark is-rounded">${chat.msg_count}</span>
+                    `;
                     
                     if (currentChatId === chat.id) {
                         a.classList.add('is-active');
                     }
                     
-                    a.addEventListener('click', () => {
+                    a.addEventListener('click', (e) => {
+                        e.preventDefault();
                         document.querySelectorAll('#chat-list a').forEach(el => el.classList.remove('is-active'));
                         a.classList.add('is-active');
                         currentChatId = chat.id;
-                        document.getElementById('chat-title').textContent = `${chat.platform} - ${chat.channel_id}`;
-                        document.getElementById('chat-subtitle').textContent = `Thread: ${chat.thread_id || 'main'}`;
-                        document.getElementById('btn-merge-context').classList.remove('is-hidden');
+                        document.getElementById('chat-header-title').textContent = displayName;
                         document.getElementById('btn-export-chat').classList.remove('is-hidden');
                         loadChatHistory(chat.id);
                         fetchChatFiles(chat.id);
-                        fetchChatModel(chat.id);
+                        fetchChatSettings(chat.id);
                     });
                     
                     li.appendChild(a);
@@ -284,16 +290,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function fetchChatModel(chatId) {
+    async function fetchChatSettings(chatId) {
         if (!chatId) return;
         try {
-            const res = await fetch(`/api/chats/${chatId}/model`);
+            const res = await fetch(`/api/chats/${chatId}/settings`);
             if (res.ok) {
                 const data = await res.json();
                 document.getElementById('chat-model-select').value = data.model || "";
+                document.getElementById('chat-project-name').value = data.project_name || "";
             }
         } catch (e) {
-            console.error("Failed to fetch chat model", e);
+            console.error("Failed to fetch chat settings", e);
         }
     }
 
@@ -303,16 +310,19 @@ document.addEventListener("DOMContentLoaded", () => {
             btnSave.addEventListener('click', async () => {
                 if (!currentChatId) return;
                 const model = document.getElementById('chat-model-select').value;
+                const projectName = document.getElementById('chat-project-name').value;
                 try {
                     btnSave.classList.add('is-loading');
-                    const res = await fetch(`/api/chats/${currentChatId}/model`, {
+                    const res = await fetch(`/api/chats/${currentChatId}/settings`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model: model })
+                        body: JSON.stringify({ model: model, project_name: projectName })
                     });
                     if (res.ok) {
                         alert("Project settings saved successfully!");
+                        document.getElementById('chat-header-title').textContent = projectName;
                         loadChatHistory(currentChatId); // reload history to show the logged message
+                        fetchChats(); // Refresh sidebar names
                     } else {
                         throw new Error("Failed to save project settings");
                     }

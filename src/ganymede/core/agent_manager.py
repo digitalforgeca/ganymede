@@ -100,7 +100,24 @@ class ManagedAgent:
                 "--conversation", self.conversation_id,
             ]
             
+            project_name = f"{self.context_key.platform}-{self.context_key.channel_id}"
+            if self.context_key.thread_id:
+                project_name += f"-{self.context_key.thread_id}"
+                
             brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.conversation_id}")
+            
+            project_name_path = os.path.join(brain_dir, "project_name.txt")
+            if os.path.exists(project_name_path):
+                try:
+                    with open(project_name_path, "r") as f:
+                        saved_name = f.read().strip()
+                    if saved_name:
+                        project_name = saved_name
+                except Exception:
+                    pass
+                    
+            args.extend(["--project", project_name])
+            
             model_path = os.path.join(brain_dir, "model.txt")
             if os.path.exists(model_path):
                 try:
