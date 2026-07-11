@@ -189,8 +189,9 @@ class TestGanymedeCore(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(managed, cached)
 
         # Verify mapping was saved in db
-        context = await self.db.get_conversation_context(managed.conversation_id)
-        self.assertIsNotNone(context)
+        contexts = await self.db.get_conversation_contexts(managed.conversation_id)
+        self.assertTrue(len(contexts) > 0)
+        context = contexts[0]
         self.assertEqual(context.platform, self.context.platform)
         self.assertEqual(context.channel_id, self.context.channel_id)
     async def test_console_approval_provider(self):
