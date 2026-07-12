@@ -393,5 +393,59 @@ discord:
                 ganymede.cli._lock_file = None
             shutil.rmtree(temp_dir)
 
+    async def test_agent_manager_streaming(self):
+        from ganymede.core.agent_manager import CliResponse
+        
+        # Mock subprocess
+        mock_process = AsyncMock()
+        mock_process.returncode = 0
+        
+        # We need an async stream reader for stdout that mimics a TTY
+        class MockStreamReader:
+            def __init__(self, chunks):
+                self.chunks = chunks
+                self.index = 0
+                
+            async def read(self, n):
+                if self.index < len(self.chunks):
+                    val = self.chunks[self.index]
+                    self.index += 1
+                    return val
+                return b""
+
+        test_chunks = [b"chunk1", b"chunk2", b"chunk3\n", b"{\"event\": \"test\"}\n"]
+        
+        # Mock loop.connect_read_pipe to return our MockStreamReader
+        mock_reader = MockStreamReader(test_chunks)
+        mock_transport = MagicMock()
+        
+        with unittest.mock.patch("asyncio.get_running_loop") as mock_loop_func:
+            mock_loop = MagicMock()
+            mock_loop_func.return_value = mock_loop
+            # It returns (transport, protocol)
+            mock_loop.connect_read_pipe = AsyncMock(return_value=(mock_transport, None))
+            
+            with unittest.mock.patch("os.fdopen") as mock_fdopen:
+                mock_fdopen.return_value = MagicMock()
+                
+                # Also mock the StreamReader inside CliResponse so it uses our mock_reader.read
+                with unittest.mock.patch("asyncio.StreamReader") as mock_stream_reader_class:
+                    mock_stream_reader_class.return_value = mock_reader
+                    
+                    cli_response = CliResponse(mock_process, "Test prompt", 999)
+                    
+                    # Consume chunks as they stream out
+                    chunks_yielded = []
+                    async for chunk in cli_response.chunks:
+                        chunks_yielded.append(chunk.text)
+                        
+                    # We should receive exactly 4 chunks instantly without blocking for newlines
+                    self.assertEqual(len(chunks_yielded), 4)
+                    self.assertEqual(chunks_yielded[0], "chunk1")
+                    self.assertEqual(chunks_yielded[1], "chunk2")
+                    self.assertEqual(chunks_yielded[2], "chunk3\n")
+                    self.assertEqual(chunks_yielded[3], '{"event": "test"}\n')
+
+
 if __name__ == '__main__':
     unittest.main()

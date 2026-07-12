@@ -14,10 +14,21 @@ class Scheduler:
         self.router = router
         self.scheduler = AsyncScheduler()
 
+    async def _run_scheduler_task(self):
+        import asyncio
+        try:
+            async with self.scheduler:
+                await self.scheduler.run_until_stopped()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error("APScheduler task crashed", exc_info=True)
+
     async def start(self) -> None:
         """Start the scheduler in the background and load active schedules from the DB."""
-        await self.scheduler.__aenter__()
-        await self.scheduler.start_in_background()
+        import asyncio
+        self._scheduler_task = asyncio.create_task(self._run_scheduler_task())
+        await asyncio.sleep(0.1) # allow async with block to enter
         logger.info("APScheduler started in background.")
 
         try:
@@ -56,7 +67,12 @@ class Scheduler:
 
     async def stop(self) -> None:
         """Stop the scheduler."""
-        await self.scheduler.__aexit__(None, None, None)
+        try:
+            await self.scheduler.stop()
+        except Exception:
+            pass
+        if hasattr(self, "_scheduler_task"):
+            self._scheduler_task.cancel()
         logger.info("APScheduler stopped.")
 
     async def _run_job(self, context: ContextKey, prompt: str) -> None:

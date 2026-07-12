@@ -225,67 +225,118 @@ class Router:
         thought_text = ""
         status_text = ""
 
-        async for chunk in response.chunks:
-            if isinstance(chunk, Thought):
-                thought_text += chunk.text
-                if not response_text and verbosity != "none":
-                    lines = thought_text.strip().split("\n")
-                    if len(lines) > 15:
-                        lines = ["..."] + lines[-14:]
-                    formatted_thought = "\n".join(f"> {line}" for line in lines)
-                    await self.adapter.edit_streaming(context, msg_id, f"💭 *Thinking...*\n{formatted_thought}" + status_text)
+        # Live telemetry interceptor to render tool calls while blocking on --print
+        async def on_telemetry(data: dict):
+            nonlocal status_text
+            ctx_match = context.channel_id in str(data.get("context", ""))
+            if not ctx_match: return
             
-            elif isinstance(chunk, Text):
-                response_text += chunk.text
+            event = data.get("event")
+            payload = data.get("payload", {})
+            if event == "PreToolUse":
+                tool = payload.get("tool_name", "tool")
+                args = payload.get("tool_args", {})
+                try:
+                    args_str = json.dumps(args, indent=2)
+                except Exception:
+                    args_str = str(args)
+                status_text = f"\n\n⚙️ *Calling `{tool}`...*\n```json\n{args_str[:400]}\n```"
                 await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
-            
-            elif isinstance(chunk, ToolCall):
+            elif event == "PostToolUse":
+                tool = payload.get("tool_name", "tool")
+                res = payload.get("tool_result", {})
+                res_str = str(res.get("output", res))
+                status_text = f"\n\n✅ *`{tool}` completed.*\n```\n{res_str[:200]}...\n```"
+                await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
 
-                base_name = chunk.name.split(":")[-1] if ":" in chunk.name else chunk.name
-                is_safe = base_name in safe_tools
-                if verbosity == "normal":
-                    if is_safe:
-                        status_text = f"\n\n⚙️ *Calling tool `{chunk.name}`...*"
-                    else:
-                        status_text = f"\n\n⚙️ *Calling tool `{chunk.name}`...* 🔒 *Awaiting administrator approval...*"
-                elif verbosity == "verbose":
-                    args_str = json.dumps(chunk.args)
-                    if is_safe:
-                        status_text = f"\n\n⚙️ *Calling tool `{chunk.name}` with args: `{args_str[:200]}`...*"
-                    else:
-                        status_text = f"\n\n⚙️ *Calling tool `{chunk.name}` with args: `{args_str[:200]}`...* 🔒 *Awaiting administrator approval...*"
-                elif verbosity == "minimal" and not is_safe:
-                    status_text = f"\n\n⚙️ *Calling unsafe tool `{chunk.name}`...* 🔒 *Awaiting administrator approval...*"
-                else:
-                    status_text = ""
+        from ganymede.core.web import dashboard_instance
+        if dashboard_instance:
+            dashboard_instance.telemetry_listeners.append(on_telemetry)
+
+        is_running = True
+        async def thinking_loop():
+            nonlocal status_text
+            dots = 1
+            while is_running:
+                await asyncio.sleep(2.0)
+                if "⚙️" not in status_text and "✅" not in status_text:
+                    status_text = f"\n\n💭 *Thinking{'.' * dots}*"
+                    dots = (dots % 3) + 1
+                    try:
+                        await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                    except Exception:
+                        pass
+
+        heartbeat_task = asyncio.create_task(thinking_loop())
+
+        try:
+            async for chunk in response.chunks:
+                if isinstance(chunk, Thought):
+                    thought_text += chunk.text
+                    if not response_text and verbosity != "none":
+                        lines = thought_text.strip().split("\n")
+                        if len(lines) > 15:
+                            lines = ["..."] + lines[-14:]
+                        formatted_thought = "\n".join(f"> {line}" for line in lines)
+                        await self.adapter.edit_streaming(context, msg_id, f"💭 *Thinking...*\n{formatted_thought}" + status_text)
                 
-                if status_text:
+                elif isinstance(chunk, Text):
+                    response_text += chunk.text
                     await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
-            
-            elif isinstance(chunk, ToolResult):
-                if verbosity == "normal":
-                    if chunk.error:
-                        status_text = f"\n\n❌ *Tool `{chunk.name}` failed: {chunk.error}*"
-                    else:
-                        status_text = f"\n\n✅ *Tool `{chunk.name}` completed.*"
-                elif verbosity == "verbose":
-                    if chunk.error:
-                        status_text = f"\n\n❌ *Tool `{chunk.name}` failed: {chunk.error}*"
-                    else:
-                        res_str = str(chunk.result)
-                        status_text = f"\n\n✅ *Tool `{chunk.name}` completed. Result: `{res_str[:150]}`...*"
-                elif verbosity == "minimal" and chunk.name not in safe_tools:
-                    if chunk.error:
-                        status_text = f"\n\n❌ *Unsafe tool `{chunk.name}` failed: {chunk.error}*"
-                    else:
-                        status_text = f"\n\n✅ *Unsafe tool `{chunk.name}` completed.*"
-                else:
-                    status_text = ""
                 
-                await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                elif isinstance(chunk, ToolCall):
+                    base_name = chunk.name.split(":")[-1] if ":" in chunk.name else chunk.name
+                    is_safe = base_name in safe_tools
+                    if verbosity == "normal":
+                        if is_safe:
+                            status_text = f"\n\n⚙️ *Calling tool `{chunk.name}`...*"
+                        else:
+                            status_text = f"\n\n⚙️ *Calling tool `{chunk.name}`...* 🔒 *Awaiting administrator approval...*"
+                    elif verbosity == "verbose":
+                        args_str = json.dumps(chunk.args)
+                        if is_safe:
+                            status_text = f"\n\n⚙️ *Calling tool `{chunk.name}` with args: `{args_str[:200]}`...*"
+                        else:
+                            status_text = f"\n\n⚙️ *Calling tool `{chunk.name}` with args: `{args_str[:200]}`...* 🔒 *Awaiting administrator approval...*"
+                    elif verbosity == "minimal" and not is_safe:
+                        status_text = f"\n\n⚙️ *Calling unsafe tool `{chunk.name}`...* 🔒 *Awaiting administrator approval...*"
+                    else:
+                        status_text = ""
+                    
+                    if status_text:
+                        await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                
+                elif isinstance(chunk, ToolResult):
+                    if verbosity == "normal":
+                        if chunk.error:
+                            status_text = f"\n\n❌ *Tool `{chunk.name}` failed: {chunk.error}*"
+                        else:
+                            status_text = f"\n\n✅ *Tool `{chunk.name}` completed.*"
+                    elif verbosity == "verbose":
+                        if chunk.error:
+                            status_text = f"\n\n❌ *Tool `{chunk.name}` failed: {chunk.error}*"
+                        else:
+                            res_str = str(chunk.result)
+                            status_text = f"\n\n✅ *Tool `{chunk.name}` completed. Result: `{res_str[:150]}`...*"
+                    elif verbosity == "minimal" and chunk.name not in safe_tools:
+                        if chunk.error:
+                            status_text = f"\n\n❌ *Unsafe tool `{chunk.name}` failed: {chunk.error}*"
+                        else:
+                            status_text = f"\n\n✅ *Unsafe tool `{chunk.name}` completed.*"
+                    else:
+                        status_text = ""
+                    
+                    await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
 
-        # Final edit to clear the last status line so it does not pollute the history
-        if status_text:
-            await self.adapter.edit_streaming(context, msg_id, response_text)
+            # Final edit to clear the last status line so it does not pollute the history
+            if status_text:
+                await self.adapter.edit_streaming(context, msg_id, response_text)
+
+        finally:
+            is_running = False
+            if heartbeat_task:
+                heartbeat_task.cancel()
+            if dashboard_instance and on_telemetry in dashboard_instance.telemetry_listeners:
+                dashboard_instance.telemetry_listeners.remove(on_telemetry)
 
         return response_text

@@ -38,6 +38,7 @@ class DashboardServer:
         
         # Track connected frontend clients
         self.dashboard_clients = set()
+        self.telemetry_listeners = []
         
         # Static Dashboard Routes
         self.web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web')
@@ -297,6 +298,10 @@ class DashboardServer:
                 if not client.closed:
                     await client.send_json(data)
                     
+            # Broadcast to internal python listeners
+            for listener in getattr(self, "telemetry_listeners", []):
+                asyncio.create_task(listener(data))
+                    
             return web.json_response({"status": "received", "event": data.get("event", "unknown")})
         except json.JSONDecodeError:
             logger.warning("Received invalid JSON from Chalice POST")
@@ -310,6 +315,10 @@ class DashboardServer:
                     await client.send_json(data)
                 except Exception as e:
                     logger.warning("Failed to send telemetry to dashboard client", error=str(e))
+                    
+        # Broadcast to internal python listeners
+        for listener in getattr(self, "telemetry_listeners", []):
+            asyncio.create_task(listener(data))
 
     async def handle_dashboard_ws(self, request):
         ws = web.WebSocketResponse()

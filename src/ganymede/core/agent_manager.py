@@ -20,9 +20,10 @@ class MockUsage:
 class CliResponse:
     """Wrapper around agy subprocess stdout stream to be compatible with Router chunks interface."""
 
-    def __init__(self, process: asyncio.subprocess.Process, prompt: str):
+    def __init__(self, process: asyncio.subprocess.Process, prompt: str, master_fd: int):
         self.process = process
         self.prompt = prompt
+        self.master_fd = master_fd
         self.response_text = ""
         self.usage_metadata = MockUsage()
         self._chunks_generator = self._read_chunks()
@@ -30,21 +31,52 @@ class CliResponse:
     async def _read_chunks(self):
         # Read from stdout in chunks to provide real-time streaming feedback
         from ganymede.core.web import dashboard_instance
-        async for line in self.process.stdout:
+        import os
+        buffer = bytearray()
+        
+        # Create an asyncio reader for the master PTY fd
+        loop = asyncio.get_running_loop()
+        reader = asyncio.StreamReader()
+        protocol = asyncio.StreamReaderProtocol(reader)
+        
+        # Set the PTY to non-blocking before handing to asyncio
+        # otherwise connect_read_pipe will block the entire event loop
+        # and starve the Discord heartbeat!
+        os.set_blocking(self.master_fd, False)
+        
+        # Use an unbuffered binary file object
+        pipe = os.fdopen(self.master_fd, 'rb', buffering=0)
+        transport, _ = await loop.connect_read_pipe(lambda: protocol, pipe)
+        
+        try:
+            while True:
+                chunk = await reader.read(32)
+                if not chunk:
+                    break
+                    
+                text = chunk.decode(errors="replace").replace('\r', '')
+                self.response_text += text
+                yield Text(text=text, step_index=0)
+                
+                # Line buffering for telemetry
+                buffer.extend(chunk)
+                while b'\n' in buffer:
+                    line, buffer = buffer.split(b'\n', 1)
+                    decoded = line.decode('utf-8', errors="replace").strip()
+                    if decoded and dashboard_instance:
+                        try:
+                            data = json.loads(decoded)
+                            asyncio.create_task(dashboard_instance.broadcast_telemetry(data))
+                        except json.JSONDecodeError:
+                            asyncio.create_task(dashboard_instance.broadcast_telemetry({"event": "Agent Log", "payload": decoded}))
+        except Exception as e:
+            logger.debug("PTY read error (likely EOF)", error=str(e))
+        finally:
+            transport.close()
             try:
-                decoded = line.decode('utf-8').strip()
-                if decoded and dashboard_instance:
-                    try:
-                        data = json.loads(decoded)
-                        asyncio.create_task(dashboard_instance.broadcast_telemetry(data))
-                    except json.JSONDecodeError:
-                        asyncio.create_task(dashboard_instance.broadcast_telemetry({"event": "Agent Log", "payload": decoded}))
+                pipe.close()
             except Exception:
                 pass
-            
-            text = line.decode(errors="replace")
-            self.response_text += text
-            yield Text(text=text, step_index=0)
 
         # Wait for the process to exit cleanly
         await self.process.wait()
@@ -54,8 +86,10 @@ class CliResponse:
         estimated_output_tokens = len(self.response_text) // 4
         self.usage_metadata.total_token_count = estimated_input_tokens + estimated_output_tokens
         if self.process.returncode != 0:
-            stderr_data = await self.process.stderr.read()
-            err_msg = stderr_data.decode(errors="replace").strip()
+            err_msg = self.response_text.strip()
+            # If output is too long, grab the tail end of it
+            if len(err_msg) > 500:
+                err_msg = "... " + err_msg[-500:]
             logger.error("agy CLI failed", code=self.process.returncode, error=err_msg)
             raise RuntimeError(f"agy error (code {self.process.returncode}): {err_msg}")
 
@@ -166,35 +200,41 @@ class ManagedAgent:
                 sys_inst = self.config.agent.system_instructions
                 sys_inst = sys_inst.replace("{bot_name}", getattr(self, "bot_namespace", "Agent"))
                 sys_inst = sys_inst.replace("{model_name}", model_override or "default model")
-                sys_inst = sys_inst.replace("{user_name}", f"User {self.context_key.user_id}")
+                user_id = getattr(self.context_key, 'user_id', 'Unknown')
+                sys_inst = sys_inst.replace("{user_name}", f"User {user_id}")
                 sys_inst = sys_inst.replace("{mission_statement}", getattr(self.config.agent, "mission_statement", "assisting the user"))
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
             args.extend(["--print", final_prompt])
             logger.info("Executing agy CLI subprocess", command=" ".join(args), context=self.context_key)
-            
-            # Build environment variables copy and inject SULCUS_NAMESPACE and GANYMEDE_IPC_PORT
-            subprocess_env = os.environ.copy()
-            subprocess_env["SULCUS_NAMESPACE"] = self.bot_namespace
-            if self.ipc_port:
-                subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
-
             # Ensure the configured workspace exists
             workspace_dir = os.path.expanduser(self.config.agent.workspace)
             os.makedirs(workspace_dir, exist_ok=True)
+            
+            # Use native python pty to emulate a TTY so that agy does not block-buffer stdout
+            import pty
+            master_fd, slave_fd = pty.openpty()
 
-            # Spawn the subprocess with stdin redirected to DEVNULL and cwd set to the workspace
+            # Build environment variables copy and inject SULCUS_NAMESPACE and GANYMEDE_IPC_PORT
+            subprocess_env = os.environ.copy()
+            subprocess_env["SULCUS_NAMESPACE"] = self.bot_namespace
+            subprocess_env["NO_COLOR"] = "1"
+            if self.ipc_port:
+                subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
+
+            # Spawn the subprocess with stdout/stderr connected to the slave PTY
             process = await asyncio.create_subprocess_exec(
                 *args,
                 stdin=asyncio.subprocess.DEVNULL,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stdout=slave_fd,
+                stderr=slave_fd,
                 cwd=workspace_dir,
                 env=subprocess_env,
             )
+            os.close(slave_fd)
             self.current_process = process
             
-            response = CliResponse(process, prompt)
+            response = CliResponse(process, prompt, master_fd)
             if needs_rename:
                 asyncio.create_task(self._post_chat_rename(response, db_dir, before_files))
                 

@@ -58,7 +58,8 @@ class DiscordStreamer:
         await self._update_message(final=True, metadata=metadata)
         try:
             if self.message:
-                await self.message.add_reaction("✅")
+                reaction = metadata.get("reaction_emoji", "✅") if metadata else "✅"
+                await self.message.add_reaction(reaction)
         except Exception as e:
             logger.warning("Failed to add completion reaction", error=str(e))
 
@@ -115,7 +116,7 @@ class DiscordStreamer:
             
         # Only update if the buffer is empty (still thinking/planning)
         if not self.buffer.strip() or self.buffer.strip() == "...":
-            content = f"⏳ *Thinking...*\n⚙️ *Running:* `{status_text}`"
+            content = f"{self.initial_text}\n⚙️ *Running:* `{status_text}`"
             if self.persist_header:
                 content = f"{self.persist_header}\n{content}"
             

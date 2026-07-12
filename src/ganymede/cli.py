@@ -21,16 +21,38 @@ except ImportError:
 
 _lock_file = None
 
-# Setup structured logging
+# Setup robust structured logging
 structlog.configure(
     processors=[
-        structlog.processors.add_log_level,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
         structlog.processors.JSONRenderer()
-    ]
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
 )
 
-logger = structlog.get_logger()
+logger = structlog.get_logger("ganymede.cli")
+
+def setup_logging(level_name: str):
+    numeric_level = getattr(logging, level_name.upper(), logging.INFO)
+    logging.basicConfig(
+        format="%(message)s",
+        stream=sys.stdout,
+        level=numeric_level,
+    )
+    # Bridge standard logging to structlog
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        handler.setFormatter(logging.Formatter("%(message)s"))
+    # Suppress overly verbose discord.py debug logs if we aren't in debug
+    if numeric_level > logging.DEBUG:
+        logging.getLogger("discord").setLevel(logging.WARNING)
+        logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 def acquire_instance_lock(data_dir: str):
     global _lock_file
@@ -47,10 +69,17 @@ def acquire_instance_lock(data_dir: str):
         _lock_file.seek(0)
         old_pid = _lock_file.read().strip()
         
-        # Write our PID to lock file
+        # Write our JSON metadata to lock file
+        import json
+        from datetime import datetime, timezone
+        lock_data = {
+            "pid": os.getpid(),
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "_comment": "Ganymede Lock. If this file exists without the process, the gateway crashed."
+        }
         _lock_file.seek(0)
         _lock_file.truncate()
-        _lock_file.write(f"{os.getpid()}\n")
+        _lock_file.write(json.dumps(lock_data) + "\n")
         _lock_file.flush()
         
         if old_pid:
@@ -83,7 +112,8 @@ async def dummy_schedule_callback(cron, prompt, channel_id):
     return "dummy_job_id_123"
 
 async def run(config: AppConfig):
-    logger.info("Initializing ganymede bridge")
+    setup_logging(config.log_level)
+    logger.info("Initializing ganymede bridge", log_level=config.log_level)
     
     # Initialize Database
     db = Database(config)
@@ -122,6 +152,19 @@ async def run(config: AppConfig):
                 await provider.router.agent_manager.destroy_all()
             await provider.stop()
         await db.close()
+        
+        # Safe exit lock cleanup
+        global _lock_file
+        if _lock_file:
+            try:
+                path = _lock_file.name
+                _lock_file.close()
+                if os.path.exists(path):
+                    os.remove(path)
+                logger.info("Removed lock file on clean shutdown")
+            except Exception as e:
+                logger.warning("Failed to remove lock file", error=str(e))
+                
         logger.info("Shutdown completed.")
         
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -151,12 +194,62 @@ async def run(config: AppConfig):
         logger.error("Error during platform execution", error=str(e))
         await shutdown()
 
+def stop_daemon(config):
+    lock_path = os.path.join(config.data_dir, "ganymede.lock")
+    if not os.path.exists(lock_path):
+        print(f"No lock file found at {lock_path}. Ganymede does not appear to be running.")
+        return False
+        
+    import json
+    import time
+    try:
+        with open(lock_path, "r") as f:
+            data = json.load(f)
+            pid = data.get("pid")
+        if not pid:
+            print("Invalid lock file format: Missing PID.")
+            return False
+            
+        pid = int(pid)
+        os.kill(pid, signal.SIGTERM)
+        print(f"Sent SIGTERM to Ganymede daemon (PID: {pid}). Initiating graceful shutdown...")
+        
+        # Wait for process to exit
+        for _ in range(30):
+            try:
+                os.kill(pid, 0)
+                time.sleep(0.5)
+            except OSError:
+                print("Daemon shut down successfully.")
+                return True
+                
+        print("Daemon did not shut down within 15 seconds. Escalating to SIGKILL...")
+        try:
+            os.kill(pid, signal.SIGKILL)
+            time.sleep(1)
+            # Verify the kill
+            os.kill(pid, 0)
+            print("Failed to SIGKILL the process.")
+            return False
+        except OSError:
+            print("Daemon forcefully terminated.")
+            if os.path.exists(lock_path):
+                os.remove(lock_path)
+            return True
+    except ProcessLookupError:
+        print(f"Ganymede daemon (PID: {pid}) is not running. Removing stale lock file.")
+        os.remove(lock_path)
+        return True
+    except Exception as e:
+        print(f"Failed to stop Ganymede: {e}")
+        return False
+
 def main():
     # Load .env file if present
     load_dotenv()
     
     parser = argparse.ArgumentParser(prog="ganymede")
-    parser.add_argument("command", nargs="?", choices=["run", "mcp"], default="run", help="Subcommand to run (run, mcp)")
+    parser.add_argument("command", nargs="?", choices=["run", "mcp", "stop", "restart"], default="run", help="Subcommand to run (run, mcp, stop, restart)")
     parser.add_argument("--config", default=None, help="Path to YAML configuration file")
     parser.add_argument("--workspace", default=None, help="Target workspace path for the agent")
     parser.add_argument("--log-level", default=None, help="Logging level")
@@ -170,6 +263,15 @@ def main():
         return
         
     config = load_config(args)
+    
+    if args.command == "stop":
+        if stop_daemon(config):
+            sys.exit(0)
+        sys.exit(1)
+        
+    if args.command == "restart":
+        stop_daemon(config)
+        # Continue to run the daemon below
     
     # Override log level from config
     structlog.configure(
