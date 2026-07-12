@@ -14,7 +14,7 @@ class DiscordStreamer:
     def __init__(self, channel: discord.abc.Messageable, initial_text: str | None = None, persist_header: str | None = None):
         self.channel = channel
         self.formatter = DiscordFormatter()
-        self.message: discord.Message | None = None
+        self.messages: list[discord.Message] = []
         self.buffer = ""
         self.last_edit_time = 0.0
         self.is_finished = False
@@ -25,11 +25,11 @@ class DiscordStreamer:
     async def start(self) -> None:
         """Send the initial placeholder message to indicate thinking state."""
         try:
-            self.message = await asyncio.wait_for(self.channel.send(self.initial_text), timeout=10.0)
+            msg = await asyncio.wait_for(self.channel.send(self.initial_text), timeout=10.0)
+            self.messages.append(msg)
             self.last_edit_time = time.time()
         except asyncio.TimeoutError:
             logger.warning("Timeout creating initial discord stream message")
-            self.message = None
 
     def _schedule_flush(self):
         if self._flush_task and not self._flush_task.done():
@@ -79,16 +79,16 @@ class DiscordStreamer:
         # Final flush
         await self._update_message(final=True, metadata=metadata)
         try:
-            if self.message:
+            if self.messages:
                 reaction = metadata.get("reaction_emoji", "✅") if metadata else "✅"
-                await asyncio.wait_for(self.message.add_reaction(reaction), timeout=5.0)
+                await asyncio.wait_for(self.messages[-1].add_reaction(reaction), timeout=5.0)
         except asyncio.TimeoutError:
             logger.warning("Timeout while adding completion reaction")
         except Exception as e:
             logger.warning("Failed to add completion reaction", error=str(e))
 
     async def _update_message(self, final: bool = False, metadata: dict | None = None) -> None:
-        if not self.message:
+        if not self.messages:
             return
 
         content = self.buffer.strip()
@@ -108,19 +108,17 @@ class DiscordStreamer:
 
         # Split content if it exceeds the limit
         chunks = self.formatter.split_message(content)
+        if not chunks:
+            chunks = ["..."]
         
         try:
-            # We edit the initial message with the first chunk
-            first_chunk = chunks[0] if chunks else "..."
-            await asyncio.wait_for(self.message.edit(content=first_chunk), timeout=10.0)
+            for i, chunk in enumerate(chunks):
+                if i < len(self.messages):
+                    await asyncio.wait_for(self.messages[i].edit(content=chunk), timeout=10.0)
+                else:
+                    new_msg = await asyncio.wait_for(self.channel.send(self._balance_code_fences(chunk)), timeout=10.0)
+                    self.messages.append(new_msg)
             self.last_edit_time = time.time()
-
-            # If there are subsequent chunks, send them as new follow-up messages
-            # Note: For simplicity, we just send subsequent chunks. In actual production,
-            # we would track them, but since streaming completes, sending them is sufficient.
-            if len(chunks) > 1:
-                for extra_chunk in chunks[1:]:
-                    self.message = await asyncio.wait_for(self.channel.send(self._balance_code_fences(extra_chunk)), timeout=10.0)
         except asyncio.TimeoutError:
             logger.warning("Timeout while updating message on Discord")
         except discord.errors.HTTPException as e:
@@ -147,8 +145,8 @@ class DiscordStreamer:
                 content = f"{self.persist_header}\n{content}"
             
             try:
-                if self.message:
-                    await asyncio.wait_for(self.message.edit(content=content), timeout=10.0)
+                if self.messages:
+                    await asyncio.wait_for(self.messages[-1].edit(content=content), timeout=10.0)
                     self.last_edit_time = time.time()
             except asyncio.TimeoutError:
                 logger.warning("Timeout while setting status on Discord message")
