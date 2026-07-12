@@ -271,7 +271,8 @@ class Router:
 
         try:
             async for chunk in response.chunks:
-                if isinstance(chunk, Thought):
+                chunk_type = chunk.__class__.__name__
+                if chunk_type == "Thought":
                     thought_text += chunk.text
                     if not response_text and verbosity != "none":
                         lines = thought_text.strip().split("\n")
@@ -280,11 +281,11 @@ class Router:
                         formatted_thought = "\n".join(f"> {line}" for line in lines)
                         await self.adapter.edit_streaming(context, msg_id, f"💭 *Thinking...*\n{formatted_thought}" + status_text)
                 
-                elif isinstance(chunk, Text):
+                elif chunk_type == "Text":
                     response_text += chunk.text
                     await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
                 
-                elif isinstance(chunk, ToolCall):
+                elif chunk_type == "ToolCall":
                     base_name = chunk.name.split(":")[-1] if ":" in chunk.name else chunk.name
                     is_safe = base_name in safe_tools
                     if verbosity == "normal":
