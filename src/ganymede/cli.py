@@ -145,14 +145,21 @@ async def run(config: AppConfig):
     
     async def shutdown():
         logger.info("Received shutdown request, cleaning up...")
-        if 'dashboard' in locals():
-            await dashboard.stop()
-        for provider in providers:
-            if provider.router and provider.router.agent_manager:
-                await provider.router.agent_manager.destroy_all()
-            await provider.stop()
-        await db.close()
         
+        async def _do_cleanup():
+            if 'dashboard' in locals():
+                await dashboard.stop()
+            for provider in providers:
+                if provider.router and provider.router.agent_manager:
+                    await provider.router.agent_manager.destroy_all()
+                await provider.stop()
+            await db.close()
+            
+        try:
+            await asyncio.wait_for(_do_cleanup(), timeout=10.0)
+        except asyncio.TimeoutError:
+            logger.warning("Shutdown timed out after 10s. Forcing cleanup.")
+            
         # Safe exit lock cleanup
         global _lock_file
         if _lock_file:
@@ -166,7 +173,8 @@ async def run(config: AppConfig):
                 logger.warning("Failed to remove lock file", error=str(e))
                 
         logger.info("Shutdown completed.")
-        
+        import sys
+        sys.exit(0)        
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
             loop.add_signal_handler(sig, lambda: asyncio.create_task(shutdown()))
@@ -271,8 +279,12 @@ def main():
         
     if args.command == "restart":
         stop_daemon(config)
-        # Continue to run the daemon below
-    
+        
+        # Daemonize the run command in the background
+        import subprocess
+        print("Starting Ganymede in the background...")
+        subprocess.Popen([sys.argv[0], "run"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        sys.exit(0)    
     # Override log level from config
     structlog.configure(
         wrapper_class=structlog.make_filtering_bound_logger(

@@ -12,9 +12,11 @@ def main():
             hook_type = os.environ.get("AGY_HOOK_EVENT", "Agent Lifecycle Hook")
             
             # Extract basic context ID if present
-            conversation_id = hook_context.get("conversation_id", "unknown")
+            conversation_id = hook_context.get("conversationId", "unknown")
             
             # Formulate the telemetry payload
+            
+            with open("/Users/dv00003-00/dev/ganymede/hook.json", "w") as f: json.dump(hook_context, f)
             payload = {
                 "event": hook_type,
                 "level": "info",
