@@ -24,8 +24,12 @@ class DiscordStreamer:
 
     async def start(self) -> None:
         """Send the initial placeholder message to indicate thinking state."""
-        self.message = await self.channel.send(self.initial_text)
-        self.last_edit_time = time.time()
+        try:
+            self.message = await asyncio.wait_for(self.channel.send(self.initial_text), timeout=10.0)
+            self.last_edit_time = time.time()
+        except asyncio.TimeoutError:
+            logger.warning("Timeout creating initial discord stream message")
+            self.message = None
 
     def _schedule_flush(self):
         if self._flush_task and not self._flush_task.done():
@@ -77,7 +81,9 @@ class DiscordStreamer:
         try:
             if self.message:
                 reaction = metadata.get("reaction_emoji", "✅") if metadata else "✅"
-                await self.message.add_reaction(reaction)
+                await asyncio.wait_for(self.message.add_reaction(reaction), timeout=5.0)
+        except asyncio.TimeoutError:
+            logger.warning("Timeout while adding completion reaction")
         except Exception as e:
             logger.warning("Failed to add completion reaction", error=str(e))
 
@@ -106,7 +112,7 @@ class DiscordStreamer:
         try:
             # We edit the initial message with the first chunk
             first_chunk = chunks[0] if chunks else "..."
-            await self.message.edit(content=first_chunk)
+            await asyncio.wait_for(self.message.edit(content=first_chunk), timeout=10.0)
             self.last_edit_time = time.time()
 
             # If there are subsequent chunks, send them as new follow-up messages
@@ -114,7 +120,9 @@ class DiscordStreamer:
             # we would track them, but since streaming completes, sending them is sufficient.
             if len(chunks) > 1:
                 for extra_chunk in chunks[1:]:
-                    self.message = await self.channel.send(self._balance_code_fences(extra_chunk))
+                    self.message = await asyncio.wait_for(self.channel.send(self._balance_code_fences(extra_chunk)), timeout=10.0)
+        except asyncio.TimeoutError:
+            logger.warning("Timeout while updating message on Discord")
         except discord.errors.HTTPException as e:
             logger.error("HTTP error during message update", error=str(e))
 
@@ -140,6 +148,9 @@ class DiscordStreamer:
             
             try:
                 if self.message:
-                    await self.message.edit(content=content)
-            except Exception as e:
-                logger.error("Failed to edit streaming status", error=str(e))
+                    await asyncio.wait_for(self.message.edit(content=content), timeout=10.0)
+                    self.last_edit_time = time.time()
+            except asyncio.TimeoutError:
+                logger.warning("Timeout while setting status on Discord message")
+            except discord.HTTPException as e:
+                logger.warning("Failed to edit Discord message status", error=str(e))
