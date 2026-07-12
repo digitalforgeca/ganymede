@@ -219,6 +219,7 @@ class ManagedAgent:
             subprocess_env = os.environ.copy()
             subprocess_env["SULCUS_NAMESPACE"] = self.bot_namespace
             subprocess_env["NO_COLOR"] = "1"
+            subprocess_env["PYTHONUNBUFFERED"] = "1"
             if self.ipc_port:
                 subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
