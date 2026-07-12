@@ -20,11 +20,25 @@ class DiscordStreamer:
         self.is_finished = False
         self.initial_text = initial_text or "⏳ *Thinking...*"
         self.persist_header = persist_header or ""
+        self._flush_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         """Send the initial placeholder message to indicate thinking state."""
         self.message = await self.channel.send(self.initial_text)
         self.last_edit_time = time.time()
+
+    def _schedule_flush(self):
+        if self._flush_task and not self._flush_task.done():
+            return
+        
+        async def flush():
+            delay = max(0.0, self.EDIT_INTERVAL - (time.time() - self.last_edit_time))
+            if delay > 0:
+                await asyncio.sleep(delay)
+            if not self.is_finished:
+                await self._update_message()
+                
+        self._flush_task = asyncio.create_task(flush())
 
     async def push_tokens(self, tokens: str) -> None:
         """Push raw token updates, editing the message if interval elapsed."""
@@ -36,6 +50,8 @@ class DiscordStreamer:
 
         if now - self.last_edit_time >= self.EDIT_INTERVAL:
             await self._update_message()
+        else:
+            self._schedule_flush()
 
     async def set_content(self, content: str) -> None:
         """Overwrite the current buffer with the exact content specified."""
@@ -47,6 +63,8 @@ class DiscordStreamer:
 
         if now - self.last_edit_time >= self.EDIT_INTERVAL:
             await self._update_message()
+        else:
+            self._schedule_flush()
 
     async def finish(self, metadata: dict | None = None) -> None:
         """Flushes remaining buffer, appends execution metadata, and closes streaming."""
