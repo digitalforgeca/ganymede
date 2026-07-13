@@ -38,10 +38,10 @@ structlog.configure(
 
 logger = structlog.get_logger("ganymede.cli")
 def setup_logging(level_name: str, log_file: str = "ganymede_live.log"):
+    import logging.handlers
     numeric_level = getattr(logging, level_name.upper(), logging.INFO)
     
     # Also log to file so we can debug daemon
-    import logging.handlers
     import sys
     file_handler = logging.FileHandler(log_file)
     stdout_handler = logging.StreamHandler(sys.stdout)
