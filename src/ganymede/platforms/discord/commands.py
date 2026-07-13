@@ -412,20 +412,7 @@ def setup_commands(adapter: discord.Client):
 
     @tree.command(name="new", description="Wipe the active conversation history and start a fresh session")
     async def new_session(interaction: discord.Interaction):
-        await interaction.response.send_message(f"🧹 *Wiping conversation memory and starting fresh...*", ephemeral=False)
-        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
-        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
-        context = ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id)
-        
-        agent_manager = adapter.router.agent_manager
-        if agent_manager:
-            await agent_manager.erase(context)
-            await interaction.followup.send(f"✅ Conversation history cleared. I'm ready for a new task!")
-            
-    @tree.command(name="run", description="Explicitly prompt the agent with a standard task")
-    @app_commands.describe(prompt="The task to execute")
-    async def run(interaction: discord.Interaction, prompt: str):
-        await interaction.response.send_message(f"▶️ *Running task...*", ephemeral=True)
+        await interaction.response.send_message(f"🧹 *Wiping conversation memory and starting fresh...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
@@ -433,7 +420,7 @@ def setup_commands(adapter: discord.Client):
             context=ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id),
             author_id=str(interaction.user.id),
             author_name=interaction.user.name,
-            content=f"/run {prompt}",
+            content="/new",
             is_bot=interaction.user.bot,
             mentions_us=False,
             attachments=[],
