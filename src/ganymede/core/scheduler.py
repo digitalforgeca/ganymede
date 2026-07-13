@@ -91,5 +91,3 @@ class Scheduler:
 
 
 # Backwards compatibility alias
-DiscordScheduler = Scheduler
-

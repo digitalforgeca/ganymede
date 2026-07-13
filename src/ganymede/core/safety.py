@@ -88,10 +88,3 @@ class ApprovalHook(PreToolCallDecideHook):
         else:
             return HookResult(allow=False, message="Tool call denied.")
 
-
-# For backwards compatibility with test suites and legacy hooks
-try:
-    from ganymede.platforms.discord.safety import DiscordApprovalHook, DiscordApprovalProvider, ApprovalView
-except ImportError:
-    pass
-

@@ -68,7 +68,7 @@ FUN_DESCRIPTIONS: Dict[str, list[str]] = {
 }
 
 def format_tool_status(tool_name: str, args: Dict[str, Any]) -> str:
-    """Format tool execution details into a styled status string for the Discord streamer.
+    """Format tool execution details into a styled status string for the platform streamer.
     
     Args:
         tool_name: Full tool path or name.
