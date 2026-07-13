@@ -375,10 +375,51 @@ class AgentManager:
         return managed
 
     async def destroy(self, context: ContextKey) -> None:
+        """Terminates an active session gracefully and removes it from the pool."""
         if managed := self._agents.pop(context, None):
-            await managed.close()
+            await managed.terminate()
+            logger.info("Session destroyed and removed from pool", context=context)
+            
+    async def erase(self, context: ContextKey) -> None:
+        """Terminate active session and wipe all its context and memory."""
+        await self.destroy(context)
+        
+        conversation_id = None
+        if self.db:
+            conversation_id = await self.db.get_conversation_id_by_context(context)
+        if not conversation_id:
+            if self.adapter:
+                conversation_id = self.adapter.get_conversation_id(context)
+            else:
+                conversation_id = f"ganymede_{context.platform}_{context.channel_id}"
+                if context.thread_id:
+                    conversation_id += f"_{context.thread_id}"
+        
+        # 1. Delete brain dir
+        import shutil
+        brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
+        if os.path.exists(brain_dir):
+            shutil.rmtree(brain_dir, ignore_errors=True)
+            
+        # 2. Delete conversations db
+        db_path = os.path.expanduser(f"~/.gemini/antigravity-cli/conversations/{conversation_id}.db")
+        if os.path.exists(db_path):
+            try:
+                os.remove(db_path)
+            except OSError:
+                pass
+            
+        for ext in ("-shm", "-wal"):
+            ext_path = db_path + ext
+            if os.path.exists(ext_path):
+                try:
+                    os.remove(ext_path)
+                except OSError:
+                    pass
+        logger.info("Session erased and memory wiped", context=context, conversation_id=conversation_id)
 
     async def destroy_all(self) -> None:
+        """Terminates all active sessions."""
         logger.info("Terminating all active agent sessions")
         keys = list(self._agents.keys())
         for k in keys:
