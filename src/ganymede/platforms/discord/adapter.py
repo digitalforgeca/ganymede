@@ -69,7 +69,8 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         if not channel:
             raise RuntimeError(f"Could not resolve channel {context.channel_id}")
 
-        streamer = DiscordStreamer(channel, initial_text=initial_text, persist_header=persist_header)
+        edit_interval = getattr(self.discord_config, "stream_edit_interval", 1.5)
+        streamer = DiscordStreamer(channel, initial_text=initial_text, persist_header=persist_header, edit_interval=edit_interval)
         await streamer.start()
         
         # Generate temporary unique transaction key to identify this streamer

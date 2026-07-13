@@ -8,10 +8,7 @@ logger = structlog.get_logger()
 
 class DiscordStreamer:
     """Manages rate-limited token streaming and message updates on Discord."""
-    
-    EDIT_INTERVAL = 1.5  # seconds (Discord rate limit safety boundary)
-
-    def __init__(self, channel: discord.abc.Messageable, initial_text: str | None = None, persist_header: str | None = None):
+    def __init__(self, channel: discord.abc.Messageable, initial_text: str | None = None, persist_header: str | None = None, edit_interval: float = 1.5):
         self.channel = channel
         self.formatter = DiscordFormatter()
         self.messages: list[discord.Message] = []
@@ -20,6 +17,7 @@ class DiscordStreamer:
         self.is_finished = False
         self.initial_text = initial_text or "⏳ *Thinking...*"
         self.persist_header = persist_header or ""
+        self.edit_interval = edit_interval
         self._flush_task: asyncio.Task | None = None
 
     async def start(self) -> None:
@@ -36,7 +34,7 @@ class DiscordStreamer:
             return
         
         async def flush():
-            delay = max(0.0, self.EDIT_INTERVAL - (time.time() - self.last_edit_time))
+            delay = max(0.0, self.edit_interval - (time.time() - self.last_edit_time))
             if delay > 0:
                 await asyncio.sleep(delay)
             if not self.is_finished:
@@ -52,7 +50,7 @@ class DiscordStreamer:
         self.buffer += tokens
         now = time.time()
 
-        if now - self.last_edit_time >= self.EDIT_INTERVAL:
+        if now - self.last_edit_time >= self.edit_interval:
             await self._update_message()
         else:
             self._schedule_flush()
@@ -65,7 +63,7 @@ class DiscordStreamer:
         self.buffer = content
         now = time.time()
 
-        if now - self.last_edit_time >= self.EDIT_INTERVAL:
+        if now - self.last_edit_time >= self.edit_interval:
             await self._update_message()
         else:
             self._schedule_flush()
