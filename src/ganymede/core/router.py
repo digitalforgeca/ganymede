@@ -228,16 +228,29 @@ class Router:
         # Live telemetry interceptor to render tool calls while blocking on --print
         async def on_telemetry(data: dict):
             nonlocal status_text
-            print(f"[DEBUG] on_telemetry received data: {data}")
             ctx_match = context.channel_id in str(data.get("context", ""))
-            if not ctx_match: 
-                print(f"[DEBUG] ctx_match failed. context.channel_id={context.channel_id}, data.get('context')={data.get('context')}")
-                return
             
             event = data.get("event")
             payload = data.get("payload", {})
             tool_call = payload.get("toolCall", {})
-            print(f"[DEBUG] on_telemetry event={event}, payload={payload}")
+            
+            # Derive event type if it's missing or generic
+            if event == "Agent Lifecycle Hook" and tool_call:
+                if "error" in payload:
+                    event = "PostToolUse"
+                else:
+                    event = "PreToolUse"
+
+            logger.info("Telemetry event received in router", 
+                        ctx_match=ctx_match, 
+                        channel_id=context.channel_id, 
+                        telemetry_context=data.get("context"), 
+                        event=event, 
+                        tool_call_name=tool_call.get("name") if tool_call else None)
+
+            if not ctx_match: 
+                return
+
             if event == "PreToolUse":
                 tool = tool_call.get("name", "tool")
                 args = tool_call.get("args", {})
@@ -246,14 +259,16 @@ class Router:
                 except Exception:
                     args_str = str(args)
                 status_text = f"\n\n⚙️ *Calling `{tool}`...*\n```json\n{args_str[:400]}\n```"
-                print(f"[DEBUG] edit_streaming PreToolUse with status_text={status_text}")
+                logger.info("Setting PreToolUse status", status_text=status_text)
                 await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
             elif event == "PostToolUse":
                 tool = tool_call.get("name", "tool")
-                res = payload.get("tool_result", {})
-                res_str = str(res.get("output", res))
-                status_text = f"\n\n✅ *`{tool}` completed.*\n```\n{res_str[:200]}...\n```"
-                print(f"[DEBUG] edit_streaming PostToolUse with status_text={status_text}")
+                err = payload.get("error", "")
+                if err:
+                    status_text = f"\n\n❌ *`{tool}` failed.*\n```\n{err[:200]}\n```"
+                else:
+                    status_text = f"\n\n✅ *`{tool}` completed.*"
+                logger.info("Setting PostToolUse status", status_text=status_text)
                 await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
 
         from ganymede.core.web import dashboard_instance

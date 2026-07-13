@@ -37,12 +37,18 @@ structlog.configure(
 )
 
 logger = structlog.get_logger("ganymede.cli")
-
-def setup_logging(level_name: str):
+def setup_logging(level_name: str, log_file: str = "ganymede_live.log"):
     numeric_level = getattr(logging, level_name.upper(), logging.INFO)
+    
+    # Also log to file so we can debug daemon
+    import logging.handlers
+    import sys
+    file_handler = logging.FileHandler(log_file)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    
     logging.basicConfig(
         format="%(message)s",
-        stream=sys.stdout,
+        handlers=[file_handler, stdout_handler],
         level=numeric_level,
     )
     # Bridge standard logging to structlog
@@ -283,8 +289,9 @@ def main():
         # Daemonize the run command in the background
         import subprocess
         print("Starting Ganymede in the background...")
-        subprocess.Popen([sys.argv[0], "run"], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        sys.exit(0)    
+        log_file = open("ganymede.log", "a")
+        subprocess.Popen([sys.argv[0], "run"], start_new_session=True, stdout=log_file, stderr=log_file)
+        sys.exit(0)
     # Override log level from config
     structlog.configure(
         wrapper_class=structlog.make_filtering_bound_logger(

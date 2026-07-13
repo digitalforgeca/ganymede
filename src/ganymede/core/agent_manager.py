@@ -33,24 +33,17 @@ class CliResponse:
         from ganymede.core.web import dashboard_instance
         import os
         buffer = bytearray()
-        
-        # Create an asyncio reader for the master PTY fd
         loop = asyncio.get_running_loop()
-        reader = asyncio.StreamReader()
-        protocol = asyncio.StreamReaderProtocol(reader)
         
-        # Set the PTY to non-blocking before handing to asyncio
-        # otherwise connect_read_pipe will block the entire event loop
-        # and starve the Discord heartbeat!
-        os.set_blocking(self.master_fd, False)
-        
-        # Use an unbuffered binary file object
-        pipe = os.fdopen(self.master_fd, 'rb', buffering=0)
-        transport, _ = await loop.connect_read_pipe(lambda: protocol, pipe)
+        def read_pty():
+            try:
+                return os.read(self.master_fd, 32)
+            except OSError:
+                return b''
         
         try:
             while True:
-                chunk = await reader.read(32)
+                chunk = await loop.run_in_executor(None, read_pty)
                 if not chunk:
                     break
                     
@@ -72,10 +65,9 @@ class CliResponse:
         except Exception as e:
             logger.debug("PTY read error (likely EOF)", error=str(e))
         finally:
-            transport.close()
             try:
-                pipe.close()
-            except Exception:
+                os.close(self.master_fd)
+            except OSError:
                 pass
 
         # Wait for the process to exit cleanly
@@ -214,13 +206,13 @@ class ManagedAgent:
             # Use native python pty to emulate a TTY so that agy does not block-buffer stdout
             import pty
             master_fd, slave_fd = pty.openpty()
-
+            
             # Build environment variables copy and inject SULCUS_NAMESPACE and GANYMEDE_IPC_PORT
             subprocess_env = os.environ.copy()
-            subprocess_env["SULCUS_NAMESPACE"] = self.bot_namespace
+            subprocess_env["SULCUS_NAMESPACE"] = getattr(self, "bot_namespace", "ganymede")
             subprocess_env["NO_COLOR"] = "1"
             subprocess_env["PYTHONUNBUFFERED"] = "1"
-            if self.ipc_port:
+            if getattr(self, "ipc_port", None):
                 subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
             # Spawn the subprocess with stdout/stderr connected to the slave PTY

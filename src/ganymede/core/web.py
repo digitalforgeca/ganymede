@@ -871,7 +871,7 @@ class DashboardServer:
         logger.info("Starting Ganymede dashboard on http://0.0.0.0:8080")
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, '0.0.0.0', 8080)
+        self.site = web.TCPSite(self.runner, '0.0.0.0', 8080, reuse_address=True, reuse_port=True)
         await self.site.start()
 
     async def stop(self):
