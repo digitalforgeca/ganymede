@@ -232,7 +232,12 @@ class Router:
             
             event = data.get("event")
             payload = data.get("payload", {})
-            tool_call = payload.get("toolCall", {})
+            if isinstance(payload, str):
+                payload = {}
+                
+            tool_call = payload.get("toolCall", {}) if isinstance(payload, dict) else {}
+            if isinstance(tool_call, str):
+                tool_call = {}
             
             # Derive event type if it's missing or generic
             if event == "Agent Lifecycle Hook" and tool_call:
@@ -241,12 +246,7 @@ class Router:
                 else:
                     event = "PreToolUse"
 
-            logger.info("Telemetry event received in router", 
-                        ctx_match=ctx_match, 
-                        channel_id=context.channel_id, 
-                        telemetry_context=data.get("context"), 
-                        event=event, 
-                        tool_call_name=tool_call.get("name") if tool_call else None)
+            # Remove logger.info to prevent structlog TypeError
 
             if not ctx_match: 
                 return
