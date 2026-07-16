@@ -4,6 +4,42 @@ import urllib.request
 import urllib.error
 import os
 
+# Path where Ganymede writes agy-PID → conversation-ID mappings.
+# Each spawned agy process gets a file named by its PID containing our internal ID.
+_PID_MAP_DIR = os.path.expanduser("~/.ganymede/data/pid_map")
+
+def _resolve_ganymede_conv_id():
+    """Walk up the process tree to find which Ganymede ManagedAgent spawned us.
+    
+    The hook runs as: ganymede → agy → [shell?] → python3 broadcast.py
+    We walk the PPID chain upward checking for a PID mapping file at each level.
+    """
+    try:
+        pid_chain = []
+        current = os.getpid()
+        # Walk up to 5 levels (broadcast → shell → agy → ganymede → init)
+        for _ in range(5):
+            current = _get_ppid(current)
+            if current <= 1:
+                break
+            pid_chain.append(current)
+            map_file = os.path.join(_PID_MAP_DIR, str(current))
+            if os.path.exists(map_file):
+                with open(map_file, "r") as f:
+                    return f.read().strip()
+    except Exception:
+        pass
+    return None
+
+def _get_ppid(pid):
+    """Get parent PID of a given PID (macOS compatible)."""
+    try:
+        import subprocess
+        out = subprocess.check_output(["ps", "-o", "ppid=", "-p", str(pid)], text=True).strip()
+        return int(out)
+    except Exception:
+        return 0
+
 def main():
     if not sys.stdin.isatty():
         try:
@@ -15,12 +51,12 @@ def main():
             conversation_id = hook_context.get("conversationId", "unknown")
             
             # Formulate the telemetry payload
-            
-            with open("/Users/dv00003-00/dev/ganymede/hook.json", "w") as f: json.dump(hook_context, f)
+            # ganymede_conv_id is resolved via PID mapping since agy strips env vars.
             payload = {
                 "event": hook_type,
                 "level": "info",
                 "context": conversation_id,
+                "ganymede_conv_id": _resolve_ganymede_conv_id(),
                 "payload": hook_context
             }
             
