@@ -6487,3 +6487,1065 @@ davey is not installed, voice will NOT be supported
 127.0.0.1 [16/Jul/2026:00:46:37 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [16/Jul/2026:00:46:37 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [16/Jul/2026:00:46:43 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"event": "Received shutdown request, cleaning up...", "level": "info", "logger": "ganymede.cli", "timestamp": "2026-07-16T07:47:01.337159Z"}
+{"event": "Stopping Ganymede dashboard", "level": "info", "logger": "ganymede.core.web", "timestamp": "2026-07-16T07:47:01.337298Z"}
+{"event": "Terminating all active agent sessions", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T07:47:01.337470Z"}
+{"conversation_id": "ganymede_discord_1480343419992936479", "event": "Terminating active agy subprocess", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T07:47:01.337511Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "tokens": 53, "event": "Recorded token usage", "level": "info", "logger": "ganymede.core.quota", "timestamp": "2026-07-16T07:47:01.358341Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "event": "Session destroyed and removed from pool", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T07:47:01.358592Z"}
+{"event": "APScheduler stopped.", "level": "info", "logger": "ganymede.core.scheduler", "timestamp": "2026-07-16T07:47:01.358702Z"}
+{"event": "Local HTTP IPC Server stopped.", "level": "info", "logger": "ganymede.platforms.discord.ipc_server", "timestamp": "2026-07-16T07:47:01.358925Z"}
+{"event": "Disconnecting from Discord...", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:47:01.359036Z"}
+{"error": "Session is closed", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:47:01.359593Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "error": "Server disconnected", "event": "Error processing context message", "level": "error", "logger": "ganymede.core.router", "timestamp": "2026-07-16T07:47:01.359652Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "error": "Session is closed", "event": "Error resolving channel from context", "level": "error", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:47:01.359796Z"}
+{"event": "Terminating all active agent sessions", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T07:47:01.359851Z"}
+ERROR:    Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/starlette/routing.py", line 645, in lifespan
+    await receive()
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+[VALIDATION] Commencing Ganymede environment validation...
+[VALIDATION] Checking for Antigravity (agy) CLI...
+[VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+[VALIDATION] Checking for Chalice telemetry plugin...
+[VALIDATION]  ✓ Chalice plugin is installed and ready.
+[VALIDATION] Chain validation complete. Proceeding to boot gateway...
+{"log_level": "INFO", "event": "Initializing ganymede bridge", "level": "info", "logger": "ganymede.cli", "timestamp": "2026-07-16T07:47:02.414010Z"}
+{"path": "/Users/mcdoolz/.ganymede/data/ganymede.db", "event": "Database initialized successfully", "level": "info", "logger": "ganymede.core.db", "timestamp": "2026-07-16T07:47:02.414734Z"}
+PyNaCl is not installed, voice will NOT be supported
+davey is not installed, voice will NOT be supported
+{"event": "Starting Ganymede dashboard on http://0.0.0.0:8080", "level": "info", "logger": "ganymede.core.web", "timestamp": "2026-07-16T07:47:02.468155Z"}
+{"event": "Starting internal MCP SSE Server on http://0.0.0.0:8081", "level": "info", "logger": "ganymede.core.web", "timestamp": "2026-07-16T07:47:02.468411Z"}
+{"platform": "web", "event": "Starting WebProvider", "level": "info", "logger": "ganymede.platforms.web.provider", "timestamp": "2026-07-16T07:47:02.764220Z"}
+{"event": "WebAdapter started", "level": "info", "logger": "ganymede.platforms.web.provider", "timestamp": "2026-07-16T07:47:02.764337Z"}
+{"event": "Registered web invoke callback with dashboard instance", "level": "info", "logger": "ganymede.platforms.web.provider", "timestamp": "2026-07-16T07:47:02.764368Z"}
+127.0.0.1 [16/Jul/2026:00:47:02 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"event": "APScheduler started in background.", "level": "info", "logger": "ganymede.core.scheduler", "timestamp": "2026-07-16T07:47:02.865376Z"}
+{"host": "localhost", "port": 50888, "event": "Local HTTP IPC Server started", "level": "info", "logger": "ganymede.platforms.discord.ipc_server", "timestamp": "2026-07-16T07:47:02.868814Z"}
+{"event": "Connecting to Discord...", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:47:02.869021Z"}
+{"user": "Icarus#5182", "id": 1480323231847158131, "event": "Bot is ready and connected", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:47:06.023469Z"}
+{"event": "Slash command tree synced successfully.", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:47:06.479527Z"}
+127.0.0.1 [16/Jul/2026:00:47:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:47:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:47:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:47:14 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:10 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:48:10 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:48:10 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:48:10 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:48:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:22 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:23 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:23 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:23 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:26 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:26 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:26 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:26 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:35 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:35 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:35 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:35 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:43 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:43 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:43 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:43 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:48:56 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:25 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:51:25 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:51:25 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:51:25 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:51:25 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:25 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:34 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:34 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:34 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:34 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:34 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:34 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:42 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:42 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:51 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:51 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:51 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:51:51 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:52:01 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "user": "dooley_21554", "event": "Processing message in context", "level": "info", "logger": "ganymede.core.router", "timestamp": "2026-07-16T07:52:22.622155Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "daily_turns": 1, "daily_limit": 1450, "event": "Recorded Gemini API turn", "level": "info", "logger": "ganymede.core.quota", "timestamp": "2026-07-16T07:52:23.224600Z"}
+{"conversation_id": "ganymede_discord_1480343419992936479", "event": "Terminating active agy subprocess", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T07:52:31.648238Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "tokens": 17, "event": "Recorded token usage", "level": "info", "logger": "ganymede.core.quota", "timestamp": "2026-07-16T07:52:31.977337Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "event": "Session destroyed and removed from pool", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T07:52:31.977961Z"}
+127.0.0.1 [16/Jul/2026:00:53:40 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:53:40 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:53:40 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:53:40 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:53:40 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:54:16 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:54:16 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:54:16 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:54:19 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:05 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:05 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:05 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:05 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:09 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:18 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:18 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:18 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:18 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:32 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:32 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:32 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:48 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:54 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:54 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:54 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:54 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:55:55 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:57 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:55:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:33 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:56:33 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:56:33 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:56:33 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:56:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:34 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:56:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:06 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:13 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:19 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:57:19 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:57:19 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:57:19 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:57:19 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:19 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:41 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:54 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:54 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:54 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:54 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:57:58 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:24 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:24 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:24 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:25 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:58:37 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:20 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:01:20 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:01:20 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:01:20 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:01:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:29 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:36 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:46 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:52 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:01:59 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:12 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:17 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:02:17 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:02:17 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:02:17 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:02:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:21 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:22 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:23 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:30 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:30 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:30 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:31 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:45 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:45 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:45 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:45 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:52 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:57 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:02:57 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:02:57 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:02:57 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:02:57 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:02:57 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:00 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:02 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:02 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:07 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:03:31 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:11:38 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:11:38 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:11:38 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:11:38 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:11:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:11:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:11:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:11:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:11:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:11:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:12:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:12:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:12:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:12:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:12:15 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"user": "dooley_21554", "channel_id": 1480343419992936479, "event": "Initialized home DM channel with bot owner", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T08:12:55.008468Z"}
+127.0.0.1 [16/Jul/2026:01:22:18 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:22:18 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:22:18 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:22:18 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:01:22:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:18 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:38 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:43 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:44 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:44 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:44 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:55 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:55 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:55 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:22:55 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:03 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:03 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:03 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:03 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:15 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:15 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:15 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:15 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:21 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:21 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:21 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:21 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:01:23:46 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"user": "dooley_21554", "channel_id": 1480343419992936479, "event": "Initialized home DM channel with bot owner", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T09:53:52.001763Z"}
+{"user": "dooley_21554", "channel_id": 1480343419992936479, "event": "Initialized home DM channel with bot owner", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T12:27:16.880684Z"}
+{"user": "dooley_21554", "channel_id": 1480343419992936479, "event": "Initialized home DM channel with bot owner", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T14:09:15.940666Z"}
+{"user": "dooley_21554", "channel_id": 1480343419992936479, "event": "Initialized home DM channel with bot owner", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:22:23.507618Z"}
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:42:38.485058Z"}
+Attempting a reconnect in 1.62s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:42:38.501874Z"}
+Attempting a reconnect in 2.94s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:42:40.127741Z"}
+Attempting a reconnect in 3.45s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:42:43.073444Z"}
+Attempting a reconnect in 2.70s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:42:46.530640Z"}
+Attempting a reconnect in 8.90s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:42:49.240206Z"}
+Attempting a reconnect in 13.02s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:42:58.148743Z"}
+Attempting a reconnect in 90.41s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:43:11.172618Z"}
+Attempting a reconnect in 8.75s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:44:41.585669Z"}
+Attempting a reconnect in 92.74s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:44:50.344370Z"}
+Attempting a reconnect in 509.21s
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1571, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1181, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1212, in _resolve_host_with_throttle
+    addrs = await self._resolver.resolve(host, port, family=self._family)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/resolver.py", line 40, in resolve
+    infos = await self._loop.getaddrinfo(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 868, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/socket.py", line 974, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/client.py", line 728, in connect
+    self.ws = await asyncio.wait_for(coro, timeout=60.0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/tasks.py", line 489, in wait_for
+    return fut.result()
+           ^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/gateway.py", line 392, in from_client
+    socket = await client.http.ws_connect(str(url))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/discord/http.py", line 571, in ws_connect
+    return await self.__session.ws_connect(url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 1244, in _ws_connect
+    resp = await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 856, in _request
+    resp = await handler(req)
+           ^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/client.py", line 810, in _connect_and_send_request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 657, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1242, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/connector.py", line 1577, in _create_direct_connection
+    raise ClientConnectorDNSError(req.connection_key, exc) from exc
+aiohttp.client_exceptions.ClientConnectorDNSError: Cannot connect to host gateway-us-east1-d.discord.gg:443 ssl:default [nodename nor servname provided, or not known]
+{"error": "Cannot connect to host discord.com:443 ssl:default [nodename nor servname provided, or not known]", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:46:23.095644Z"}
+{"user": "dooley_21554", "channel_id": 1480343419992936479, "event": "Initialized home DM channel with bot owner", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:54:53.611532Z"}
+{"user": "Icarus#5182", "id": 1480323231847158131, "event": "Bot is ready and connected", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:55:01.301930Z"}
+{"event": "Slash command tree synced successfully.", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T17:55:01.572213Z"}
+127.0.0.1 [16/Jul/2026:11:21:52 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:21:52 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:21:52 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:21:52 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:21:52 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:21:52 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:09 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:09 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:09 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:09 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:22:36 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:26:55 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:26:55 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:26:55 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:26:55 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:26:55 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:26:55 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:27:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:03 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:03 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:13 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:13 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:13 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:13 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:17 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:17 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:17 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:28:17 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:06 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:06 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:06 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:07 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:12 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:12 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:12 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:12 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:20 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:22 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:29:22 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:29:22 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:29:22 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:29:22 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:22 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:32 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:33 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:40 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:40 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:40 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:40 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:29:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:30:01 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:32:59 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:32:59 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:32:59 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:32:59 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:11:32:59 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:00 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:07 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:08 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:09 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:14 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:14 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:14 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:14 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:21 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:21 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:21 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:22 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:27 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:28 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:45 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:46 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:46 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:46 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:11:33:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"event": "Received shutdown request, cleaning up...", "level": "info", "logger": "ganymede.cli", "timestamp": "2026-07-16T18:33:53.333013Z"}
+{"event": "Stopping Ganymede dashboard", "level": "info", "logger": "ganymede.core.web", "timestamp": "2026-07-16T18:33:53.333227Z"}
+{"event": "Terminating all active agent sessions", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T18:33:53.333546Z"}
+{"event": "APScheduler stopped.", "level": "info", "logger": "ganymede.core.scheduler", "timestamp": "2026-07-16T18:33:53.333663Z"}
+{"event": "Local HTTP IPC Server stopped.", "level": "info", "logger": "ganymede.platforms.discord.ipc_server", "timestamp": "2026-07-16T18:33:53.333810Z"}
+{"event": "Disconnecting from Discord...", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T18:33:53.334104Z"}
+{"error": "Session is closed", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T18:33:53.334598Z"}
+{"event": "Terminating all active agent sessions", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T18:33:53.334682Z"}
+ERROR:    Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/starlette/routing.py", line 645, in lifespan
+    await receive()
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
