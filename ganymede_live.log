@@ -945,3 +945,28 @@ davey is not installed, voice will NOT be supported
 127.0.0.1 [16/Jul/2026:14:53:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [16/Jul/2026:14:53:47 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [16/Jul/2026:14:53:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:49 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:50 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "user": "dooley_21554", "event": "Processing message in context", "level": "info", "logger": "ganymede.core.router", "timestamp": "2026-07-16T21:53:52.112163Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "daily_turns": 3, "daily_limit": 1450, "event": "Recorded Gemini API turn", "level": "info", "logger": "ganymede.core.quota", "timestamp": "2026-07-16T21:53:52.524924Z"}
+127.0.0.1 [16/Jul/2026:14:53:52 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:52 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:53 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:54 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:56 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:53:57 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"ganymede_conv_id": "ganymede_discord_1480343419992936479", "agy_conv_id": "2d5ed0d7-3b08-4c24-a749-c4a442583966", "transcript_path": "/Users/mcdoolz/.gemini/antigravity-cli/brain/2d5ed0d7-3b08-4c24-a749-c4a442583966/.system_generated/logs/transcript_full.jsonl", "reason": "NO_TOOL_CALL", "event": "Chalice signaled turn complete", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T21:53:57.296514Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "tokens": 19, "event": "Recorded token usage", "level": "info", "logger": "ganymede.core.quota", "timestamp": "2026-07-16T21:53:57.296758Z"}
+127.0.0.1 [16/Jul/2026:14:54:01 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:01 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:07 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:09 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:14:54:12 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
