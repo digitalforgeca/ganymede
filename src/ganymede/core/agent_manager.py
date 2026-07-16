@@ -276,13 +276,7 @@ class AgentManager:
         self._active_authors: dict[ContextKey, str] = {}
         self._active_author_names: dict[ContextKey, str] = {}
         self.adapter = None
-
-        # Register Chalice telemetry listener to wake up chat sessions
-        from ganymede.core.web import dashboard_instance
-        if dashboard_instance:
-            if not hasattr(dashboard_instance, "telemetry_listeners"):
-                dashboard_instance.telemetry_listeners = []
-            dashboard_instance.telemetry_listeners.append(self.handle_telemetry)
+        self._telemetry_registered = False
 
     async def handle_telemetry(self, data: dict):
         """Wake up ManagedAgent when Chalice signals turn completion.
@@ -320,7 +314,21 @@ class AgentManager:
     def set_adapter(self, adapter) -> None:
         self.adapter = adapter
 
+    def _register_telemetry_listener(self):
+        """Lazily register telemetry listener with dashboard (avoids init race)."""
+        if self._telemetry_registered:
+            return
+        from ganymede.core.web import dashboard_instance
+        if dashboard_instance:
+            if not hasattr(dashboard_instance, "telemetry_listeners"):
+                dashboard_instance.telemetry_listeners = []
+            dashboard_instance.telemetry_listeners.append(self.handle_telemetry)
+            self._telemetry_registered = True
+            logger.info("Registered Chalice telemetry listener with dashboard")
+
     async def get_or_create(self, context: ContextKey) -> ManagedAgent:
+        self._register_telemetry_listener()
+
         if context in self._agents:
             managed = self._agents[context]
             managed.last_active = time.time()
