@@ -285,12 +285,26 @@ class AgentManager:
             dashboard_instance.telemetry_listeners.append(self.handle_telemetry)
 
     async def handle_telemetry(self, data: dict):
-        """Wake up ManagedAgent when Chalice signals turn completion."""
-        if data.get("event") == "Stop":
-            conv_id = data.get("conversationId")
-            for agent in self._agents.values():
-                if agent.sdk_conversation_id == conv_id:
-                    agent.turn_completed_event.set()
+        """Wake up ManagedAgent when Chalice signals turn completion.
+        
+        Chalice sends all events as "Agent Lifecycle Hook". A completed turn
+        is identified by payload.fullyIdle=true with a terminationReason present.
+        The conversationId lives inside the payload dict, not at the top level.
+        """
+        if data.get("event") != "Agent Lifecycle Hook":
+            return
+            
+        payload = data.get("payload", {})
+        if not isinstance(payload, dict):
+            return
+            
+        if payload.get("fullyIdle"):
+            conv_id = payload.get("conversationId")
+            if conv_id:
+                for agent in self._agents.values():
+                    if agent.sdk_conversation_id == conv_id:
+                        logger.info("Chalice signaled turn complete", conversation_id=conv_id, reason=payload.get("terminationReason"))
+                        agent.turn_completed_event.set()
 
     def set_active_author(self, context: ContextKey, author_id: str, author_name: str = None) -> None:
         self._active_authors[context] = author_id
