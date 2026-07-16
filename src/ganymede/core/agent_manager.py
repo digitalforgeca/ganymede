@@ -28,14 +28,14 @@ class MockUsage:
 class CliResponse:
     """Wrapper around agy subprocess to be compatible with Router chunks interface.
     
-    Instead of scraping the PTY output, we rely on the Chalice plugin's 'Stop' telemetry
-    event to signal completion, and then we parse the clean output from the JSONL transcript.
+    ARCHITECTURE: The PTY is ONLY for injecting input. Output is read via Chalice telemetry.
+    When the Chalice Stop hook fires (fullyIdle=true), it provides the transcriptPath
+    to the child conversation's JSONL transcript. We read the agent's response from there.
     """
 
-    def __init__(self, agent_instance, prompt: str, transcript_path: str):
+    def __init__(self, agent_instance, prompt: str):
         self.agent = agent_instance
         self.prompt = prompt
-        self.transcript_path = transcript_path
         self.response_text = ""
         self.usage_metadata = MockUsage()
         self._chunks_generator = self._read_chunks()
@@ -58,25 +58,29 @@ class CliResponse:
             logger.info("Agent turn aborted by /stop", conversation_id=self.agent.conversation_id)
             return
 
-        # Turn is complete. Read the clean output from transcript_full.jsonl
-        full_transcript = self.transcript_path.replace("transcript.jsonl", "transcript_full.jsonl")
-        if not os.path.exists(full_transcript):
-            full_transcript = self.transcript_path
+        # Turn is complete. Read the clean output from the transcript path
+        # provided by the Chalice Stop hook payload (stored on the agent).
+        transcript_path = self.agent._chalice_transcript_path
+        if not transcript_path or not os.path.exists(transcript_path):
+            logger.error("No transcript path from Chalice telemetry",
+                         conversation_id=self.agent.conversation_id,
+                         transcript_path=transcript_path)
+            yield Text(text="[Error: No transcript available from agent]", step_index=0)
+            return
             
         final_text = ""
         tool_calls = []
         try:
-            if os.path.exists(full_transcript):
-                with open(full_transcript, 'r') as f:
-                    for line in f:
-                        if not line.strip(): continue
-                        try:
-                            data = json.loads(line)
-                            if data.get("type") in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
-                                final_text = data.get("content", "")
-                                tool_calls = data.get("tool_calls", [])
-                        except json.JSONDecodeError:
-                            continue
+            with open(transcript_path, 'r') as f:
+                for line in f:
+                    if not line.strip(): continue
+                    try:
+                        data = json.loads(line)
+                        if data.get("type") in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
+                            final_text = data.get("content", "")
+                            tool_calls = data.get("tool_calls", [])
+                    except json.JSONDecodeError:
+                        continue
                             
             if tool_calls:
                 tool_text = "\n\n*⚒️ Tools Used:*\n"
@@ -96,7 +100,8 @@ class CliResponse:
             
             self.usage_metadata.total_token_count = (len(self.prompt) + len(final_text)) // 4
         except Exception as e:
-            logger.error("Failed to read transcript for output", error=str(e))
+            logger.error("Failed to read transcript for output", error=str(e),
+                         transcript_path=transcript_path)
             yield Text(text="[Error: Failed to parse agent transcript]", step_index=0)
 
     @property
@@ -124,6 +129,7 @@ class ManagedAgent:
         self.sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
         self.turn_completed_event = asyncio.Event()
         self.aborted = False
+        self._chalice_transcript_path = None  # Set by handle_telemetry when Stop fires
 
     async def _sink_pty_output(self):
         """Read and discard the PTY output in the background so the buffer doesn't fill up."""
@@ -203,6 +209,15 @@ class ManagedAgent:
         )
         os.close(slave_fd)
         
+        # Write PID→conversation_id mapping so Chalice broadcast.py can correlate
+        # telemetry events back to this ManagedAgent. We can't use env vars because
+        # agy sanitizes the subprocess environment before running hook commands.
+        pid_map_dir = os.path.expanduser("~/.ganymede/data/pid_map")
+        os.makedirs(pid_map_dir, exist_ok=True)
+        pid_map_file = os.path.join(pid_map_dir, str(self.current_process.pid))
+        with open(pid_map_file, "w") as f:
+            f.write(self.conversation_id)
+        
         # Start background sink
         asyncio.create_task(self._sink_pty_output())
         
@@ -225,17 +240,12 @@ class ManagedAgent:
                 sys_inst = sys_inst.replace("{model_name}", getattr(self.config.agent, "model", "default model"))
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
-            # Write prompt as simulated keystrokes to the PTY
+            # Write prompt as simulated keystrokes to the PTY.
             # \r is required to trigger bubbletea's Enter key (submit action) in raw mode.
+            # Output reading is handled entirely by Chalice telemetry, not the PTY.
             os.write(self.master_fd, (final_prompt + '\r').encode('utf-8'))
             
-            transcript_path = os.path.join(
-                os.path.expanduser("~/.gemini/antigravity-cli/brain"), 
-                self.sdk_conversation_id, 
-                ".system_generated", "logs", "transcript.jsonl"
-            )
-            
-            return CliResponse(self, prompt, transcript_path)
+            return CliResponse(self, prompt)
 
     async def terminate(self) -> None:
         """Forcefully terminate the active agy CLI subprocess if running."""
@@ -256,6 +266,15 @@ class ManagedAgent:
             except Exception as e:
                 logger.error("Error terminating agy subprocess", error=str(e))
             finally:
+                # Clean up PID mapping file
+                if self.current_process:
+                    pid_map_file = os.path.join(
+                        os.path.expanduser("~/.ganymede/data/pid_map"),
+                        str(self.current_process.pid))
+                    try:
+                        os.remove(pid_map_file)
+                    except FileNotFoundError:
+                        pass
                 self.current_process = None
                 if self.master_fd is not None:
                     try:
@@ -293,9 +312,13 @@ class AgentManager:
     async def handle_telemetry(self, data: dict):
         """Wake up ManagedAgent when Chalice signals turn completion.
         
-        Chalice sends all events as "Agent Lifecycle Hook". A completed turn
-        is identified by payload.fullyIdle=true with a terminationReason present.
-        The conversationId lives inside the payload dict, not at the top level.
+        Correlation: Each agy subprocess has GANYMEDE_CONV_ID set in its env.
+        broadcast.py includes this as 'ganymede_conv_id' in the telemetry payload.
+        We match on this field (our internal conversation ID) rather than the
+        agy-internal conversationId, which changes per child conversation.
+        
+        The Chalice payload also provides transcriptPath pointing to the child
+        conversation's JSONL file — CliResponse reads the response from there.
         """
         if data.get("event") != "Agent Lifecycle Hook":
             return
@@ -303,14 +326,26 @@ class AgentManager:
         payload = data.get("payload", {})
         if not isinstance(payload, dict):
             return
+        
+        # Match on our GANYMEDE_CONV_ID, not agy's internal conversation ID
+        ganymede_conv_id = data.get("ganymede_conv_id")
+        if not ganymede_conv_id:
+            return
             
         if payload.get("fullyIdle"):
-            conv_id = payload.get("conversationId")
-            if conv_id:
-                for agent in self._agents.values():
-                    if agent.sdk_conversation_id == conv_id:
-                        logger.info("Chalice signaled turn complete", conversation_id=conv_id, reason=payload.get("terminationReason"))
-                        agent.turn_completed_event.set()
+            for agent in self._agents.values():
+                if agent.conversation_id == ganymede_conv_id:
+                    # Store transcript path from Chalice so CliResponse can read it
+                    transcript_path = payload.get("transcriptPath")
+                    if transcript_path:
+                        agent._chalice_transcript_path = transcript_path
+                    logger.info("Chalice signaled turn complete",
+                                ganymede_conv_id=ganymede_conv_id,
+                                agy_conv_id=payload.get("conversationId"),
+                                transcript_path=transcript_path,
+                                reason=payload.get("terminationReason"))
+                    agent.turn_completed_event.set()
+                    return
 
     def set_active_author(self, context: ContextKey, author_id: str, author_name: str = None) -> None:
         self._active_authors[context] = author_id
