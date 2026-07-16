@@ -33,6 +33,7 @@ class DiscordIPCServer:
         self.app.router.add_post("/api/thread/create", self.handle_thread_create)
         self.app.router.add_post("/api/schedule/cron", self.handle_schedule_cron)
         self.app.router.add_post("/api/status/update", self.handle_status_update)
+        self.app.router.add_post("/api/test/invoke", self.handle_test_invoke)
 
     async def start(self) -> None:
         """Launch the local web server on a dynamic port and write port to file."""
@@ -335,4 +336,41 @@ class DiscordIPCServer:
             return web.json_response({"status": "ok"})
         except Exception as e:
             logger.error("Failed to process status update request", error=str(e))
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def handle_test_invoke(self, request: web.Request) -> web.Response:
+        """Simulate an incoming discord message for testing purposes."""
+        try:
+            data = await request.json()
+            channel_id = data.get("channel_id")
+            content = data.get("content")
+            author_id = data.get("author_id", "test_user_id")
+            author_name = data.get("author_name", "TestUser")
+            
+            if not channel_id or not content:
+                return web.json_response({"error": "Missing channel_id or content"}, status=400)
+                
+            from ganymede.core import ContextKey
+            from ganymede.core.models import PlatformMessage
+            
+            context = ContextKey(platform="discord", channel_id=str(channel_id), thread_id=None)
+            normalized = PlatformMessage(
+                context=context,
+                author_id=str(author_id),
+                author_name=author_name,
+                content=content,
+                is_bot=False,
+                mentions_us=True,
+                attachments=[],
+                reply_to=None,
+                raw=None
+            )
+            
+            if hasattr(self.client, "_on_message_callback") and self.client._on_message_callback:
+                asyncio.create_task(self.client._on_message_callback(normalized))
+                return web.json_response({"status": "invoked", "channel_id": channel_id})
+            else:
+                return web.json_response({"error": "Adapter missing _on_message_callback"}, status=500)
+        except Exception as e:
+            logger.error("Failed to process test invoke", error=str(e))
             return web.json_response({"error": str(e)}, status=500)
