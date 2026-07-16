@@ -43,6 +43,7 @@ class CliResponse:
     async def _read_chunks(self):
         # Clear the event before we wait
         self.agent.turn_completed_event.clear()
+        self.agent.aborted = False
         
         try:
             # Wait for Chalice to fire the Stop hook signaling generation is done
@@ -50,6 +51,11 @@ class CliResponse:
         except asyncio.TimeoutError:
             logger.error("Timeout waiting for agent to finish turn", conversation_id=self.agent.conversation_id)
             yield Text(text="[Error: Agent timed out while generating response]", step_index=0)
+            return
+
+        # Check if we were woken by an abort (/stop) rather than clean completion
+        if self.agent.aborted:
+            logger.info("Agent turn aborted by /stop", conversation_id=self.agent.conversation_id)
             return
 
         # Turn is complete. Read the clean output from transcript_full.jsonl
@@ -117,6 +123,7 @@ class ManagedAgent:
         self.master_fd: int | None = None
         self.sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
         self.turn_completed_event = asyncio.Event()
+        self.aborted = False
 
     async def _sink_pty_output(self):
         """Read and discard the PTY output in the background so the buffer doesn't fill up."""
@@ -232,6 +239,10 @@ class ManagedAgent:
 
     async def terminate(self) -> None:
         """Forcefully terminate the active agy CLI subprocess if running."""
+        # Signal abort FIRST so the blocked CliResponse generator wakes up immediately
+        self.aborted = True
+        self.turn_completed_event.set()
+
         if self.current_process:
             logger.info("Terminating active agy subprocess", conversation_id=self.conversation_id)
             try:
