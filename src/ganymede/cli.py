@@ -300,11 +300,44 @@ def main():
     )
     
     validate_environment()
+    migrate_legacy_conversations()
     
     # Ensure only one instance of the daemon runs at a time
     acquire_instance_lock(config.data_dir)
     
     asyncio.run(run(config))
+
+def migrate_legacy_conversations():
+    """One-time startup migration: rename underscore-based conversation files to hyphen-based.
+    
+    The Antigravity SDK's cascade_id field requires [a-zA-Z0-9-]. Old conversation files
+    used underscores (e.g. ganymede_discord_XXXXX.db). This migrates them to hyphens
+    (ganymede-discord-XXXXX.db) so the SDK can resume them without crashing.
+    """
+    import glob
+    app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+    
+    # Migrate conversation .db files
+    conversations_dir = os.path.join(app_data, "conversations")
+    if os.path.isdir(conversations_dir):
+        for old_path in glob.glob(os.path.join(conversations_dir, "ganymede_*.db")):
+            new_name = os.path.basename(old_path).replace("_", "-")
+            new_path = os.path.join(conversations_dir, new_name)
+            if not os.path.exists(new_path):
+                os.rename(old_path, new_path)
+                print(f"[MIGRATION] Renamed {os.path.basename(old_path)} → {new_name}", file=sys.stdout)
+    
+    # Migrate brain directories
+    brain_dir = os.path.join(app_data, "brain")
+    if os.path.isdir(brain_dir):
+        for entry in os.listdir(brain_dir):
+            if entry.startswith("ganymede_") and os.path.isdir(os.path.join(brain_dir, entry)):
+                new_name = entry.replace("_", "-")
+                old_path = os.path.join(brain_dir, entry)
+                new_path = os.path.join(brain_dir, new_name)
+                if not os.path.exists(new_path):
+                    os.rename(old_path, new_path)
+                    print(f"[MIGRATION] Renamed brain/{entry} → brain/{new_name}", file=sys.stdout)
 
 def validate_environment():
     """Strictly validates the Antigravity ecosystem chain before booting."""

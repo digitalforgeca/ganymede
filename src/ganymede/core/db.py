@@ -94,9 +94,8 @@ class Database:
         """)
 
         # Conversation Mappings Table (Many-to-One network contexts to one Antigravity conversation)
-        await self._conn.execute("DROP TABLE IF EXISTS conversation_mappings")
         await self._conn.execute("""
-            CREATE TABLE conversation_mappings (
+            CREATE TABLE IF NOT EXISTS conversation_mappings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 platform TEXT NOT NULL,
                 channel_id TEXT NOT NULL,

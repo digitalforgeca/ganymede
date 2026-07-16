@@ -63,40 +63,24 @@ class ManagedAgent:
         # true async background tasks that won't panic the gateway when upstream servers restart!
         if getattr(self, "ipc_port", None):
             os.environ["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
-            
-        # Ensure conversation_id conforms to Antigravity's regex: [a-zA-Z0-9-]
-        sanitized_conv_id = self.conversation_id.replace("_", "-")
         
-        # Migrate old database and brain dir if they exist
+        # SDK session management: if a prior session .db exists, resume it.
+        # If not, omit conversation_id so the SDK creates a fresh session.
         app_data = os.path.expanduser("~/.gemini/antigravity-cli")
-        old_db = os.path.join(app_data, "conversations", f"{self.conversation_id}.db")
-        new_db = os.path.join(app_data, "conversations", f"{sanitized_conv_id}.db")
-        if os.path.exists(old_db) and not os.path.exists(new_db):
-            os.rename(old_db, new_db)
-        elif not os.path.exists(new_db):
-            # Bootstrap an empty database so the Antigravity SDK doesn't throw 'trajectory not found'
-            os.makedirs(os.path.dirname(new_db), exist_ok=True)
-            open(new_db, 'a').close()
-            
-        old_brain = os.path.join(app_data, "brain", self.conversation_id)
-        new_brain = os.path.join(app_data, "brain", sanitized_conv_id)
-        if os.path.exists(old_brain) and not os.path.exists(new_brain):
-            os.rename(old_brain, new_brain)
-        elif not os.path.exists(new_brain):
-            os.makedirs(new_brain, exist_ok=True)
-            
+        conversations_dir = os.path.join(app_data, "conversations")
+        os.makedirs(conversations_dir, exist_ok=True)
+        
+        db_path = os.path.join(conversations_dir, f"{self.conversation_id}.db")
+        has_existing_session = os.path.exists(db_path) and os.path.getsize(db_path) > 0
+        
         agent_config = LocalAgentConfig(
             system_instructions=sys_inst,
             capabilities=CapabilitiesConfig(),
             workspace=workspace_dir,
-            conversation_id=sanitized_conv_id,
+            conversation_id=self.conversation_id if has_existing_session else None,
             app_data_dir=app_data,
-            save_dir=os.path.join(app_data, "conversations")
+            save_dir=conversations_dir
         )
-        
-        # Note: LocalAgentConfig expects ModelTarget objects for model routing, but the SDK
-        # also supports string fallbacks natively in the connection initialization. 
-        # For simplicity, if model_override exists we pass it via kwargs or assume default.
         
         self.agent = Agent(agent_config)
         await self.agent.__aenter__()
