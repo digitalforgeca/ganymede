@@ -226,7 +226,9 @@ class ManagedAgent:
             workspace_dir = os.path.expanduser(self.config.agent.workspace)
             os.makedirs(workspace_dir, exist_ok=True)
             
-            # Use a PTY so the CLI thinks it has a terminal (avoids bubbletea crashes)
+            # Use a PTY so the CLI thinks it has a terminal (avoids bubbletea crashes).
+            # bubbletea opens /dev/tty directly (not stdin/stdout), so we must make the
+            # PTY the actual controlling terminal via setsid + TIOCSCTTY.
             master_fd, slave_fd = pty.openpty()
             
             # Build environment variables copy and inject SULCUS_NAMESPACE and GANYMEDE_IPC_PORT
@@ -237,14 +239,26 @@ class ManagedAgent:
             if getattr(self, "ipc_port", None):
                 subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
-            # Spawn the subprocess with stdout/stderr connected to the slave PTY
+            # preexec_fn runs in the child after fork, before exec.
+            # It makes the slave PTY the controlling terminal so /dev/tty resolves to it.
+            import fcntl
+            import termios
+            _slave_fd = slave_fd  # capture for closure
+            def _setup_ctty():
+                # Create a new session (detach from parent's controlling terminal)
+                os.setsid()
+                # Make the slave PTY the controlling terminal for this session
+                fcntl.ioctl(_slave_fd, termios.TIOCSCTTY, 0)
+
+            # Spawn the subprocess with all three stdio fds connected to the slave PTY
             process = await asyncio.create_subprocess_exec(
                 *args,
-                stdin=asyncio.subprocess.DEVNULL,
+                stdin=slave_fd,
                 stdout=slave_fd,
                 stderr=slave_fd,
                 cwd=workspace_dir,
                 env=subprocess_env,
+                preexec_fn=_setup_ctty,
             )
             os.close(slave_fd)
             self.current_process = process
