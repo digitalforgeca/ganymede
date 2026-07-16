@@ -219,7 +219,8 @@ class ManagedAgent:
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
             # Write prompt as simulated keystrokes to the PTY
-            os.write(self.master_fd, (final_prompt + '\n').encode('utf-8'))
+            # \r is required to trigger bubbletea's Enter key (submit action) in raw mode.
+            os.write(self.master_fd, (final_prompt + '\r').encode('utf-8'))
             
             transcript_path = os.path.join(
                 os.path.expanduser("~/.gemini/antigravity-cli/brain"), 
