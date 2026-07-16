@@ -74,6 +74,14 @@ class ManagedAgent:
         conversations_dir = os.path.join(app_data, "conversations")
         os.makedirs(conversations_dir, exist_ok=True)
         
+        # Bridge the brain directory: SDK writes to brain/{uuid}, our dashboard reads
+        # brain/{ganymede_discord_XXXXX}. Symlink the UUID path → our path so both work.
+        our_brain_dir = os.path.join(app_data, "brain", self.conversation_id)
+        sdk_brain_dir = os.path.join(app_data, "brain", sdk_conversation_id)
+        os.makedirs(our_brain_dir, exist_ok=True)
+        if not os.path.exists(sdk_brain_dir):
+            os.symlink(our_brain_dir, sdk_brain_dir)
+        
         # If a prior SDK session .db exists, pass the ID to resume it.
         # If not, omit conversation_id so the SDK creates a fresh session.
         db_path = os.path.join(conversations_dir, f"{sdk_conversation_id}.db")
