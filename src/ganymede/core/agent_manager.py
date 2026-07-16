@@ -2,6 +2,7 @@ import asyncio
 import time
 import os
 import json
+import uuid
 import structlog
 from typing import Any
 from google.antigravity import Agent, LocalAgentConfig, CapabilitiesConfig
@@ -64,20 +65,25 @@ class ManagedAgent:
         if getattr(self, "ipc_port", None):
             os.environ["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
         
-        # SDK session management: if a prior session .db exists, resume it.
-        # If not, omit conversation_id so the SDK creates a fresh session.
+        # SDK cascade_id requires [a-zA-Z0-9-] and min 32 chars.
+        # DO NOT change our internal naming scheme (ganymede_discord_XXXXX) to satisfy this.
+        # Instead, derive a deterministic UUID that the SDK is happy with.
+        sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
+        
         app_data = os.path.expanduser("~/.gemini/antigravity-cli")
         conversations_dir = os.path.join(app_data, "conversations")
         os.makedirs(conversations_dir, exist_ok=True)
         
-        db_path = os.path.join(conversations_dir, f"{self.conversation_id}.db")
+        # If a prior SDK session .db exists, pass the ID to resume it.
+        # If not, omit conversation_id so the SDK creates a fresh session.
+        db_path = os.path.join(conversations_dir, f"{sdk_conversation_id}.db")
         has_existing_session = os.path.exists(db_path) and os.path.getsize(db_path) > 0
         
         agent_config = LocalAgentConfig(
             system_instructions=sys_inst,
             capabilities=CapabilitiesConfig(),
             workspace=workspace_dir,
-            conversation_id=self.conversation_id if has_existing_session else None,
+            conversation_id=sdk_conversation_id if has_existing_session else None,
             app_data_dir=app_data,
             save_dir=conversations_dir
         )
@@ -155,9 +161,10 @@ class AgentManager:
             if self.adapter:
                 conversation_id = self.adapter.get_conversation_id(context)
             else:
-                conversation_id = f"ganymede-{context.platform}-{context.channel_id}"
+                # DO NOT change this naming scheme. The SDK gets a derived UUID, not this ID directly.
+                conversation_id = f"ganymede_{context.platform}_{context.channel_id}"
                 if context.thread_id:
-                    conversation_id += f"-{context.thread_id}"
+                    conversation_id += f"_{context.thread_id}"
                 
             if self.db:
                 await self.db.save_conversation_mapping(conversation_id, context)

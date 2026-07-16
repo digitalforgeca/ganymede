@@ -102,7 +102,7 @@ class WebAdapter(PlatformAdapter):
 
     def get_conversation_id(self, context: ContextKey) -> str:
         # Standardize conversation ID mapping
-        return f"ganymede-web-{context.channel_id}"
+        return f"ganymede_web_{context.channel_id}"
 
 
 class WebProvider(BasePlatformProvider):
