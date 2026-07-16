@@ -66,13 +66,32 @@ class ManagedAgent:
             
         # Ensure conversation_id conforms to Antigravity's regex: [a-zA-Z0-9-]
         sanitized_conv_id = self.conversation_id.replace("_", "-")
+        
+        # Migrate old database and brain dir if they exist
+        app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+        old_db = os.path.join(app_data, "conversations", f"{self.conversation_id}.db")
+        new_db = os.path.join(app_data, "conversations", f"{sanitized_conv_id}.db")
+        if os.path.exists(old_db) and not os.path.exists(new_db):
+            os.rename(old_db, new_db)
+        elif not os.path.exists(new_db):
+            # Bootstrap an empty database so the Antigravity SDK doesn't throw 'trajectory not found'
+            os.makedirs(os.path.dirname(new_db), exist_ok=True)
+            open(new_db, 'a').close()
+            
+        old_brain = os.path.join(app_data, "brain", self.conversation_id)
+        new_brain = os.path.join(app_data, "brain", sanitized_conv_id)
+        if os.path.exists(old_brain) and not os.path.exists(new_brain):
+            os.rename(old_brain, new_brain)
+        elif not os.path.exists(new_brain):
+            os.makedirs(new_brain, exist_ok=True)
             
         agent_config = LocalAgentConfig(
             system_instructions=sys_inst,
             capabilities=CapabilitiesConfig(),
             workspace=workspace_dir,
             conversation_id=sanitized_conv_id,
-            app_data_dir=os.path.expanduser("~/.gemini/antigravity-cli")
+            app_data_dir=app_data,
+            save_dir=os.path.join(app_data, "conversations")
         )
         
         # Note: LocalAgentConfig expects ModelTarget objects for model routing, but the SDK
