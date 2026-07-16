@@ -64,11 +64,14 @@ class ManagedAgent:
         if getattr(self, "ipc_port", None):
             os.environ["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
             
+        # Ensure conversation_id conforms to Antigravity's regex: [a-zA-Z0-9-]
+        sanitized_conv_id = self.conversation_id.replace("_", "-")
+            
         agent_config = LocalAgentConfig(
             system_instructions=sys_inst,
             capabilities=CapabilitiesConfig(),
             workspace=workspace_dir,
-            conversation_id=self.conversation_id,
+            conversation_id=sanitized_conv_id,
         )
         
         # Note: LocalAgentConfig expects ModelTarget objects for model routing, but the SDK
@@ -148,9 +151,9 @@ class AgentManager:
             if self.adapter:
                 conversation_id = self.adapter.get_conversation_id(context)
             else:
-                conversation_id = f"ganymede_{context.platform}_{context.channel_id}"
+                conversation_id = f"ganymede-{context.platform}-{context.channel_id}"
                 if context.thread_id:
-                    conversation_id += f"_{context.thread_id}"
+                    conversation_id += f"-{context.thread_id}"
                 
             if self.db:
                 await self.db.save_conversation_mapping(conversation_id, context)

@@ -326,23 +326,33 @@ def validate_environment():
     plugin_path_target = os.path.expanduser("~/.gemini/config/plugins/chalice")
     plugin_path_json = os.path.join(plugin_path_target, "plugin.json")
     
+    # If a broken symlink exists, remove it
+    if os.path.islink(plugin_path_target) and not os.path.exists(plugin_path_target):
+        os.unlink(plugin_path_target)
+    elif os.path.islink(plugin_path_target):
+        # Let's upgrade them from symlink to an actual copy
+        os.unlink(plugin_path_target)
+    
     if not os.path.exists(plugin_path_json):
-        # Auto-install it!
+        # Auto-install it via copy!
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
         source_chalice_path = os.path.join(repo_root, "plugins", "chalice")
         
         if os.path.exists(os.path.join(source_chalice_path, "plugin.json")):
-            print("[VALIDATION]  - Chalice plugin not found in ~/.gemini. Auto-installing...", file=sys.stdout)
+            print("[VALIDATION]  - Chalice plugin not found or needs upgrade in ~/.gemini. Auto-installing...", file=sys.stdout)
             os.makedirs(os.path.dirname(plugin_path_target), exist_ok=True)
             try:
-                os.symlink(source_chalice_path, plugin_path_target)
-                print(f"[VALIDATION]  ✓ Successfully symlinked Chalice plugin to {plugin_path_target}", file=sys.stdout)
+                import shutil
+                if os.path.exists(plugin_path_target):
+                    shutil.rmtree(plugin_path_target)
+                shutil.copytree(source_chalice_path, plugin_path_target)
+                print(f"[VALIDATION]  ✓ Successfully copied Chalice plugin to {plugin_path_target}", file=sys.stdout)
             except Exception as e:
-                print(f"[ERROR] Fatal: Could not create symlink for Chalice plugin: {e}", file=sys.stderr)
+                print(f"[ERROR] Fatal: Could not copy Chalice plugin: {e}", file=sys.stderr)
                 sys.exit(1)
         else:
             print(f"[ERROR] Fatal: Chalice plugin not found at {plugin_path_json}", file=sys.stderr)
-            print("[ERROR] Your installer failed to symlink the telemetry plugin. Ganymede cannot operate without accurate records.", file=sys.stderr)
+            print("[ERROR] Your installer failed to install the telemetry plugin. Ganymede cannot operate without accurate records.", file=sys.stderr)
             sys.exit(1)
     else:
         print("[VALIDATION]  ✓ Chalice plugin is installed and ready.", file=sys.stdout)

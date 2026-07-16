@@ -53,9 +53,40 @@ class DashboardServer:
         self.site = None
         self.web_invoke_callback = None
         self.platform_states = {}
+        self.mcp_task = None
 
     def set_platform_status(self, platform: str, is_connected: bool) -> None:
         self.platform_states[platform] = is_connected
+
+    async def start_mcp_server(self):
+        try:
+            import uvicorn
+            from ganymede.mcp_server import app as mcp_app
+            starlette_app = mcp_app.sse_app("/mcp")
+            
+            # Simple ASGI middleware for Auth
+            token = getattr(self.config.agent, "mcp_auth_token", "default_secure_token_123")
+            class MCPAuthMiddleware:
+                def __init__(self, app):
+                    self.app = app
+                async def __call__(self, scope, receive, send):
+                    if scope["type"] != "http":
+                        return await self.app(scope, receive, send)
+                    headers = dict(scope.get("headers", []))
+                    auth = headers.get(b"authorization", b"").decode("utf-8")
+                    if not auth or auth != f"Bearer {token}":
+                        await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"application/json")]})
+                        await send({"type": "http.response.body", "body": b'{"error": "Unauthorized"}'})
+                        return
+                    return await self.app(scope, receive, send)
+                    
+            wrapped_app = MCPAuthMiddleware(starlette_app)
+            
+            cfg = uvicorn.Config(wrapped_app, host="0.0.0.0", port=8081, log_level="warning")
+            server = uvicorn.Server(cfg)
+            await server.serve()
+        except Exception as e:
+            logger.error("FastMCP SSE server crashed", error=str(e))
 
     async def handle_index(self, request):
         index_path = os.path.join(self.web_dir, 'index.html')
@@ -572,9 +603,9 @@ class DashboardServer:
         thread_id = parts[2] if parts[2] != 'main' else None
         
         db_path = os.path.join(self.config.data_dir, "ganymede.db")
-        conversation_id = f"ganymede_{platform}_{channel_id}"
+        conversation_id = f"ganymede-{platform}-{channel_id}"
         if thread_id:
-            conversation_id += f"_{thread_id}"
+            conversation_id += f"-{thread_id}"
             
         # Check mapping table to resolve merged context
         if os.path.exists(db_path):
@@ -656,7 +687,7 @@ class DashboardServer:
         thread_id = parts[2] if parts[2] != 'main' else None
         
         new_thread_id = f"fork-{uuid.uuid4().hex[:8]}"
-        new_conversation_id = f"ganymede_{platform}_{channel_id}_{new_thread_id}"
+        new_conversation_id = f"ganymede-{platform}-{channel_id}-{new_thread_id}"
         
         # 1. Copy agy brain dir
         old_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
@@ -691,9 +722,9 @@ class DashboardServer:
         channel_id = parts[1]
         thread_id = parts[2] if parts[2] != 'main' else None
         
-        conversation_id = f"ganymede_{platform}_{channel_id}"
+        conversation_id = f"ganymede-{platform}-{channel_id}"
         if thread_id:
-            conversation_id += f"_{thread_id}"
+            conversation_id += f"-{thread_id}"
             
         db_path = os.path.join(self.config.data_dir, "ganymede.db")
         if os.path.exists(db_path):
@@ -873,8 +904,12 @@ class DashboardServer:
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, '0.0.0.0', 8080, reuse_address=True, reuse_port=True)
         await self.site.start()
+        logger.info("Starting internal MCP SSE Server on http://0.0.0.0:8081")
+        self.mcp_task = asyncio.create_task(self.start_mcp_server())
 
     async def stop(self):
+        if self.mcp_task:
+            self.mcp_task.cancel()
         if self.runner:
             logger.info("Stopping Ganymede dashboard")
             await self.runner.cleanup()
