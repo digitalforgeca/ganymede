@@ -72,6 +72,7 @@ class ManagedAgent:
             capabilities=CapabilitiesConfig(),
             workspace=workspace_dir,
             conversation_id=sanitized_conv_id,
+            app_data_dir=os.path.expanduser("~/.gemini/antigravity-cli")
         )
         
         # Note: LocalAgentConfig expects ModelTarget objects for model routing, but the SDK
