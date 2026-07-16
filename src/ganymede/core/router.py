@@ -225,10 +225,23 @@ class Router:
         thought_text = ""
         status_text = ""
 
-        # Live telemetry interceptor to render tool calls while blocking on --print
+        # Live telemetry interceptor to render tool calls while blocking on turn completion.
+        # This fires for every intermediate Chalice event, giving us the "hot mic" view
+        # of what the agent is doing in real-time.
+        last_edit_time = [0.0]  # Throttle: max 1 Discord edit per 2s
+        EDIT_THROTTLE_SECS = 2.0
+
+        # Resolve the managed agent's conversation_id for matching against ganymede_conv_id
+        managed_agent = self.agent_manager._agents.get(context)
+        agent_conv_id = managed_agent.conversation_id if managed_agent else None
+
         async def on_telemetry(data: dict):
             nonlocal status_text
-            ctx_match = context.channel_id in str(data.get("context", ""))
+            
+            # Match on ganymede_conv_id (our internal ID), not agy's child conversation ID
+            ganymede_conv_id = data.get("ganymede_conv_id")
+            if not ganymede_conv_id or ganymede_conv_id != agent_conv_id:
+                return
             
             event = data.get("event")
             payload = data.get("payload", {})
@@ -239,37 +252,46 @@ class Router:
             if isinstance(tool_call, str):
                 tool_call = {}
             
-            # Derive event type if it's missing or generic
+            # Derive event type from Chalice lifecycle hook
             if event == "Agent Lifecycle Hook" and tool_call:
                 if "error" in payload:
                     event = "PostToolUse"
                 else:
                     event = "PreToolUse"
 
-            # Remove logger.info to prevent structlog TypeError
-
-            if not ctx_match: 
-                return
-
             if event == "PreToolUse":
                 tool = tool_call.get("name", "tool")
                 args = tool_call.get("args", {})
-                try:
-                    args_str = json.dumps(args, indent=2)
-                except Exception:
-                    args_str = str(args)
-                status_text = f"\n\n⚙️ *Calling `{tool}`...*\n```json\n{args_str[:400]}\n```"
-                logger.info("Setting PreToolUse status", status_text=status_text)
-                await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                # Prefer human-readable toolAction/toolSummary from the payload
+                tool_action = args.get("toolAction", "")
+                tool_summary = args.get("toolSummary", "")
+                if tool_action:
+                    status_text = f"\n\n⚙️ *{tool_action}* — `{tool}`"
+                else:
+                    status_text = f"\n\n⚙️ *Calling `{tool}`...*"
             elif event == "PostToolUse":
                 tool = tool_call.get("name", "tool")
                 err = payload.get("error", "")
                 if err:
-                    status_text = f"\n\n❌ *`{tool}` failed.*\n```\n{err[:200]}\n```"
+                    status_text = f"\n\n❌ *`{tool}` failed:* `{err[:200]}`"
                 else:
-                    status_text = f"\n\n✅ *`{tool}` completed.*"
-                logger.info("Setting PostToolUse status", status_text=status_text)
-                await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                    args = tool_call.get("args", {})
+                    tool_action = args.get("toolAction", "")
+                    if tool_action:
+                        status_text = f"\n\n✅ *{tool_action}* — `{tool}`"
+                    else:
+                        status_text = f"\n\n✅ *`{tool}` completed.*"
+            else:
+                return
+            
+            # Throttle Discord edits to avoid rate limiting
+            now = time.time()
+            if (now - last_edit_time[0]) >= EDIT_THROTTLE_SECS:
+                last_edit_time[0] = now
+                try:
+                    await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                except Exception:
+                    pass
 
         from ganymede.core.web import dashboard_instance
         if dashboard_instance:

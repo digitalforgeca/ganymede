@@ -1,0 +1,10 @@
+import pty, os, time, subprocess, uuid
+cid = str(uuid.uuid4())
+print(f"CID: {cid}")
+master, slave = pty.openpty()
+p = subprocess.Popen(["agy", "--continue", "--conversation", cid, "--new-project", "test-transcript", "--dangerously-skip-permissions"], stdin=slave, stdout=slave, stderr=slave)
+time.sleep(3)
+os.write(master, b"echo hello\r")
+time.sleep(15)
+p.kill()
+os.system(f"cat ~/.gemini/antigravity-cli/brain/{cid}/.system_generated/logs/transcript.jsonl")
