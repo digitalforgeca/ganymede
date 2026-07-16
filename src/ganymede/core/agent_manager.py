@@ -236,6 +236,7 @@ class ManagedAgent:
             subprocess_env["SULCUS_NAMESPACE"] = getattr(self, "bot_namespace", "ganymede")
             subprocess_env["NO_COLOR"] = "1"
             subprocess_env["PYTHONUNBUFFERED"] = "1"
+            subprocess_env["TERM"] = "dumb"
             if getattr(self, "ipc_port", None):
                 subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
