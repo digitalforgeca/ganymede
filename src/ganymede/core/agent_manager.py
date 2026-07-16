@@ -3,10 +3,10 @@ import time
 import os
 import json
 import uuid
+import pty
 import structlog
 from typing import Any
-from google.antigravity import Agent, LocalAgentConfig, CapabilitiesConfig
-from google.antigravity.types import Text, ToolCall, ToolResult, Thought
+from google.antigravity.types import Text
 from ganymede.core import ContextKey
 from ganymede.config import AppConfig
 from ganymede.core.quota import QuotaTracker
@@ -14,8 +14,101 @@ from ganymede.core.quota import QuotaTracker
 logger = structlog.get_logger()
 
 
+class MockUsage:
+    def __init__(self):
+        self.total_token_count = 0
+
+
+class CliResponse:
+    """Wrapper around agy subprocess stdout stream to be compatible with Router chunks interface.
+    
+    ARCHITECTURE NOTE: Ganymede invokes the `agy` CLI binary as a subprocess rather than
+    using the Antigravity Python SDK directly. This is intentional and critical:
+    
+    - The `agy` CLI has its own authentication, rate-limit pooling, and session management.
+    - Using the Python SDK directly bypasses all of this and hits the raw API, which
+      immediately slams into free-tier rate limits (5 RPM).
+    - The Chalice plugin hooks (PreToolUse, PostToolUse, etc.) only fire when `agy` runs
+      as a CLI process — they don't exist in the raw SDK path.
+    
+    DO NOT replace this with direct SDK calls. Ever.
+    """
+
+    def __init__(self, process: asyncio.subprocess.Process, prompt: str, master_fd: int):
+        self.process = process
+        self.prompt = prompt
+        self.master_fd = master_fd
+        self.response_text = ""
+        self.usage_metadata = MockUsage()
+        self._chunks_generator = self._read_chunks()
+
+    async def _read_chunks(self):
+        # Read from stdout in chunks to provide real-time streaming feedback
+        from ganymede.core.web import dashboard_instance
+        buffer = bytearray()
+        loop = asyncio.get_running_loop()
+        
+        def read_pty():
+            try:
+                return os.read(self.master_fd, 32)
+            except OSError:
+                return b''
+        
+        try:
+            while True:
+                chunk = await loop.run_in_executor(None, read_pty)
+                if not chunk:
+                    break
+                    
+                text = chunk.decode(errors="replace").replace('\r', '')
+                self.response_text += text
+                yield Text(text=text, step_index=0)
+                
+                # Line buffering for telemetry
+                buffer.extend(chunk)
+                while b'\n' in buffer:
+                    line, buffer = buffer.split(b'\n', 1)
+                    decoded = line.decode('utf-8', errors="replace").strip()
+                    if decoded and dashboard_instance:
+                        try:
+                            data = json.loads(decoded)
+                            asyncio.create_task(dashboard_instance.broadcast_telemetry(data))
+                        except json.JSONDecodeError:
+                            asyncio.create_task(dashboard_instance.broadcast_telemetry({"event": "Agent Log", "payload": decoded}))
+        except Exception as e:
+            logger.debug("PTY read error (likely EOF)", error=str(e))
+        finally:
+            try:
+                os.close(self.master_fd)
+            except OSError:
+                pass
+
+        # Wait for the process to exit cleanly
+        await self.process.wait()
+        
+        # Estimate total tokens based on prompt and response size (~4 characters per token)
+        estimated_input_tokens = len(self.prompt) // 4
+        estimated_output_tokens = len(self.response_text) // 4
+        self.usage_metadata.total_token_count = estimated_input_tokens + estimated_output_tokens
+        if self.process.returncode != 0:
+            err_msg = self.response_text.strip()
+            # If output is too long, grab the tail end of it
+            if len(err_msg) > 500:
+                err_msg = "... " + err_msg[-500:]
+            logger.error("agy CLI failed", code=self.process.returncode, error=err_msg)
+            raise RuntimeError(f"agy error (code {self.process.returncode}): {err_msg}")
+
+    @property
+    def chunks(self):
+        return self._chunks_generator
+
+
 class ManagedAgent:
-    """Wraps a persistent conversation channel context mapped to an Antigravity SDK Agent session."""
+    """Wraps a persistent conversation channel context mapped to an agy CLI session.
+    
+    IMPORTANT: This class spawns `agy` as a CLI subprocess. It does NOT use the
+    Antigravity Python SDK directly. See CliResponse docstring for rationale.
+    """
 
     def __init__(self, context_key: ContextKey, config: AppConfig, conversation_id: str, bot_namespace: str = "ganymede", ipc_port: int | None = None):
         self.context_key = context_key
@@ -25,105 +118,172 @@ class ManagedAgent:
         self.conversation_id = conversation_id
         self.bot_namespace = bot_namespace
         self.ipc_port = ipc_port
-        self.agent: Agent | None = None
+        self.current_process: asyncio.subprocess.Process | None = None
 
-    async def _init_agent(self):
-        """Initializes the SDK agent if not already connected."""
-        if self.agent and self.agent.is_started:
-            return
-
-        brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.conversation_id}")
-        
-        # Check model override
-        model_override = None
-        model_path = os.path.join(brain_dir, "model.txt")
-        if os.path.exists(model_path):
-            try:
-                with open(model_path, "r") as f:
-                    model_override = f.read().strip()
-            except Exception:
-                pass
-        if not model_override and hasattr(self.config.agent, "model"):
-            model_override = self.config.agent.model
-
-        # Build system instructions
-        sys_inst = ""
-        if hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
-            sys_inst = self.config.agent.system_instructions
-            sys_inst = sys_inst.replace("{bot_name}", getattr(self, "bot_namespace", "Agent"))
-            sys_inst = sys_inst.replace("{model_name}", model_override or "default model")
-            user_id = getattr(self.context_key, 'user_id', 'Unknown')
-            sys_inst = sys_inst.replace("{user_name}", f"User {user_id}")
-            sys_inst = sys_inst.replace("{mission_statement}", getattr(self.config.agent, "mission_statement", "assisting the user"))
-
-        workspace_dir = os.path.expanduser(self.config.agent.workspace)
-        os.makedirs(workspace_dir, exist_ok=True)
-        
-        # NOTE: We switched from the `agy` CLI subprocess to the Antigravity Python SDK
-        # This native integration prevents the 'bubbletea: error opening TTY' crash and allows
-        # true async background tasks that won't panic the gateway when upstream servers restart!
-        if getattr(self, "ipc_port", None):
-            os.environ["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
-        
-        # SDK cascade_id requires [a-zA-Z0-9-] and min 32 chars.
-        # DO NOT change our internal naming scheme (ganymede_discord_XXXXX) to satisfy this.
-        # Instead, derive a deterministic UUID that the SDK is happy with.
-        sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
-        
-        app_data = os.path.expanduser("~/.gemini/antigravity-cli")
-        conversations_dir = os.path.join(app_data, "conversations")
-        os.makedirs(conversations_dir, exist_ok=True)
-        
-        # Bridge the brain directory: SDK writes to brain/{uuid}, our dashboard reads
-        # brain/{ganymede_discord_XXXXX}. Symlink the UUID path → our path so both work.
-        our_brain_dir = os.path.join(app_data, "brain", self.conversation_id)
-        sdk_brain_dir = os.path.join(app_data, "brain", sdk_conversation_id)
-        os.makedirs(our_brain_dir, exist_ok=True)
-        if not os.path.exists(sdk_brain_dir):
-            os.symlink(our_brain_dir, sdk_brain_dir)
-        
-        # If a prior SDK session .db exists, pass the ID to resume it.
-        # If not, omit conversation_id so the SDK creates a fresh session.
-        db_path = os.path.join(conversations_dir, f"{sdk_conversation_id}.db")
-        has_existing_session = os.path.exists(db_path) and os.path.getsize(db_path) > 0
-        
-        agent_config = LocalAgentConfig(
-            system_instructions=sys_inst,
-            capabilities=CapabilitiesConfig(),
-            workspace=workspace_dir,
-            conversation_id=sdk_conversation_id if has_existing_session else None,
-            app_data_dir=app_data,
-            save_dir=conversations_dir
-        )
-        
-        self.agent = Agent(agent_config)
-        await self.agent.__aenter__()
-
-    async def chat(self, prompt: str) -> Any:
+    async def chat(self, prompt: str) -> CliResponse:
         self.last_active = time.time()
+        
         async with self._lock:
-            await self._init_agent()
-            response = await self.agent.chat(prompt)
-            # The ChatResponse yields `.chunks` which is natively consumed by Router._stream_response_chunks!
+            # Derive a deterministic UUID for the agy CLI's --conversation flag.
+            # The CLI's cascade_id requires [a-zA-Z0-9-] and min 32 chars.
+            # DO NOT change our internal naming scheme (ganymede_discord_XXXXX) to satisfy this.
+            # Instead, derive a deterministic UUID that the CLI is happy with.
+            sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
+            
+            # Check if database already exists for this conversation
+            db_dir = os.path.expanduser("~/.gemini/antigravity-cli/conversations")
+            db_path = os.path.join(db_dir, f"{sdk_conversation_id}.db")
+            is_new_conversation = not os.path.exists(db_path)
+
+            agy_path = "agy"
+            
+            args = [
+                agy_path,
+                "--conversation", sdk_conversation_id,
+            ]
+            
+            project_name = f"{self.context_key.platform}-{self.context_key.channel_id}"
+            if self.context_key.thread_id:
+                project_name += f"-{self.context_key.thread_id}"
+                
+            brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.conversation_id}")
+            
+            # Bridge the brain directory: the CLI writes to brain/{uuid}, our dashboard reads
+            # brain/{ganymede_discord_XXXXX}. Symlink the UUID path → our path so both work.
+            app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+            sdk_brain_dir = os.path.join(app_data, "brain", sdk_conversation_id)
+            os.makedirs(brain_dir, exist_ok=True)
+            if not os.path.exists(sdk_brain_dir):
+                os.symlink(brain_dir, sdk_brain_dir)
+            
+            project_name_path = os.path.join(brain_dir, "project_name.txt")
+            if os.path.exists(project_name_path):
+                try:
+                    with open(project_name_path, "r") as f:
+                        saved_name = f.read().strip()
+                    if saved_name:
+                        project_name = saved_name
+                except Exception:
+                    pass
+                    
+            if is_new_conversation:
+                args.extend(["--new-project", project_name])
+            else:
+                args.extend(["--project", project_name])
+            
+            model_path = os.path.join(brain_dir, "model.txt")
+            model_override = None
+            if os.path.exists(model_path):
+                try:
+                    with open(model_path, "r") as f:
+                        model_override = f.read().strip()
+                except Exception:
+                    pass
+            
+            if not model_override and hasattr(self.config.agent, "model"):
+                model_override = self.config.agent.model
+                
+            if model_override:
+                args.extend(["--model", model_override])
+            
+            skip_permissions = getattr(self.config.agent, "skip_permissions", True)
+            skip_permissions_path = os.path.join(brain_dir, "skip_permissions.txt")
+            if os.path.exists(skip_permissions_path):
+                try:
+                    with open(skip_permissions_path, "r") as f:
+                        skip_permissions = f.read().strip() == "true"
+                except Exception:
+                    pass
+                    
+            if skip_permissions:
+                args.append("--dangerously-skip-permissions")
+                
+            mode = getattr(self.config.agent, "mode", "accept-edits")
+            mode_path = os.path.join(brain_dir, "mode.txt")
+            if os.path.exists(mode_path):
+                try:
+                    with open(mode_path, "r") as f:
+                        mode = f.read().strip()
+                except Exception:
+                    pass
+                    
+            if mode:
+                args.extend(["--mode", mode])
+            
+            # Inject system instructions for new conversations
+            final_prompt = prompt
+            if is_new_conversation and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
+                sys_inst = self.config.agent.system_instructions
+                sys_inst = sys_inst.replace("{bot_name}", getattr(self, "bot_namespace", "Agent"))
+                sys_inst = sys_inst.replace("{model_name}", model_override or "default model")
+                user_id = getattr(self.context_key, 'user_id', 'Unknown')
+                sys_inst = sys_inst.replace("{user_name}", f"User {user_id}")
+                sys_inst = sys_inst.replace("{mission_statement}", getattr(self.config.agent, "mission_statement", "assisting the user"))
+                final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
+            
+            args.extend(["--print", final_prompt])
+
+            workspace_dir = os.path.expanduser(self.config.agent.workspace)
+            os.makedirs(workspace_dir, exist_ok=True)
+            
+            # Use a PTY so the CLI thinks it has a terminal (avoids bubbletea crashes)
+            master_fd, slave_fd = pty.openpty()
+            
+            # Build environment variables copy and inject SULCUS_NAMESPACE and GANYMEDE_IPC_PORT
+            subprocess_env = os.environ.copy()
+            subprocess_env["SULCUS_NAMESPACE"] = getattr(self, "bot_namespace", "ganymede")
+            subprocess_env["NO_COLOR"] = "1"
+            subprocess_env["PYTHONUNBUFFERED"] = "1"
+            if getattr(self, "ipc_port", None):
+                subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
+
+            # Spawn the subprocess with stdout/stderr connected to the slave PTY
+            process = await asyncio.create_subprocess_exec(
+                *args,
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=slave_fd,
+                stderr=slave_fd,
+                cwd=workspace_dir,
+                env=subprocess_env,
+            )
+            os.close(slave_fd)
+            self.current_process = process
+            
+            response = CliResponse(process, prompt, master_fd)
             return response
 
     async def terminate(self) -> None:
-        """Forcefully terminate the active SDK agent session if running."""
-        if self.agent and self.agent.is_started:
-            logger.info("Terminating active SDK agent session", conversation_id=self.conversation_id)
+        """Forcefully terminate the active agy CLI subprocess if running."""
+        if self.current_process:
+            logger.info("Terminating active agy subprocess", conversation_id=self.conversation_id)
             try:
-                await self.agent.__aexit__(None, None, None)
+                self.current_process.terminate()
+                try:
+                    await asyncio.wait_for(self.current_process.wait(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    logger.warn("Subprocess did not exit gracefully, killing it", conversation_id=self.conversation_id)
+                    self.current_process.kill()
+                    await self.current_process.wait()
             except Exception as e:
-                logger.error("Error terminating SDK agent", error=str(e))
+                logger.error("Error terminating agy subprocess", error=str(e))
             finally:
-                self.agent = None
+                self.current_process = None
 
     async def close(self):
         await self.terminate()
 
 
 class AgentManager:
-    """Manages channel-to-conversation mapping and SDK execution instances."""
+    """Manages channel-to-conversation mapping and CLI execution instances.
+    
+    ARCHITECTURE: Ganymede is a multiplexing gateway over the `agy` CLI binary.
+    It does NOT call the Antigravity API directly. The CLI handles authentication,
+    rate limiting, model routing, and session persistence. The Chalice plugin provides
+    telemetry hooks that fire during CLI execution.
+    
+    DO NOT replace this with direct Python SDK calls — that bypasses the CLI's
+    infrastructure and immediately hits free-tier API rate limits.
+    """
 
     def __init__(self, config: AppConfig, quota_tracker: QuotaTracker = None, db: Any = None):
         self.config = config
@@ -169,7 +329,7 @@ class AgentManager:
             if self.adapter:
                 conversation_id = self.adapter.get_conversation_id(context)
             else:
-                # DO NOT change this naming scheme. The SDK gets a derived UUID, not this ID directly.
+                # DO NOT change this naming scheme. The CLI gets a derived UUID, not this ID directly.
                 conversation_id = f"ganymede_{context.platform}_{context.channel_id}"
                 if context.thread_id:
                     conversation_id += f"_{context.thread_id}"
