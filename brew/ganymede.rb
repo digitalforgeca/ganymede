@@ -1,7 +1,7 @@
 class Ganymede < Formula
   desc "Discord communications and productivity gateway for Antigravity"
   homepage "https://github.com/digitalforgeca/ganymede"
-  url "https://github.com/digitalforgeca/ganymede.git", branch: "master"
+  url "file:///Users/mcdoolz/dev/ganymede", using: :git, branch: "master"
   version "0.1.0"
 
   depends_on "python@3.11"
