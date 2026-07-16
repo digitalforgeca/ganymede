@@ -2,6 +2,7 @@ import asyncio
 import time
 import os
 import json
+import re
 import uuid
 import pty
 import structlog
@@ -12,6 +13,11 @@ from ganymede.config import AppConfig
 from ganymede.core.quota import QuotaTracker
 
 logger = structlog.get_logger()
+
+# Regex to strip ANSI/VT escape sequences that bubbletea emits through the PTY.
+# We need the PTY so bubbletea can open /dev/tty (otherwise it fatally crashes),
+# but we don't want the TUI rendering garbage leaking into Discord messages.
+_ANSI_ESCAPE = re.compile(r'\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\)|\([A-Z0-9])')
 
 
 class MockUsage:
@@ -61,6 +67,10 @@ class CliResponse:
                     break
                     
                 text = chunk.decode(errors="replace").replace('\r', '')
+                # Strip ANSI/VT escape sequences emitted by bubbletea's TUI
+                text = _ANSI_ESCAPE.sub('', text)
+                if not text:
+                    continue
                 self.response_text += text
                 yield Text(text=text, step_index=0)
                 

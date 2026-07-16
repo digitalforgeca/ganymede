@@ -6146,3 +6146,59 @@ davey is not installed, voice will NOT be supported
 127.0.0.1 [16/Jul/2026:00:42:59 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [16/Jul/2026:00:42:59 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [16/Jul/2026:00:43:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:43:15 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:43:16 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:43:22 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"event": "Received shutdown request, cleaning up...", "level": "info", "logger": "ganymede.cli", "timestamp": "2026-07-16T07:43:24.562758Z"}
+{"event": "Stopping Ganymede dashboard", "level": "info", "logger": "ganymede.core.web", "timestamp": "2026-07-16T07:43:24.562920Z"}
+{"event": "Terminating all active agent sessions", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T07:43:24.563118Z"}
+{"event": "APScheduler stopped.", "level": "info", "logger": "ganymede.core.scheduler", "timestamp": "2026-07-16T07:43:24.563265Z"}
+{"event": "Local HTTP IPC Server stopped.", "level": "info", "logger": "ganymede.platforms.discord.ipc_server", "timestamp": "2026-07-16T07:43:24.563499Z"}
+{"event": "Disconnecting from Discord...", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:43:24.563733Z"}
+{"error": "Session is closed", "event": "Failed to initialize home DM channel with owner", "level": "warning", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:43:24.564482Z"}
+{"event": "Terminating all active agent sessions", "level": "info", "logger": "ganymede.core.agent_manager", "timestamp": "2026-07-16T07:43:24.564573Z"}
+{"log_level": "INFO", "event": "Initializing ganymede bridge", "level": "info", "logger": "ganymede.cli", "timestamp": "2026-07-16T07:43:25.692476Z"}
+{"path": "/Users/mcdoolz/.ganymede/data/ganymede.db", "event": "Database initialized successfully", "level": "info", "logger": "ganymede.core.db", "timestamp": "2026-07-16T07:43:25.693166Z"}
+PyNaCl is not installed, voice will NOT be supported
+davey is not installed, voice will NOT be supported
+{"event": "Starting Ganymede dashboard on http://0.0.0.0:8080", "level": "info", "logger": "ganymede.core.web", "timestamp": "2026-07-16T07:43:25.748493Z"}
+{"event": "Starting internal MCP SSE Server on http://0.0.0.0:8081", "level": "info", "logger": "ganymede.core.web", "timestamp": "2026-07-16T07:43:25.748765Z"}
+{"platform": "web", "event": "Starting WebProvider", "level": "info", "logger": "ganymede.platforms.web.provider", "timestamp": "2026-07-16T07:43:26.129858Z"}
+{"event": "WebAdapter started", "level": "info", "logger": "ganymede.platforms.web.provider", "timestamp": "2026-07-16T07:43:26.130025Z"}
+{"event": "Registered web invoke callback with dashboard instance", "level": "info", "logger": "ganymede.platforms.web.provider", "timestamp": "2026-07-16T07:43:26.130067Z"}
+{"event": "APScheduler started in background.", "level": "info", "logger": "ganymede.core.scheduler", "timestamp": "2026-07-16T07:43:26.230955Z"}
+{"host": "localhost", "port": 50803, "event": "Local HTTP IPC Server started", "level": "info", "logger": "ganymede.platforms.discord.ipc_server", "timestamp": "2026-07-16T07:43:26.234884Z"}
+{"event": "Connecting to Discord...", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:43:26.235388Z"}
+127.0.0.1 [16/Jul/2026:00:43:29 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"user": "Icarus#5182", "id": 1480323231847158131, "event": "Bot is ready and connected", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:43:29.449410Z"}
+{"event": "Slash command tree synced successfully.", "level": "info", "logger": "ganymede.platforms.discord.adapter", "timestamp": "2026-07-16T07:43:29.903447Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "user": "dooley_21554", "event": "Processing message in context", "level": "info", "logger": "ganymede.core.router", "timestamp": "2026-07-16T07:44:36.668642Z"}
+{"context": "ContextKey(platform='discord', channel_id='1480343419992936479', thread_id=None)", "daily_turns": 1, "daily_limit": 1450, "event": "Recorded Gemini API turn", "level": "info", "logger": "ganymede.core.quota", "timestamp": "2026-07-16T07:44:37.304479Z"}
+127.0.0.1 [16/Jul/2026:00:45:05 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:45:05 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:45:05 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:45:05 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:45:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:45:06 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:45:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:45:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:45:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:45:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:45:15 -0700] "POST /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:45:15 -0700] "DELETE /mcp HTTP/1.1" 405 209 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:45:15 -0700] "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:45:15 -0700] "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 172 "-" "Go-http-client/1.1"
+127.0.0.1 [16/Jul/2026:00:45:15 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:05 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:26 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:26 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:26 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:37 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:37 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:37 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [16/Jul/2026:00:46:43 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
