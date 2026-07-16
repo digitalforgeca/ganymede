@@ -47,7 +47,7 @@ graph TD
 
 #### ✅ 0.1 — Create plugin directory structure
 
-Create the canonical Antigravity plugin layout at the project root. This will be installable/symlinked into `~/.gemini/antigravity-cli/plugins/ganymede/`.
+Create the canonical Antigravity plugin layout at the project root. This will be installable/copied into `~/.gemini/antigravity-cli/plugins/ganymede/`.
 
 ```
 ganymede/
@@ -920,7 +920,7 @@ Sections: Overview, Prerequisites, Installation (pip + plugin setup), Configurat
 Interactive CLI that:
 1. Prompts for Discord bot token
 2. Writes `.env` file
-3. Creates/symlinks plugin into `~/.gemini/antigravity-cli/plugins/ganymede/`
+3. Creates/copies plugin into `~/.gemini/antigravity-cli/plugins/ganymede/`
 4. Enables the sidecar in `~/.gemini/config/config.json`
 5. Syncs Discord slash commands
 
