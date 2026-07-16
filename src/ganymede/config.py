@@ -39,6 +39,7 @@ class AgentConfig:
     elevated_users: list[str] = field(default_factory=list)
     auto_approve_tools: list[str] = field(default_factory=lambda: ["view_file", "grep_search", "list_dir", "search_web", "read_url_content", "finish"])
     mission_statement: str = "developing, auditing, and managing the Sulcus persistent context layer and the Antigravity developer ecosystem"
+    mcp_auth_token: str = "default_secure_token_123"
 
 @dataclass
 class QuotaConfig:
