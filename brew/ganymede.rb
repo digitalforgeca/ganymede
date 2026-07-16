@@ -16,6 +16,9 @@ class Ganymede < Formula
     # Install the package and all of its dependencies
     system libexec/"bin/pip", "install", "."
 
+    # Copy the plugins directory so the daemon can auto-install them during validation
+    (libexec/"plugins").install "plugins/chalice"
+
     # Symlink the generated executable into the Homebrew bin directory
     bin.install_symlink libexec/"bin/ganymede"
   end

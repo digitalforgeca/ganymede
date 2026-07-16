@@ -335,10 +335,15 @@ def validate_environment():
     
     if not os.path.exists(plugin_path_json):
         # Auto-install it via copy!
-        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-        source_chalice_path = os.path.join(repo_root, "plugins", "chalice")
+        # Find the plugin source whether running from git tree or Homebrew libexec
+        possible_paths = [
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "plugins", "chalice")),
+            os.path.join(sys.prefix, "plugins", "chalice"),
+            os.path.join(sys.prefix, "share", "ganymede", "plugins", "chalice")
+        ]
+        source_chalice_path = next((p for p in possible_paths if os.path.exists(os.path.join(p, "plugin.json"))), None)
         
-        if os.path.exists(os.path.join(source_chalice_path, "plugin.json")):
+        if source_chalice_path:
             print("[VALIDATION]  - Chalice plugin not found or needs upgrade in ~/.gemini. Auto-installing...", file=sys.stdout)
             os.makedirs(os.path.dirname(plugin_path_target), exist_ok=True)
             try:
