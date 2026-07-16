@@ -26,87 +26,72 @@ class MockUsage:
 
 
 class CliResponse:
-    """Wrapper around agy subprocess stdout stream to be compatible with Router chunks interface.
+    """Wrapper around agy subprocess to be compatible with Router chunks interface.
     
-    ARCHITECTURE NOTE: Ganymede invokes the `agy` CLI binary as a subprocess rather than
-    using the Antigravity Python SDK directly. This is intentional and critical:
-    
-    - The `agy` CLI has its own authentication, rate-limit pooling, and session management.
-    - Using the Python SDK directly bypasses all of this and hits the raw API, which
-      immediately slams into free-tier rate limits (5 RPM).
-    - The Chalice plugin hooks (PreToolUse, PostToolUse, etc.) only fire when `agy` runs
-      as a CLI process — they don't exist in the raw SDK path.
-    
-    DO NOT replace this with direct SDK calls. Ever.
+    Instead of scraping the PTY output, we rely on the Chalice plugin's 'Stop' telemetry
+    event to signal completion, and then we parse the clean output from the JSONL transcript.
     """
 
-    def __init__(self, process: asyncio.subprocess.Process, prompt: str, master_fd: int):
-        self.process = process
+    def __init__(self, agent_instance, prompt: str, transcript_path: str):
+        self.agent = agent_instance
         self.prompt = prompt
-        self.master_fd = master_fd
+        self.transcript_path = transcript_path
         self.response_text = ""
         self.usage_metadata = MockUsage()
         self._chunks_generator = self._read_chunks()
 
     async def _read_chunks(self):
-        # Read from stdout in chunks to provide real-time streaming feedback
-        from ganymede.core.web import dashboard_instance
-        buffer = bytearray()
-        loop = asyncio.get_running_loop()
-        
-        def read_pty():
-            try:
-                return os.read(self.master_fd, 32)
-            except OSError:
-                return b''
+        # Clear the event before we wait
+        self.agent.turn_completed_event.clear()
         
         try:
-            while True:
-                chunk = await loop.run_in_executor(None, read_pty)
-                if not chunk:
-                    break
-                    
-                text = chunk.decode(errors="replace").replace('\r', '')
-                # Strip ANSI/VT escape sequences emitted by bubbletea's TUI
-                text = _ANSI_ESCAPE.sub('', text)
-                if not text:
-                    continue
-                self.response_text += text
-                yield Text(text=text, step_index=0)
-                
-                # Line buffering for telemetry
-                buffer.extend(chunk)
-                while b'\n' in buffer:
-                    line, buffer = buffer.split(b'\n', 1)
-                    decoded = line.decode('utf-8', errors="replace").strip()
-                    if decoded and dashboard_instance:
-                        try:
-                            data = json.loads(decoded)
-                            asyncio.create_task(dashboard_instance.broadcast_telemetry(data))
-                        except json.JSONDecodeError:
-                            asyncio.create_task(dashboard_instance.broadcast_telemetry({"event": "Agent Log", "payload": decoded}))
-        except Exception as e:
-            logger.debug("PTY read error (likely EOF)", error=str(e))
-        finally:
-            try:
-                os.close(self.master_fd)
-            except OSError:
-                pass
+            # Wait for Chalice to fire the Stop hook signaling generation is done
+            await asyncio.wait_for(self.agent.turn_completed_event.wait(), timeout=600)
+        except asyncio.TimeoutError:
+            logger.error("Timeout waiting for agent to finish turn", conversation_id=self.agent.conversation_id)
+            yield Text(text="[Error: Agent timed out while generating response]", step_index=0)
+            return
 
-        # Wait for the process to exit cleanly
-        await self.process.wait()
-        
-        # Estimate total tokens based on prompt and response size (~4 characters per token)
-        estimated_input_tokens = len(self.prompt) // 4
-        estimated_output_tokens = len(self.response_text) // 4
-        self.usage_metadata.total_token_count = estimated_input_tokens + estimated_output_tokens
-        if self.process.returncode != 0:
-            err_msg = self.response_text.strip()
-            # If output is too long, grab the tail end of it
-            if len(err_msg) > 500:
-                err_msg = "... " + err_msg[-500:]
-            logger.error("agy CLI failed", code=self.process.returncode, error=err_msg)
-            raise RuntimeError(f"agy error (code {self.process.returncode}): {err_msg}")
+        # Turn is complete. Read the clean output from transcript_full.jsonl
+        full_transcript = self.transcript_path.replace("transcript.jsonl", "transcript_full.jsonl")
+        if not os.path.exists(full_transcript):
+            full_transcript = self.transcript_path
+            
+        final_text = ""
+        tool_calls = []
+        try:
+            if os.path.exists(full_transcript):
+                with open(full_transcript, 'r') as f:
+                    for line in f:
+                        if not line.strip(): continue
+                        try:
+                            data = json.loads(line)
+                            if data.get("type") in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
+                                final_text = data.get("content", "")
+                                tool_calls = data.get("tool_calls", [])
+                        except json.JSONDecodeError:
+                            continue
+                            
+            if tool_calls:
+                tool_text = "\n\n*⚒️ Tools Used:*\n"
+                for t in tool_calls:
+                    t_name = t.get('name') or t.get('function', {}).get('name') or 'tool'
+                    args = t.get('args') or t.get('function', {}).get('arguments') or {}
+                    try:
+                        args_formatted = json.dumps(json.loads(args) if isinstance(args, str) else args, indent=2)
+                    except Exception:
+                        args_formatted = str(args)
+                    tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
+                
+                final_text = (final_text + tool_text) if final_text else tool_text.strip()
+                
+            self.response_text = final_text
+            yield Text(text=final_text, step_index=0)
+            
+            self.usage_metadata.total_token_count = (len(self.prompt) + len(final_text)) // 4
+        except Exception as e:
+            logger.error("Failed to read transcript for output", error=str(e))
+            yield Text(text="[Error: Failed to parse agent transcript]", step_index=0)
 
     @property
     def chunks(self):
@@ -129,153 +114,120 @@ class ManagedAgent:
         self.bot_namespace = bot_namespace
         self.ipc_port = ipc_port
         self.current_process: asyncio.subprocess.Process | None = None
+        self.master_fd: int | None = None
+        self.sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
+        self.turn_completed_event = asyncio.Event()
+
+    async def _sink_pty_output(self):
+        """Read and discard the PTY output in the background so the buffer doesn't fill up."""
+        loop = asyncio.get_running_loop()
+        def read_pty():
+            import select
+            try:
+                r, _, _ = select.select([self.master_fd], [], [], 1.0)
+                if r:
+                    return os.read(self.master_fd, 4096)
+            except OSError:
+                pass
+            return b''
+            
+        while self.current_process and self.current_process.returncode is None:
+            chunk = await loop.run_in_executor(None, read_pty)
+            if not chunk:
+                await asyncio.sleep(0.1)
+
+    async def ensure_running(self):
+        if self.current_process and self.current_process.returncode is None:
+            return
+
+        db_dir = os.path.expanduser("~/.gemini/antigravity-cli/conversations")
+        db_path = os.path.join(db_dir, f"{self.sdk_conversation_id}.db")
+        is_new_conversation = not os.path.exists(db_path)
+
+        args = ["agy", "--continue", "--conversation", self.sdk_conversation_id]
+        
+        project_name = f"{self.context_key.platform}-{self.context_key.channel_id}"
+        if self.context_key.thread_id:
+            project_name += f"-{self.context_key.thread_id}"
+            
+        brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.conversation_id}")
+        app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+        sdk_brain_dir = os.path.join(app_data, "brain", self.sdk_conversation_id)
+        os.makedirs(brain_dir, exist_ok=True)
+        if not os.path.exists(sdk_brain_dir):
+            os.symlink(brain_dir, sdk_brain_dir)
+            
+        if is_new_conversation:
+            args.extend(["--new-project", project_name])
+            
+        # Model, skip_permissions, etc
+        if hasattr(self.config.agent, "model"):
+            args.extend(["--model", self.config.agent.model])
+        if getattr(self.config.agent, "skip_permissions", True):
+            args.append("--dangerously-skip-permissions")
+            
+        workspace_dir = os.path.expanduser(self.config.agent.workspace)
+        os.makedirs(workspace_dir, exist_ok=True)
+        
+        master_fd, slave_fd = pty.openpty()
+        self.master_fd = master_fd
+        
+        subprocess_env = os.environ.copy()
+        subprocess_env["SULCUS_NAMESPACE"] = getattr(self, "bot_namespace", "ganymede")
+        subprocess_env["NO_COLOR"] = "1"
+        subprocess_env["PYTHONUNBUFFERED"] = "1"
+        subprocess_env["TERM"] = "dumb"
+        if getattr(self, "ipc_port", None):
+            subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
+
+        import fcntl, termios
+        def _setup_ctty():
+            os.setsid()
+            fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
+
+        self.current_process = await asyncio.create_subprocess_exec(
+            *args,
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            cwd=workspace_dir,
+            env=subprocess_env,
+            preexec_fn=_setup_ctty,
+        )
+        os.close(slave_fd)
+        
+        # Start background sink
+        asyncio.create_task(self._sink_pty_output())
+        
+        # Wait a moment for agy to boot up before injecting initial input
+        await asyncio.sleep(2)
 
     async def chat(self, prompt: str) -> CliResponse:
         self.last_active = time.time()
         
         async with self._lock:
-            # Derive a deterministic UUID for the agy CLI's --conversation flag.
-            # The CLI's cascade_id requires [a-zA-Z0-9-] and min 32 chars.
-            # DO NOT change our internal naming scheme (ganymede_discord_XXXXX) to satisfy this.
-            # Instead, derive a deterministic UUID that the CLI is happy with.
-            sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
+            await self.ensure_running()
             
-            # Check if database already exists for this conversation
+            # Inject system instructions for new conversations as a compound prompt
             db_dir = os.path.expanduser("~/.gemini/antigravity-cli/conversations")
-            db_path = os.path.join(db_dir, f"{sdk_conversation_id}.db")
-            is_new_conversation = not os.path.exists(db_path)
-
-            agy_path = "agy"
+            is_new = not os.path.exists(os.path.join(db_dir, f"{self.sdk_conversation_id}.db"))
             
-            args = [
-                agy_path,
-                "--conversation", sdk_conversation_id,
-            ]
-            
-            project_name = f"{self.context_key.platform}-{self.context_key.channel_id}"
-            if self.context_key.thread_id:
-                project_name += f"-{self.context_key.thread_id}"
-                
-            brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.conversation_id}")
-            
-            # Bridge the brain directory: the CLI writes to brain/{uuid}, our dashboard reads
-            # brain/{ganymede_discord_XXXXX}. Symlink the UUID path → our path so both work.
-            app_data = os.path.expanduser("~/.gemini/antigravity-cli")
-            sdk_brain_dir = os.path.join(app_data, "brain", sdk_conversation_id)
-            os.makedirs(brain_dir, exist_ok=True)
-            if not os.path.exists(sdk_brain_dir):
-                os.symlink(brain_dir, sdk_brain_dir)
-            
-            project_name_path = os.path.join(brain_dir, "project_name.txt")
-            if os.path.exists(project_name_path):
-                try:
-                    with open(project_name_path, "r") as f:
-                        saved_name = f.read().strip()
-                    if saved_name:
-                        project_name = saved_name
-                except Exception:
-                    pass
-                    
-            if is_new_conversation:
-                args.extend(["--new-project", project_name])
-            else:
-                args.extend(["--project", project_name])
-            
-            model_path = os.path.join(brain_dir, "model.txt")
-            model_override = None
-            if os.path.exists(model_path):
-                try:
-                    with open(model_path, "r") as f:
-                        model_override = f.read().strip()
-                except Exception:
-                    pass
-            
-            if not model_override and hasattr(self.config.agent, "model"):
-                model_override = self.config.agent.model
-                
-            if model_override:
-                args.extend(["--model", model_override])
-            
-            skip_permissions = getattr(self.config.agent, "skip_permissions", True)
-            skip_permissions_path = os.path.join(brain_dir, "skip_permissions.txt")
-            if os.path.exists(skip_permissions_path):
-                try:
-                    with open(skip_permissions_path, "r") as f:
-                        skip_permissions = f.read().strip() == "true"
-                except Exception:
-                    pass
-                    
-            if skip_permissions:
-                args.append("--dangerously-skip-permissions")
-                
-            mode = getattr(self.config.agent, "mode", "accept-edits")
-            mode_path = os.path.join(brain_dir, "mode.txt")
-            if os.path.exists(mode_path):
-                try:
-                    with open(mode_path, "r") as f:
-                        mode = f.read().strip()
-                except Exception:
-                    pass
-                    
-            if mode:
-                args.extend(["--mode", mode])
-            
-            # Inject system instructions for new conversations
             final_prompt = prompt
-            if is_new_conversation and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
-                sys_inst = self.config.agent.system_instructions
-                sys_inst = sys_inst.replace("{bot_name}", getattr(self, "bot_namespace", "Agent"))
-                sys_inst = sys_inst.replace("{model_name}", model_override or "default model")
-                user_id = getattr(self.context_key, 'user_id', 'Unknown')
-                sys_inst = sys_inst.replace("{user_name}", f"User {user_id}")
-                sys_inst = sys_inst.replace("{mission_statement}", getattr(self.config.agent, "mission_statement", "assisting the user"))
+            if is_new and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
+                sys_inst = self.config.agent.system_instructions.replace("{bot_name}", self.bot_namespace)
+                sys_inst = sys_inst.replace("{model_name}", getattr(self.config.agent, "model", "default model"))
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
-            args.extend(["--print", final_prompt])
-
-            workspace_dir = os.path.expanduser(self.config.agent.workspace)
-            os.makedirs(workspace_dir, exist_ok=True)
+            # Write prompt as simulated keystrokes to the PTY
+            os.write(self.master_fd, (final_prompt + '\n').encode('utf-8'))
             
-            # Use a PTY so the CLI thinks it has a terminal (avoids bubbletea crashes).
-            # bubbletea opens /dev/tty directly (not stdin/stdout), so we must make the
-            # PTY the actual controlling terminal via setsid + TIOCSCTTY.
-            master_fd, slave_fd = pty.openpty()
-            
-            # Build environment variables copy and inject SULCUS_NAMESPACE and GANYMEDE_IPC_PORT
-            subprocess_env = os.environ.copy()
-            subprocess_env["SULCUS_NAMESPACE"] = getattr(self, "bot_namespace", "ganymede")
-            subprocess_env["NO_COLOR"] = "1"
-            subprocess_env["PYTHONUNBUFFERED"] = "1"
-            subprocess_env["TERM"] = "dumb"
-            if getattr(self, "ipc_port", None):
-                subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
-
-            # preexec_fn runs in the child after fork, before exec.
-            # It makes the slave PTY the controlling terminal so /dev/tty resolves to it.
-            import fcntl
-            import termios
-            _slave_fd = slave_fd  # capture for closure
-            def _setup_ctty():
-                # Create a new session (detach from parent's controlling terminal)
-                os.setsid()
-                # Make the slave PTY the controlling terminal for this session
-                fcntl.ioctl(_slave_fd, termios.TIOCSCTTY, 0)
-
-            # Spawn the subprocess with all three stdio fds connected to the slave PTY
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                stdin=slave_fd,
-                stdout=slave_fd,
-                stderr=slave_fd,
-                cwd=workspace_dir,
-                env=subprocess_env,
-                preexec_fn=_setup_ctty,
+            transcript_path = os.path.join(
+                os.path.expanduser("~/.gemini/antigravity-cli/brain"), 
+                self.sdk_conversation_id, 
+                ".system_generated", "logs", "transcript.jsonl"
             )
-            os.close(slave_fd)
-            self.current_process = process
             
-            response = CliResponse(process, prompt, master_fd)
-            return response
+            return CliResponse(self, prompt, transcript_path)
 
     async def terminate(self) -> None:
         """Forcefully terminate the active agy CLI subprocess if running."""
@@ -293,6 +245,12 @@ class ManagedAgent:
                 logger.error("Error terminating agy subprocess", error=str(e))
             finally:
                 self.current_process = None
+                if self.master_fd is not None:
+                    try:
+                        os.close(self.master_fd)
+                    except Exception:
+                        pass
+                    self.master_fd = None
 
     async def close(self):
         await self.terminate()
@@ -318,6 +276,21 @@ class AgentManager:
         self._active_authors: dict[ContextKey, str] = {}
         self._active_author_names: dict[ContextKey, str] = {}
         self.adapter = None
+
+        # Register Chalice telemetry listener to wake up chat sessions
+        from ganymede.core.web import dashboard_instance
+        if dashboard_instance:
+            if not hasattr(dashboard_instance, "telemetry_listeners"):
+                dashboard_instance.telemetry_listeners = []
+            dashboard_instance.telemetry_listeners.append(self.handle_telemetry)
+
+    async def handle_telemetry(self, data: dict):
+        """Wake up ManagedAgent when Chalice signals turn completion."""
+        if data.get("event") == "Stop":
+            conv_id = data.get("conversationId")
+            for agent in self._agents.values():
+                if agent.sdk_conversation_id == conv_id:
+                    agent.turn_completed_event.set()
 
     def set_active_author(self, context: ContextKey, author_id: str, author_name: str = None) -> None:
         self._active_authors[context] = author_id
