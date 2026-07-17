@@ -24,6 +24,7 @@ class SyncedPlatformsDict(dict):
 @dataclass
 class AgentConfig:
     name: str = "Agent"
+    model: str = "gemini-pro-agent"
     system_instructions: str = "You are {bot_name}, a helpful AI assistant. Always begin your response by thinking out loud and explicitly explaining what you are going to do before calling any tools. This ensures the user is kept abreast of your activity. Your mission is {mission_statement}."
     workspace: str = "~/dev"
     capabilities: dict[str, bool] = field(default_factory=lambda: {
