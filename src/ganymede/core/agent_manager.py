@@ -58,14 +58,21 @@ class CliResponse:
             logger.info("Agent turn aborted by /stop", conversation_id=self.agent.conversation_id)
             return
 
+        # Check if the Stop hook carried an error (e.g., API rate limit / quota exhaustion).
+        # Surface it immediately so the user sees what went wrong.
+        chalice_error = self.agent._chalice_error
+        self.agent._chalice_error = None  # Consume the error
+
         # Turn is complete. Read the clean output from the transcript path
         # provided by the Chalice Stop hook payload (stored on the agent).
         transcript_path = self.agent._chalice_transcript_path
         if not transcript_path or not os.path.exists(transcript_path):
+            error_msg = chalice_error or "No transcript available from agent"
             logger.error("No transcript path from Chalice telemetry",
                          conversation_id=self.agent.conversation_id,
-                         transcript_path=transcript_path)
-            yield Text(text="[Error: No transcript available from agent]", step_index=0)
+                         transcript_path=transcript_path,
+                         chalice_error=chalice_error)
+            yield Text(text=f"⚠️ {error_msg}", step_index=0)
             return
             
         final_text = ""
@@ -95,6 +102,10 @@ class CliResponse:
                 
                 final_text = (final_text + tool_text) if final_text else tool_text.strip()
                 
+            # If the transcript had no model response but we got an API error, surface it
+            if not final_text and chalice_error:
+                final_text = f"⚠️ {chalice_error}"
+            
             self.response_text = final_text
             yield Text(text=final_text, step_index=0)
             
@@ -130,6 +141,7 @@ class ManagedAgent:
         self.turn_completed_event = asyncio.Event()
         self.aborted = False
         self._chalice_transcript_path = None  # Set by handle_telemetry when Stop fires
+        self._chalice_error = None  # Set by handle_telemetry if Stop fires with an error
 
     async def _sink_pty_output(self):
         """Read and discard the PTY output in the background so the buffer doesn't fill up."""
@@ -339,11 +351,17 @@ class AgentManager:
                     transcript_path = payload.get("transcriptPath")
                     if transcript_path:
                         agent._chalice_transcript_path = transcript_path
+                    # Store error from the Stop hook (e.g., API quota exhaustion)
+                    # so CliResponse can surface it to the user instead of showing nothing
+                    error_text = payload.get("error", "")
+                    if error_text:
+                        agent._chalice_error = error_text
                     logger.info("Chalice signaled turn complete",
                                 ganymede_conv_id=ganymede_conv_id,
                                 agy_conv_id=payload.get("conversationId"),
                                 transcript_path=transcript_path,
-                                reason=payload.get("terminationReason"))
+                                reason=payload.get("terminationReason"),
+                                error=error_text or None)
                     agent.turn_completed_event.set()
                     return
 
