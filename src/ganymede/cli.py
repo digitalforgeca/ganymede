@@ -263,7 +263,7 @@ def main():
     load_dotenv()
     
     parser = argparse.ArgumentParser(prog="ganymede")
-    parser.add_argument("command", nargs="?", choices=["run", "mcp", "stop", "restart"], default="run", help="Subcommand to run (run, mcp, stop, restart)")
+    parser.add_argument("command", nargs="?", default="start", help="Action to perform: start (default), stop, restart, mcp")
     parser.add_argument("--config", default=None, help="Path to YAML configuration file")
     parser.add_argument("--workspace", default=None, help="Target workspace path for the agent")
     parser.add_argument("--log-level", default=None, help="Logging level")
@@ -290,8 +290,14 @@ def main():
         import subprocess
         print("Starting Ganymede in the background...")
         log_file = open("ganymede.log", "a")
-        subprocess.Popen([sys.argv[0], "run"], start_new_session=True, stdout=log_file, stderr=log_file)
+        subprocess.Popen([sys.argv[0], "start"], start_new_session=True, stdout=log_file, stderr=log_file)
         sys.exit(0)
+
+    if args.command not in ("run", "start"):
+        print(f"Error: Unknown command '{args.command}'.")
+        parser.print_help()
+        sys.exit(1)
+
     # Override log level from config
     structlog.configure(
         wrapper_class=structlog.make_filtering_bound_logger(
