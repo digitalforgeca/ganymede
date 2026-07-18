@@ -76,29 +76,68 @@ class CliResponse:
             return
             
         final_text = ""
-        tool_calls = []
+        current_turn_tool_calls = []
         try:
             with open(transcript_path, 'r') as f:
-                for line in f:
-                    if not line.strip(): continue
-                    try:
-                        data = json.loads(line)
-                        if data.get("type") in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
-                            final_text = data.get("content", "")
-                            tool_calls = data.get("tool_calls", [])
-                    except json.JSONDecodeError:
-                        continue
+                lines = f.readlines()
+                
+            # Iterate backwards to find the last USER_INPUT to bound the turn
+            start_idx = 0
+            for i in range(len(lines)-1, -1, -1):
+                try:
+                    data = json.loads(lines[i])
+                    if data.get("type") == "USER_INPUT":
+                        start_idx = i
+                        break
+                except json.JSONDecodeError:
+                    continue
+                    
+            # Collect all tool calls and the last non-empty final_text
+            for i in range(start_idx, len(lines)):
+                try:
+                    data = json.loads(lines[i])
+                    if data.get("type") in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
+                        content = data.get("content", "")
+                        if content:
+                            final_text = content
+                        if data.get("tool_calls"):
+                            current_turn_tool_calls.extend(data.get("tool_calls"))
+                except json.JSONDecodeError:
+                    continue
                             
-            if tool_calls:
+            if current_turn_tool_calls:
+                artifacts_created = []
                 tool_text = "\n\n*⚒️ Tools Used:*\n"
-                for t in tool_calls:
+                for t in current_turn_tool_calls:
                     t_name = t.get('name') or t.get('function', {}).get('name') or 'tool'
                     args = t.get('args') or t.get('function', {}).get('arguments') or {}
                     try:
-                        args_formatted = json.dumps(json.loads(args) if isinstance(args, str) else args, indent=2)
+                        args_obj = json.loads(args) if isinstance(args, str) else args
+                        args_formatted = json.dumps(args_obj, indent=2)
+                        
+                        # Detect artifacts
+                        if t_name in ("write_to_file", "replace_file_content", "multi_replace_file_content"):
+                            metadata = args_obj.get("ArtifactMetadata", {})
+                            if metadata and (metadata.get("UserFacing") or metadata.get("RequestFeedback")):
+                                target_file = args_obj.get("TargetFile", "Unknown File")
+                                summary = metadata.get("Summary", "")
+                                if not any(a["file"] == target_file for a in artifacts_created):
+                                    artifacts_created.append({"file": target_file, "summary": summary})
                     except Exception:
                         args_formatted = str(args)
+                        
                     tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
+                
+                # Append artifact review notice if any were created
+                if artifacts_created:
+                    port = getattr(self.agent.config, "dashboard_port", 8180)
+                    dash_url = f"http://127.0.0.1:{port}"
+                    art_text = "\n\n**📄 Artifacts Requiring Review:**\n"
+                    for art in artifacts_created:
+                        name = os.path.basename(art["file"])
+                        art_text += f"- **{name}**: {art['summary']}\n"
+                    art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
+                    final_text = (final_text + art_text) if final_text else art_text.strip()
                 
                 final_text = (final_text + tool_text) if final_text else tool_text.strip()
                 
