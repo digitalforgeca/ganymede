@@ -899,10 +899,10 @@ class DashboardServer:
         return web.json_response({"files": files_data, "workspace": workspace})
 
     async def start(self):
-        logger.info("Starting Ganymede dashboard on http://0.0.0.0:8080")
+        logger.info("Starting Ganymede dashboard on http://0.0.0.0:8180")
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, '0.0.0.0', 8080, reuse_address=True, reuse_port=True)
+        self.site = web.TCPSite(self.runner, '0.0.0.0', 8180, reuse_address=True, reuse_port=True)
         await self.site.start()
         logger.info("Starting internal MCP SSE Server on http://0.0.0.0:8081")
         self.mcp_task = asyncio.create_task(self.start_mcp_server())
