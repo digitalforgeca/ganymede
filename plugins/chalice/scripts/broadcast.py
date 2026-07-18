@@ -60,8 +60,27 @@ def main():
                 "payload": hook_context
             }
             
+            def _get_dashboard_port():
+                port = os.environ.get("GANYMEDE_PORT")
+                if port and port.isdigit():
+                    return int(port)
+                
+                config_path = os.path.expanduser("~/.ganymede/config.yaml")
+                if os.path.exists(config_path):
+                    try:
+                        with open(config_path, "r") as f:
+                            for line in f:
+                                if line.strip().startswith("dashboard_port:"):
+                                    val = line.split(":", 1)[1].strip()
+                                    if val.isdigit():
+                                        return int(val)
+                    except Exception:
+                        pass
+                return 8180
+
+            port = _get_dashboard_port()
             req = urllib.request.Request(
-                "http://127.0.0.1:8080/api/telemetry",
+                f"http://127.0.0.1:{port}/api/telemetry",
                 data=json.dumps(payload).encode("utf-8"),
                 headers={"Content-Type": "application/json"}
             )

@@ -57,3 +57,7 @@ activation:
   per_channel: {}
 
 log_level: "INFO"
+
+# The port where the Ganymede local dashboard and internal IPC API will be served.
+# This can also be configured by setting the GANYMEDE_PORT environment variable.
+dashboard_port: 8180

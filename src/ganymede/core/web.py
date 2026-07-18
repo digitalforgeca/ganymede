@@ -899,7 +899,7 @@ class DashboardServer:
         return web.json_response({"files": files_data, "workspace": workspace})
 
     async def start(self):
-        port = 8180
+        port = getattr(self.config, "dashboard_port", 8180)
         
         # Check for port conflict before binding
         import socket
@@ -908,7 +908,7 @@ class DashboardServer:
                 s.bind(('0.0.0.0', port))
         except OSError as e:
             if e.errno == 48:  # Address already in use
-                logger.error(f"CRITICAL: Port {port} is already in use by another process. Ganymede dashboard cannot start. Please resolve the port conflict.", port=port)
+                logger.error(f"CRITICAL: Port {port} is already in use by another process. Ganymede dashboard cannot start. Please resolve the port conflict or set GANYMEDE_PORT to a different port.", port=port)
                 raise RuntimeError(f"Port {port} is already in use.") from e
             raise
 
