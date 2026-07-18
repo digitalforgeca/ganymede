@@ -75,6 +75,7 @@ class AppConfig:
     activation: ActivationConfig = field(default_factory=ActivationConfig)
     data_dir: str = ""
     log_level: str = "INFO"
+    dashboard_port: int = 8180
     platforms: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -136,6 +137,13 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
     env_log_level = os.environ.get("AGY_DISCORD_LOG_LEVEL") or os.environ.get("AGYD_LOG_LEVEL")
     if env_log_level:
         config.log_level = env_log_level
+
+    env_port = os.environ.get("GANYMEDE_PORT")
+    if env_port:
+        try:
+            config.dashboard_port = int(env_port)
+        except ValueError:
+            pass
 
     # 4. CLI overrides
     if args:
@@ -207,3 +215,4 @@ def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
         config.activation.trigger_patterns = ac.get("trigger_patterns", config.activation.trigger_patterns)
         config.activation.per_channel = ac.get("per_channel", config.activation.per_channel)
     config.log_level = data.get("log_level", config.log_level)
+    config.dashboard_port = data.get("dashboard_port", config.dashboard_port)
