@@ -899,10 +899,23 @@ class DashboardServer:
         return web.json_response({"files": files_data, "workspace": workspace})
 
     async def start(self):
-        logger.info("Starting Ganymede dashboard on http://0.0.0.0:8180")
+        port = 8180
+        
+        # Check for port conflict before binding
+        import socket
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('0.0.0.0', port))
+        except OSError as e:
+            if e.errno == 48:  # Address already in use
+                logger.error(f"CRITICAL: Port {port} is already in use by another process. Ganymede dashboard cannot start. Please resolve the port conflict.", port=port)
+                raise RuntimeError(f"Port {port} is already in use.") from e
+            raise
+
+        logger.info(f"Starting Ganymede dashboard on http://0.0.0.0:{port}")
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, '0.0.0.0', 8180, reuse_address=True, reuse_port=True)
+        self.site = web.TCPSite(self.runner, '0.0.0.0', port, reuse_address=True, reuse_port=True)
         await self.site.start()
         logger.info("Starting internal MCP SSE Server on http://0.0.0.0:8081")
         self.mcp_task = asyncio.create_task(self.start_mcp_server())
