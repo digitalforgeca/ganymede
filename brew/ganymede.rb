@@ -34,7 +34,7 @@ class Ganymede < Formula
         ~/.ganymede/config.yaml
         
       You can access the embedded dashboard at:
-        http://localhost:8080
+        http://localhost:8180
     EOS
   end
 
