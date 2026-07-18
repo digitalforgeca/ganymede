@@ -305,14 +305,22 @@ class ManagedAgent:
         self.turn_completed_event.set()
 
         if self.current_process:
-            logger.info("Terminating active agy subprocess", conversation_id=self.conversation_id)
+            logger.info("Terminating active agy subprocess and its process group", conversation_id=self.conversation_id)
             try:
-                self.current_process.terminate()
+                import signal
+                try:
+                    os.killpg(self.current_process.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+                    
                 try:
                     await asyncio.wait_for(self.current_process.wait(), timeout=1.0)
                 except asyncio.TimeoutError:
-                    logger.warn("Subprocess did not exit gracefully, killing it", conversation_id=self.conversation_id)
-                    self.current_process.kill()
+                    logger.warn("Subprocess did not exit gracefully, killing process group", conversation_id=self.conversation_id)
+                    try:
+                        os.killpg(self.current_process.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
                     await self.current_process.wait()
             except Exception as e:
                 logger.error("Error terminating agy subprocess", error=str(e))
