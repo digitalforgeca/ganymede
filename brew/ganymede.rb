@@ -28,7 +28,7 @@ class Ganymede < Formula
       Ganymede has been installed successfully.
       
       To start the gateway, run:
-        ganymede run
+        ganymede
         
       The user configuration file will automatically be created on first run at:
         ~/.ganymede/config.yaml
