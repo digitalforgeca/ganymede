@@ -8435,3 +8435,47 @@ davey is not installed, voice will NOT be supported
 127.0.0.1 [19/Jul/2026:22:30:57 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [19/Jul/2026:22:30:57 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [19/Jul/2026:22:31:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:24 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:24 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+[VALIDATION] Commencing Ganymede environment validation...
+[VALIDATION] Checking for Antigravity (agy) CLI...
+[VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+[VALIDATION] Checking for Chalice telemetry plugin...
+[VALIDATION]  ✓ Chalice plugin is installed and ready.
+[VALIDATION] Chain validation complete. Proceeding to boot gateway...
+{"log_level": "INFO", "event": "Initializing ganymede bridge", "level": "info", "logger": "ganymede.cli", "timestamp": "2026-07-20T05:31:33.149048Z"}
+{"path": "/Users/mcdoolz/.ganymede/data/ganymede.db", "event": "Database initialized successfully", "level": "info", "logger": "ganymede.core.db", "timestamp": "2026-07-20T05:31:33.149824Z"}
+PyNaCl is not installed, voice will NOT be supported
+davey is not installed, voice will NOT be supported
+{"port": 8180, "event": "CRITICAL: Port 8180 is already in use by another process. Ganymede dashboard cannot start. Please resolve the port conflict or set GANYMEDE_PORT to a different port.", "level": "error", "logger": "ganymede.core.web", "timestamp": "2026-07-20T05:31:33.209171Z"}
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/web.py", line 908, in start
+    s.bind(('0.0.0.0', port))
+OSError: [Errno 48] Address already in use
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/bin/ganymede", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/cli.py", line 313, in main
+    asyncio.run(run(config))
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/cli.py", line 195, in run
+    await dashboard.start()
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/web.py", line 912, in start
+    raise RuntimeError(f"Port {port} is already in use.") from e
+RuntimeError: Port 8180 is already in use.

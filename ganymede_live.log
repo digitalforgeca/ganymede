@@ -2404,3 +2404,14 @@ davey is not installed, voice will NOT be supported
 127.0.0.1 [19/Jul/2026:22:30:57 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [19/Jul/2026:22:30:57 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
 127.0.0.1 [19/Jul/2026:22:31:04 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:10 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:11 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:24 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+127.0.0.1 [19/Jul/2026:22:31:24 -0700] "POST /api/telemetry HTTP/1.1" 200 233 "-" "Python-urllib/3.14"
+{"log_level": "INFO", "event": "Initializing ganymede bridge", "level": "info", "logger": "ganymede.cli", "timestamp": "2026-07-20T05:31:33.149048Z"}
+{"path": "/Users/mcdoolz/.ganymede/data/ganymede.db", "event": "Database initialized successfully", "level": "info", "logger": "ganymede.core.db", "timestamp": "2026-07-20T05:31:33.149824Z"}
+PyNaCl is not installed, voice will NOT be supported
+davey is not installed, voice will NOT be supported
+{"port": 8180, "event": "CRITICAL: Port 8180 is already in use by another process. Ganymede dashboard cannot start. Please resolve the port conflict or set GANYMEDE_PORT to a different port.", "level": "error", "logger": "ganymede.core.web", "timestamp": "2026-07-20T05:31:33.209171Z"}
