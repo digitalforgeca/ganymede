@@ -113,15 +113,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         return s
 
     def get_conversation_id(self, context: ContextKey) -> str:
-        """Generate a unique, stable conversation identifier for the given context key.
-        
-        NOTE: This is OUR internal naming scheme. Do not change it to satisfy SDK constraints.
-        The SDK boundary layer in agent_manager.py derives a UUID from this ID.
-        """
-        cid = f"ganymede_discord_{context.channel_id}"
-        if context.thread_id:
-            cid += f"_{context.thread_id}"
-        return cid
+        return context.ganymede_conv_id
 
     # --- discord.py Event Handlers ---
 

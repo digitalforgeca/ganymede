@@ -408,9 +408,8 @@ class DashboardServer:
                         except Exception:
                             pass
                             
-                        project_name = f"{r['context_platform']}-{r['context_channel']}"
-                        if r['context_thread']:
-                            project_name += f"-{r['context_thread']}"
+                        ctx = ContextKey(r['context_platform'], r['context_channel'], r['context_thread'])
+                        project_name = ctx.project_name
                             
                         brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{actual_conv_id}")
                         project_name_path = os.path.join(brain_dir, "project_name.txt")
@@ -767,9 +766,8 @@ class DashboardServer:
             platform = parts[0]
             channel_id = parts[1]
             thread_id = parts[2] if len(parts) > 2 and parts[2] != 'main' else None
-            project_name = f"{platform}-{channel_id}"
-            if thread_id:
-                project_name += f"-{thread_id}"
+            ctx = ContextKey(platform, channel_id, thread_id)
+            project_name = ctx.project_name
                 
         # Read Mode
         mode_path = os.path.join(brain_dir, "mode.txt")
