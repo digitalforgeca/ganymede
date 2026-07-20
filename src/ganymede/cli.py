@@ -286,11 +286,11 @@ def main():
     if args.command == "restart":
         stop_daemon(config)
         
-        # Daemonize the run command in the background
+        # Daemonize without explicit command parameters
         import subprocess
         print("Starting Ganymede in the background...")
         log_file = open("ganymede.log", "a")
-        subprocess.Popen([sys.argv[0], "start"], start_new_session=True, stdout=log_file, stderr=log_file)
+        subprocess.Popen([sys.argv[0]], start_new_session=True, stdout=log_file, stderr=log_file)
         sys.exit(0)
 
     if args.command not in ("run", "start"):

@@ -19,6 +19,14 @@ logger = structlog.get_logger()
 # but we don't want the TUI rendering garbage leaking into Discord messages.
 _ANSI_ESCAPE = re.compile(r'\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\)|\([A-Z0-9])')
 
+# MANDATORY default model for all CLI invocations.
+# Ganymede must ALWAYS pass --model to agy; without it, agy falls back to its
+# own global settings.json which the human user may have set to a third-party
+# model (e.g. Opus).  Gemini models have effectively unlimited API quotas;
+# third-party models do not and must only be used when the human explicitly
+# configures a per-channel override via /model or model.txt.
+DEFAULT_MODEL = "Gemini 3.1 Pro (High)"
+
 
 class MockUsage:
     def __init__(self):
@@ -33,12 +41,18 @@ class CliResponse:
     to the child conversation's JSONL transcript. We read the agent's response from there.
     """
 
-    def __init__(self, agent_instance, prompt: str):
+    def __init__(self, agent_instance, prompt: str, direct_text: str = None):
         self.agent = agent_instance
         self.prompt = prompt
-        self.response_text = ""
+        self.response_text = direct_text or ""
         self.usage_metadata = MockUsage()
-        self._chunks_generator = self._read_chunks()
+        if direct_text is not None:
+            self._chunks_generator = self._direct_chunks()
+        else:
+            self._chunks_generator = self._read_chunks()
+
+    async def _direct_chunks(self):
+        yield Text(text=self.response_text, step_index=0)
 
     async def _read_chunks(self):
         # Clear the event before we wait
@@ -126,20 +140,46 @@ class CliResponse:
                     except Exception:
                         args_formatted = str(args)
                         
-                    tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
-                
-                # Append artifact review notice if any were created
-                if artifacts_created:
-                    port = getattr(self.agent.config, "dashboard_port", 8180)
-                    dash_url = f"http://127.0.0.1:{port}"
-                    art_text = "\n\n**📄 Artifacts Requiring Review:**\n"
-                    for art in artifacts_created:
-                        name = os.path.basename(art["file"])
-                        art_text += f"- **{name}**: {art['summary']}\n"
-                    art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
-                    final_text = (final_text + art_text) if final_text else art_text.strip()
+                    tool_text += f"- `{t_name}`\n```json\n{args_formatted}\n```\n"
                 
                 final_text = (final_text + tool_text) if final_text else tool_text.strip()
+
+            # Merge artifacts globally captured from telemetry (which covers subagents!)
+            captured_artifacts = getattr(self.agent, "_artifacts_this_turn", [])
+            for art in captured_artifacts:
+                if not any(a["file"] == art["file"] for a in artifacts_created):
+                    artifacts_created.append(art)
+                    
+            # Process syncing and generating the Discord notification
+            if artifacts_created:
+                port = getattr(self.agent.config, "dashboard_port", 8180)
+                dash_url = f"http://127.0.0.1:{port}"
+                art_text = "\n\n**📄 Artifacts Requiring Review:**\n"
+                
+                channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.conversation_id}")
+                os.makedirs(channel_brain_dir, exist_ok=True)
+                
+                import shutil
+                for art in artifacts_created:
+                    target_file = art["file"]
+                    name = os.path.basename(target_file)
+                    
+                    # Sync artifact from isolated subagent directory back to channel's root brain directory
+                    if os.path.exists(target_file):
+                        dest_file = os.path.join(channel_brain_dir, name)
+                        if target_file != dest_file:
+                            try:
+                                shutil.copy2(target_file, dest_file)
+                            except Exception as e:
+                                logger.error("Failed to sync subagent artifact", error=str(e))
+                                
+                    art_text += f"- **{name}**: {art['summary']}\n"
+                    
+                art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
+                final_text = (final_text + art_text) if final_text else art_text.strip()
+                
+            # Clear telemetry capture for next turn
+            self.agent._artifacts_this_turn = []
                 
             # If the transcript had no model response but we got an API error, surface it
             if not final_text and chalice_error:
@@ -224,9 +264,20 @@ class ManagedAgent:
         if is_new_conversation:
             args.extend(["--new-project", project_name])
             
-        # Model, skip_permissions, etc
-        if hasattr(self.config.agent, "model"):
-            args.extend(["--model", self.config.agent.model])
+        # Model resolution — ALWAYS pass --model to prevent agy's global
+        # settings.json from applying its own model (which may be Opus/Claude).
+        # Priority: model.txt (per-channel /model override) > config.agent.model
+        model_txt = os.path.join(sdk_brain_dir, "model.txt")
+        if os.path.exists(model_txt):
+            with open(model_txt, "r") as f:
+                resolved_model = f.read().strip()
+            if not resolved_model:
+                resolved_model = self.config.agent.model
+        else:
+            resolved_model = self.config.agent.model
+
+        args.extend(["--model", resolved_model])
+            
         if getattr(self.config.agent, "skip_permissions", True):
             args.append("--dangerously-skip-permissions")
             
@@ -249,6 +300,7 @@ class ManagedAgent:
             os.setsid()
             fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
 
+        logger.info("Spawning agy subprocess", command=" ".join(args), model=resolved_model, context=self.context_key)
         self.current_process = await asyncio.create_subprocess_exec(
             *args,
             stdin=slave_fd,
@@ -279,6 +331,35 @@ class ManagedAgent:
         self.last_active = time.time()
         
         async with self._lock:
+            prompt_stripped = prompt.strip()
+            
+            # Intercept /models
+            if prompt_stripped == "/models":
+                import subprocess
+                try:
+                    result = subprocess.run(["agy", "models"], capture_output=True, text=True, check=True)
+                    out = _ANSI_ESCAPE.sub('', result.stdout).strip()
+                    return CliResponse(self, prompt, direct_text=f"```\n{out}\n```")
+                except Exception as e:
+                    return CliResponse(self, prompt, direct_text=f"❌ Error listing models: {e}")
+            
+            # Intercept /model <name>
+            if prompt_stripped.startswith("/model "):
+                model_name = prompt_stripped[7:].strip()
+                if (model_name.startswith('"') and model_name.endswith('"')) or (model_name.startswith("'") and model_name.endswith("'")):
+                    model_name = model_name[1:-1]
+                
+                # Write to model.txt in the conversation's brain dir
+                app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+                sdk_brain_dir = os.path.join(app_data, "brain", self.sdk_conversation_id)
+                os.makedirs(sdk_brain_dir, exist_ok=True)
+                with open(os.path.join(sdk_brain_dir, "model.txt"), "w") as f:
+                    f.write(model_name)
+                    
+                # Terminate the current PTY process so it restarts with the new model on next message
+                await self.terminate()
+                return CliResponse(self, prompt, direct_text=f"✅ Model successfully switched to `{model_name}` for this channel.\n*(It will take effect on your next message)*")
+
             await self.ensure_running()
             
             # Inject system instructions for new conversations as a compound prompt
@@ -288,7 +369,7 @@ class ManagedAgent:
             final_prompt = prompt
             if is_new and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
                 sys_inst = self.config.agent.system_instructions.replace("{bot_name}", self.bot_namespace)
-                sys_inst = sys_inst.replace("{model_name}", getattr(self.config.agent, "model", "default model"))
+                sys_inst = sys_inst.replace("{model_name}", DEFAULT_MODEL)
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
             # Write prompt as simulated keystrokes to the PTY.
@@ -367,6 +448,20 @@ class AgentManager:
         self._active_author_names: dict[ContextKey, str] = {}
         self.adapter = None
         self._telemetry_registered = False
+        self._sweeper_task = asyncio.create_task(self._idle_sweeper())
+
+    async def _idle_sweeper(self):
+        """Background task that reaps idle CLI sessions that haven't shown activity."""
+        while True:
+            await asyncio.sleep(600)  # Check every 10 mins
+            now = time.time()
+            to_remove = []
+            for ctx, agent in self._agents.items():
+                if now - agent.last_active > 1800:  # 30 minutes of no telemetry activity
+                    to_remove.append(ctx)
+            for ctx in to_remove:
+                logger.info("Sweeping idle agent session to free memory/PTY", context=ctx)
+                await self.destroy(ctx)
 
     async def handle_telemetry(self, data: dict):
         """Wake up ManagedAgent when Chalice signals turn completion.
@@ -391,6 +486,11 @@ class AgentManager:
         if not ganymede_conv_id:
             return
             
+        # Update activity timestamp to prevent idle reaping during long tasks
+        for agent in self._agents.values():
+            if agent.conversation_id == ganymede_conv_id:
+                agent.last_active = time.time()
+                
         if payload.get("fullyIdle"):
             for agent in self._agents.values():
                 if agent.conversation_id == ganymede_conv_id:
@@ -411,6 +511,33 @@ class AgentManager:
                                 error=error_text or None)
                     agent.turn_completed_event.set()
                     return
+                    
+        # Catch live tool calls globally (captures subagent artifacts)
+        for agent in self._agents.values():
+            if agent.conversation_id == ganymede_conv_id:
+                if not hasattr(agent, "_artifacts_this_turn"):
+                    agent._artifacts_this_turn = []
+                tool_call = payload.get("toolCall")
+                if isinstance(tool_call, dict):
+                    t_name = tool_call.get("name", "")
+                    if t_name in ("write_to_file", "replace_file_content", "multi_replace_file_content"):
+                        args = tool_call.get("args", {})
+                        if isinstance(args, str):
+                            try:
+                                args = json.loads(args)
+                            except Exception:
+                                args = {}
+                        if isinstance(args, dict):
+                            metadata = args.get("ArtifactMetadata", {})
+                            if metadata and (metadata.get("UserFacing") or metadata.get("RequestFeedback")):
+                                target_file = args.get("TargetFile")
+                                summary = metadata.get("Summary", "")
+                                if target_file and not any(a["file"] == target_file for a in agent._artifacts_this_turn):
+                                    agent._artifacts_this_turn.append({
+                                        "file": target_file,
+                                        "summary": summary
+                                    })
+                return
 
     def set_active_author(self, context: ContextKey, author_id: str, author_name: str = None) -> None:
         self._active_authors[context] = author_id
