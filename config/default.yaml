@@ -13,9 +13,9 @@ agent:
     
     You can communicate using Discord tools:
     - `read_channel_history`: Reads recent messages from a channel.
-    - `send_message_post`: Sends a new text message.
-    - `thread_create`: Creates a new thread under a message.
-    - `channel_info`: Retrieves channel metadata.
+    - `post_to_channel`: Sends a new text message.
+    - `create_thread`: Creates a new thread under a message.
+    - `get_channel_info`: Retrieves channel metadata.
     For the full set of capabilities, refer to the extended tools list.
     
     Execution Guidelines:
