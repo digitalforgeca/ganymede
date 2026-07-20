@@ -119,8 +119,8 @@ class CliResponse:
                 except json.JSONDecodeError:
                     continue
                             
+            artifacts_created = []
             if current_turn_tool_calls:
-                artifacts_created = []
                 tool_text = "\n\n*⚒️ Tools Used:*\n"
                 for t in current_turn_tool_calls:
                     t_name = t.get('name') or t.get('function', {}).get('name') or 'tool'
