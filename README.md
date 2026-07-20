@@ -114,10 +114,10 @@ Execute our PowerShell script. It isolates the build in your `LOCALAPPDATA` dire
 
 ## 🏃 Running the Gateway
 
-Once installed, simply start the daemon:
+#### 1. Starting the Bridge
+Simply run the gateway daemon:
 ```bash
-# Terminal execution
-ganymede run
+ganymede
 ```
 You can access the real-time telemetry dashboard at `http://localhost:8080`.
 

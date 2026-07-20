@@ -175,54 +175,7 @@ def setup_commands(adapter: discord.Client):
             embed.description = "\n".join(description_lines)
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @tree.command(name="session", description="Manage or inspect the active agent session")
-    @app_commands.choices(action=[
-        app_commands.Choice(name="info", value="info"),
-        app_commands.Choice(name="reset", value="reset")
-    ])
-    async def session(interaction: discord.Interaction, action: str):
-        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
-        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
-        
-        context = ContextKey(
-            platform="discord",
-            channel_id=channel_id,
-            thread_id=thread_id
-        )
 
-        agent_manager = adapter.router.agent_manager
-        if not agent_manager:
-            await interaction.response.send_message("❌ Agent Manager is not configured.", ephemeral=True)
-            return
-
-        if action == "reset":
-            await agent_manager.destroy(context)
-            await interaction.response.send_message("🔄 Agent session for this channel reset successfully.", ephemeral=True)
-        elif action == "info":
-            managed = agent_manager._agents.get(context)
-            
-            embed = discord.Embed(title="🤖 Active Session Information", color=discord.Color.blue())
-            embed.add_field(name="Platform", value=context.platform, inline=True)
-            embed.add_field(name="Channel ID", value=context.channel_id, inline=True)
-            if context.thread_id:
-                embed.add_field(name="Thread ID", value=context.thread_id, inline=True)
-
-            workspace = agent_manager.config.agent.workspace
-            embed.add_field(name="Workspace", value=workspace, inline=False)
-
-            if managed:
-                idle_sec = time.time() - managed.last_active
-                idle_str = f"{int(idle_sec // 60)}m {int(idle_sec % 60)}s"
-                embed.add_field(name="Session Status", value=f"Active (Idle for {idle_str})", inline=True)
-            else:
-                embed.add_field(name="Session Status", value="Inactive (No agent spawned)", inline=True)
-
-            if agent_manager.quota_tracker:
-                summary = await agent_manager.quota_tracker.get_usage_summary(context)
-                embed.add_field(name="Context Hourly Usage", value=f"{summary['context_usage']} / {summary['context_limit']} tokens", inline=True)
-                embed.add_field(name="Global Hourly Usage", value=f"{summary['global_usage']} / {summary['global_limit']} tokens", inline=True)
-
-            await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @tree.command(name="schedule", description="Schedule a recurring agent prompt using cron trigger")
     @app_commands.describe(
@@ -391,6 +344,59 @@ def setup_commands(adapter: discord.Client):
         )
         asyncio.create_task(adapter.router.handle_message(message))
 
+    async def _handle_session(interaction: discord.Interaction, session_id: str | None = None):
+        agent_manager = adapter.router.agent_manager
+        if not agent_manager:
+            await interaction.response.send_message("❌ *Agent manager not configured.*", ephemeral=True)
+            return
+
+        if not session_id:
+            # List active sessions
+            if not agent_manager._agents:
+                await interaction.response.send_message("ℹ️ *No active sessions currently running.*", ephemeral=True)
+                return
+                
+            import time
+            now = time.time()
+            lines = ["**Active Ganymede Sessions:**"]
+            for ctx, agent in agent_manager._agents.items():
+                idle_secs = int(now - agent.last_active)
+                idle_mins = idle_secs // 60
+                
+                # Format location gracefully
+                loc = f"<#{ctx.thread_id}>" if ctx.thread_id else f"<#{ctx.channel_id}>"
+                lines.append(f"• ID: `{agent.conversation_id}` | Loc: {loc} | Idle: {idle_mins}m")
+                
+            await interaction.response.send_message("\n".join(lines), ephemeral=True)
+        else:
+            # Close specific session
+            target_ctx = None
+            target_agent = None
+            for ctx, agent in agent_manager._agents.items():
+                # Allow matching by internal conversation ID, SDK UUID, or just the channel/thread ID
+                if session_id in (agent.conversation_id, agent.sdk_conversation_id, ctx.channel_id, ctx.thread_id):
+                    target_ctx = ctx
+                    target_agent = agent
+                    break
+                    
+            if not target_agent:
+                await interaction.response.send_message(f"❌ *No active session found matching `{session_id}`.*", ephemeral=True)
+                return
+                
+            await target_agent.terminate()
+            await agent_manager.destroy(target_ctx)
+            await interaction.response.send_message(f"🛑 *Session `{target_agent.conversation_id}` forcefully closed by {interaction.user.name}.*", ephemeral=False)
+
+    @tree.command(name="session", description="List active sessions or close a specific session")
+    @app_commands.describe(session_id="Optional ID of the session to close")
+    async def session_cmd(interaction: discord.Interaction, session_id: str | None = None):
+        await _handle_session(interaction, session_id)
+
+    @tree.command(name="sessions", description="List active sessions or close a specific session")
+    @app_commands.describe(session_id="Optional ID of the session to close")
+    async def sessions_cmd(interaction: discord.Interaction, session_id: str | None = None):
+        await _handle_session(interaction, session_id)
+
     @tree.command(name="stop", description="Abruptly terminate the active agent execution in this channel")
     async def stop(interaction: discord.Interaction):
         # Construct ContextKey
@@ -421,6 +427,45 @@ def setup_commands(adapter: discord.Client):
             author_id=str(interaction.user.id),
             author_name=interaction.user.name,
             content="/new",
+            is_bot=interaction.user.bot,
+            mentions_us=False,
+            attachments=[],
+            reply_to=None,
+            raw=interaction
+        )
+        asyncio.create_task(adapter.router.handle_message(message))
+
+    @tree.command(name="models", description="List all available models")
+    async def models_cmd(interaction: discord.Interaction):
+        await interaction.response.send_message(f"🔍 *Fetching available models...*", ephemeral=True)
+        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
+        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
+        
+        message = PlatformMessage(
+            context=ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id),
+            author_id=str(interaction.user.id),
+            author_name=interaction.user.name,
+            content="/models",
+            is_bot=interaction.user.bot,
+            mentions_us=False,
+            attachments=[],
+            reply_to=None,
+            raw=interaction
+        )
+        asyncio.create_task(adapter.router.handle_message(message))
+
+    @tree.command(name="model", description="Switch the model for the current channel")
+    @app_commands.describe(model_name="The exact model name to switch to (e.g. gemini-pro-agent)")
+    async def model_cmd(interaction: discord.Interaction, model_name: str):
+        await interaction.response.send_message(f"🔄 *Switching model to {model_name}...*", ephemeral=True)
+        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
+        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
+        
+        message = PlatformMessage(
+            context=ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id),
+            author_id=str(interaction.user.id),
+            author_name=interaction.user.name,
+            content=f"/model {model_name}",
             is_bot=interaction.user.bot,
             mentions_us=False,
             attachments=[],

@@ -104,6 +104,9 @@ class DiscordStreamer:
         # Ensure code blocks are balanced
         content = self._balance_code_fences(content)
 
+        # Sanitize any stray HTML tags before sending to Discord
+        content = self.formatter.format_text(content)
+
         # Split content if it exceeds the limit
         chunks = self.formatter.split_message(content)
         if not chunks:
