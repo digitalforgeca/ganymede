@@ -81,7 +81,15 @@ class Router:
                             if self.agent_manager.quota_tracker:
                                 await self.agent_manager.quota_tracker.record_usage(message.context, tokens_count)
                             
-                            await self.adapter.send_streaming_end(message.context, msg_id, {"tokens": tokens_count, "duration": duration})
+                            metadata = {
+                                "tokens": tokens_count, 
+                                "duration": duration,
+                                "model": self.agent_manager.config.agent.model,
+                                "artifacts": getattr(response, "artifacts_count", 0),
+                                "tasks": getattr(response, "tasks_count", 0),
+                                "subagents": getattr(response, "subagents_count", 0)
+                            }
+                            await self.adapter.send_streaming_end(message.context, msg_id, metadata)
                             
                             if self.db:
                                 try:
@@ -171,7 +179,15 @@ class Router:
                             if self.agent_manager.quota_tracker:
                                 await self.agent_manager.quota_tracker.record_usage(context, tokens_count)
                             
-                            await self.adapter.send_streaming_end(context, msg_id, {"tokens": tokens_count, "duration": duration})
+                            metadata = {
+                                "tokens": tokens_count, 
+                                "duration": duration,
+                                "model": self.agent_manager.config.agent.model,
+                                "artifacts": getattr(response, "artifacts_count", 0),
+                                "tasks": getattr(response, "tasks_count", 0),
+                                "subagents": getattr(response, "subagents_count", 0)
+                            }
+                            await self.adapter.send_streaming_end(context, msg_id, metadata)
                             
                             if self.db:
                                 try:

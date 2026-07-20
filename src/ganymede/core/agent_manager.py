@@ -180,6 +180,10 @@ class CliResponse:
                 
             # Clear telemetry capture for next turn
             self.agent._artifacts_this_turn = []
+            
+            self.artifacts_count = len(artifacts_created)
+            self.tasks_count = getattr(self.agent, "_chalice_tasks_count", 0)
+            self.subagents_count = getattr(self.agent, "_chalice_subagents_count", 0)
                 
             # If the transcript had no model response but we got an API error, surface it
             if not final_text and chalice_error:
@@ -371,12 +375,12 @@ class ManagedAgent:
             if is_new and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
                 sys_inst = self.config.agent.system_instructions.replace("{bot_name}", self.bot_namespace)
                 sys_inst = sys_inst.replace("{model_name}", self.config.agent.model)
-                mission = getattr(self.config.agent, "mission_statement", "assist the user")
+                mission = getattr(self.config.agent, "mission_statement", "to be of help")
                 sys_inst = sys_inst.replace("{mission_statement}", mission)
                 
-                user_name = "the user"
+                user_name = "user"
                 if self.manager:
-                    user_name = self.manager.get_active_author_name(self.context_key)
+                    user_name = self.manager.get_active_author_name(self.context_key) or "user"
                 sys_inst = sys_inst.replace("{user_name}", user_name)
                 
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
@@ -512,6 +516,9 @@ class AgentManager:
                     error_text = payload.get("error", "")
                     if error_text:
                         agent._chalice_error = error_text
+                        
+                    agent._chalice_tasks_count = payload.get("activeTasks", payload.get("tasksCount", 0))
+                    agent._chalice_subagents_count = payload.get("activeSubagents", payload.get("subagentsCount", 0))
                     logger.info("Chalice signaled turn complete",
                                 ganymede_conv_id=ganymede_conv_id,
                                 agy_conv_id=payload.get("conversationId"),
