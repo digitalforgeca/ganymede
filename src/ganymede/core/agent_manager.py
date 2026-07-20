@@ -206,7 +206,8 @@ class ManagedAgent:
     Antigravity Python SDK directly. See CliResponse docstring for rationale.
     """
 
-    def __init__(self, context_key: ContextKey, config: AppConfig, conversation_id: str, bot_namespace: str = "ganymede", ipc_port: int | None = None):
+    def __init__(self, context_key: ContextKey, config: AppConfig, conversation_id: str, bot_namespace: str = "ganymede", ipc_port: int | None = None, manager=None):
+        self.manager = manager
         self.context_key = context_key
         self.config = config
         self.last_active = time.time()
@@ -370,6 +371,14 @@ class ManagedAgent:
             if is_new and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
                 sys_inst = self.config.agent.system_instructions.replace("{bot_name}", self.bot_namespace)
                 sys_inst = sys_inst.replace("{model_name}", self.config.agent.model)
+                mission = getattr(self.config.agent, "mission_statement", "assist the user")
+                sys_inst = sys_inst.replace("{mission_statement}", mission)
+                
+                user_name = "the user"
+                if self.manager:
+                    user_name = self.manager.get_active_author_name(self.context_key)
+                sys_inst = sys_inst.replace("{user_name}", user_name)
+                
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
             # Write prompt as simulated keystrokes to the PTY.
@@ -604,7 +613,7 @@ class AgentManager:
             if hasattr(self.adapter, "ipc_server") and self.adapter.ipc_server and hasattr(self.adapter.ipc_server, "port"):
                 ipc_port = self.adapter.ipc_server.port
 
-        managed = ManagedAgent(context, self.config, conversation_id, bot_namespace, ipc_port)
+        managed = ManagedAgent(context, self.config, conversation_id, bot_namespace, ipc_port, manager=self)
         self._agents[context] = managed
         return managed
 
