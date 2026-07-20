@@ -101,8 +101,7 @@ class WebAdapter(PlatformAdapter):
         self.on_message_callback = callback
 
     def get_conversation_id(self, context: ContextKey) -> str:
-        # Standardize conversation ID mapping
-        return f"ganymede_web_{context.channel_id}"
+        return context.ganymede_conv_id
 
 
 class WebProvider(BasePlatformProvider):

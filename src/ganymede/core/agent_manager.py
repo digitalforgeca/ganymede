@@ -255,9 +255,7 @@ class ManagedAgent:
 
         args = ["agy", "--continue", "--conversation", self.sdk_conversation_id]
         
-        project_name = f"{self.context_key.platform}-{self.context_key.channel_id}"
-        if self.context_key.thread_id:
-            project_name += f"-{self.context_key.thread_id}"
+        project_name = self.context_key.project_name
             
         brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.conversation_id}")
         app_data = os.path.expanduser("~/.gemini/antigravity-cli")
@@ -605,9 +603,7 @@ class AgentManager:
                 conversation_id = self.adapter.get_conversation_id(context)
             else:
                 # DO NOT change this naming scheme. The CLI gets a derived UUID, not this ID directly.
-                conversation_id = f"ganymede_{context.platform}_{context.channel_id}"
-                if context.thread_id:
-                    conversation_id += f"_{context.thread_id}"
+                conversation_id = context.ganymede_conv_id
                 
             if self.db:
                 await self.db.save_conversation_mapping(conversation_id, context)
