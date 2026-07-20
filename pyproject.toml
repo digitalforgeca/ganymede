@@ -1,6 +1,6 @@
 [project]
 name = "ganymede"
-version = "0.1.21"
+version = "0.1.22"
 description = "Discord communications and productivity gateway for Antigravity"
 readme = "README.md"
 requires-python = ">=3.11"
