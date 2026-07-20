@@ -146,6 +146,34 @@ async def run(config: AppConfig):
     web_provider = WebProvider(config, router_factory(config), db)
     providers.append(web_provider)
     
+    # Auto-register Ganymede SSE MCP server globally for agy CLI clients
+    import json
+    mcp_dir = os.path.expanduser("~/.gemini/mcp")
+    os.makedirs(mcp_dir, exist_ok=True)
+    mcp_config_path = os.path.join(mcp_dir, "ganymede.json")
+    try:
+        # We grab the port dynamically from the dashboard configuration
+        port = getattr(config.agent, "dashboard_port", 8180)
+        token = getattr(config.agent, "mcp_auth_token", "default_secure_token_123")
+        # FastMCP uses the /mcp endpoint by default for SSE connections
+        sse_url = f"http://127.0.0.1:{port}/mcp"
+        
+        with open(mcp_config_path, "w") as f:
+            json.dump({
+                "mcpServers": {
+                    "ganymede": {
+                        "type": "sse",
+                        "url": sse_url,
+                        "headers": {
+                            "Authorization": f"Bearer {token}"
+                        }
+                    }
+                }
+            }, f, indent=2)
+        logger.info("Registered Ganymede SSE MCP server globally", url=sse_url)
+    except Exception as e:
+        logger.warning("Failed to auto-register SSE MCP server", error=str(e))
+        
     # Hook signal handling for clean exit
     loop = asyncio.get_running_loop()
     
