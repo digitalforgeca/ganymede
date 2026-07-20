@@ -98,7 +98,18 @@ class DiscordStreamer:
 
         # Handle formatting metadata (e.g. tokens, execution duration) on final edit
         if final and metadata:
-            stats = f"\n\n*⚡ {metadata.get('tokens', '?')} tokens · ⏱ {metadata.get('duration', '?')}s*"
+            stats = f"\n\n*⚡ {metadata.get('tokens', '?')} tokens · ⏱ {metadata.get('duration', '?')}s"
+            
+            if metadata.get('tasks'):
+                stats += f" · 📝 {metadata.get('tasks')} outstanding tasks"
+            if metadata.get('artifacts'):
+                stats += f" · 📦 {metadata.get('artifacts')} outstanding artifacts"
+            if metadata.get('subagents'):
+                stats += f" · 👨‍💻 {metadata.get('subagents')} outstanding subagents"
+            if metadata.get('model'):
+                stats += f" · 🤖 {metadata.get('model')}"
+                
+            stats += "*"
             content += stats
 
         # Ensure code blocks are balanced
