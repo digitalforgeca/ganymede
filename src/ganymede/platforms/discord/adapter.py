@@ -169,6 +169,12 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         thread_id = str(message.channel.id) if isinstance(message.channel, discord.Thread) else None
         channel_id = str(message.channel.parent_id) if thread_id else str(message.channel.id)
         
+        # Prevent accidental native CLI invocations typed as plain text chat (even mid-string)
+        # We escape the commands with backticks so agy treats them as plain text
+        import re
+        pattern = r"(?<!`)(/goal|/plan|/schedule|/grill-me|/teamwork-preview|/learn|/clear)(?!`)"
+        content_to_send = re.sub(pattern, r"`\1`", message.content)
+        
         context = ContextKey(
             platform="discord",
             channel_id=channel_id,
@@ -182,7 +188,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
             context=context,
             author_id=str(message.author.id),
             author_name=message.author.name,
-            content=message.content,
+            content=content_to_send,
             is_bot=message.author.bot,
             mentions_us=mentions_us,
             attachments=[att.url for att in message.attachments],

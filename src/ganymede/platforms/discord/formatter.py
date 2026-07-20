@@ -9,9 +9,26 @@ class DiscordFormatter(Formatter):
         return 2000
 
     def format_text(self, content: str) -> str:
-        # Standard cleaning of any unsupported raw HTML tags or double escaping
-        clean = re.sub(r"<[^>]+>", "", content)
-        return clean
+        """Strip raw HTML tags while preserving Discord mentions and code blocks.
+        
+        Discord uses angle brackets for mentions (<@id>, <#id>, <:emoji:id>),
+        so we cannot blindly strip all <...> sequences. Instead we target
+        known HTML tag patterns (alphabetic tag names) and skip anything
+        inside fenced code blocks.
+        """
+        # Split on code fences to avoid mangling code block content
+        parts = re.split(r'(```[\s\S]*?```)', content)
+        result = []
+        for i, part in enumerate(parts):
+            if part.startswith('```'):
+                # Inside a code block — pass through untouched
+                result.append(part)
+            else:
+                # Outside code blocks: strip HTML-style tags (e.g. <details>, </summary>)
+                # but preserve Discord syntax: <@id>, <#id>, <:name:id>, <a:name:id>
+                clean = re.sub(r'</?[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?\s*/?>', '', part)
+                result.append(clean)
+        return ''.join(result)
 
     def format_code_block(self, code: str, language: str) -> str:
         return f"```{language}\n{code}\n```"

@@ -35,7 +35,7 @@ After=network.target
 [Service]
 Type=simple
 User=$SUDO_USER
-ExecStart=/usr/local/bin/ganymede run
+ExecStart=ganymede
 Restart=on-failure
 Environment="GANYMEDE_DATA_DIR=/home/$SUDO_USER/.ganymede/data"
 

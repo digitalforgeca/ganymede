@@ -25,7 +25,7 @@ _ANSI_ESCAPE = re.compile(r'\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x
 # model (e.g. Opus).  Gemini models have effectively unlimited API quotas;
 # third-party models do not and must only be used when the human explicitly
 # configures a per-channel override via /model or model.txt.
-DEFAULT_MODEL = "Gemini 3.1 Pro (High)"
+
 
 
 class MockUsage:
@@ -369,7 +369,7 @@ class ManagedAgent:
             final_prompt = prompt
             if is_new and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
                 sys_inst = self.config.agent.system_instructions.replace("{bot_name}", self.bot_namespace)
-                sys_inst = sys_inst.replace("{model_name}", DEFAULT_MODEL)
+                sys_inst = sys_inst.replace("{model_name}", self.config.agent.model)
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
             # Write prompt as simulated keystrokes to the PTY.
