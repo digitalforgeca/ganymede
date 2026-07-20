@@ -140,7 +140,7 @@ class CliResponse:
                     except Exception:
                         args_formatted = str(args)
                         
-                    tool_text += f"- `{t_name}`\n```json\n{args_formatted}\n```\n"
+                    tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
                 
                 final_text = (final_text + tool_text) if final_text else tool_text.strip()
 
