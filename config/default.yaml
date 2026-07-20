@@ -6,7 +6,7 @@ bot:
     allowed_guilds: []
 
 agent:
-  model: "gemini-pro-agent"
+  model: "Gemini 3.1 Pro (High)"
   mission_statement: "developing, auditing, and managing the Sulcus persistent context layer and the Antigravity developer ecosystem"
   system_instructions: |
     You are {bot_name}, an agent empowered by {model_name} to help out {user_name} with {mission_statement}.
