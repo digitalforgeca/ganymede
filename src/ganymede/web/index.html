@@ -62,11 +62,15 @@
             
             <div class="section pt-0">
                 <aside class="menu">
+                    <p class="menu-label">Main</p>
+                    <ul class="menu-list sidebar-nav mb-4">
+                        <li><a class="is-active nav-item" href="#view-dashboard" data-target="view-dashboard"><span class="icon is-small mr-2"><i class="fas fa-home"></i></span>Dashboard</a></li>
+                        <li><a class="nav-item" href="#view-chats" data-target="view-chats"><span class="icon is-small mr-2"><i class="fas fa-folder"></i></span>Projects</a></li>
+                    </ul>
+                    <p class="menu-label">Configuration</p>
                     <ul class="menu-list sidebar-nav">
-                        <li><a class="is-active nav-item" data-target="view-dashboard">Dashboard</a></li>
-                        <li><a class="nav-item" data-target="view-chats">Projects</a></li>
-                        <li><a class="nav-item" data-target="view-bots">Bots</a></li>
-                        <li><a class="nav-item" data-target="view-settings">Settings</a></li>
+                        <li><a class="nav-item" href="#view-bots" data-target="view-bots"><span class="icon is-small mr-2"><i class="fas fa-robot"></i></span>Bots</a></li>
+                        <li><a class="nav-item" href="#view-settings" data-target="view-settings"><span class="icon is-small mr-2"><i class="fas fa-cog"></i></span>Settings</a></li>
                     </ul>
                 </aside>
             </div>
@@ -208,8 +212,8 @@
                                                 <div class="select is-small is-fullwidth">
                                                     <select id="chat-model-select">
                                                         <option value="">Default (Global Config)</option>
-                                                        <option value="gemini-pro-agent">gemini-pro-agent (Recommended)</option>
-                                                        <option value="gemini-flash-agent">gemini-flash-agent (Fast)</option>
+                                                        <option value="Gemini 3.1 Pro (High)">Gemini 3.1 Pro (High) (Recommended)</option>
+                                                        <option value="Gemini Flash">Gemini Flash (Fast)</option>
                                                         <option value="gemini-1.5-pro-002">gemini-1.5-pro-002</option>
                                                         <option value="gemini-1.5-flash-002">gemini-1.5-flash-002</option>
                                                     </select>
@@ -339,7 +343,7 @@
                                                 <span class="has-text-grey is-size-7">Platform</span>
                                                 <span class="has-text-info has-text-weight-bold is-size-7" id="bot-card-platform">--</span>
                                             </div>
-                                            <div class="is-flex is-justify-content-space-between">
+                            <div class="is-flex is-justify-content-space-between">
                                                 <span class="has-text-grey is-size-7">Status</span>
                                                 <span class="has-text-success has-text-weight-bold is-size-7">Online</span>
                                             </div>
@@ -349,9 +353,92 @@
                             </div>
                         </div>
                     </div>
+                    <div class="box p-5 mt-4 is-hidden" id="no-rules-message">
+                        <p class="has-text-grey has-text-centered">No rules found. Create one to get started.</p>
+                    </div>
                 </main>
 
-
+                <!-- Bot Detail View -->
+                <main class="section view-section pt-5 is-hidden" id="view-bot-detail">
+                    <div class="columns">
+                        <!-- Left Column: Bot Profile & Config -->
+                        <div class="column is-4">
+                            <div class="box mb-4">
+                                <div class="is-flex is-align-items-center mb-4">
+                                    <span class="icon is-large has-text-info mr-3"><i class="fas fa-robot fa-2x"></i></span>
+                                    <div>
+                                        <h2 class="title is-4 mb-1" id="bot-detail-name">Ganymede</h2>
+                                        <p class="subtitle is-6 has-text-grey">Bot Configuration</p>
+                                    </div>
+                                </div>
+                                <hr>
+                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="fas fa-plug"></i></span>Invocation Points</h3>
+                                <div class="tags mb-4">
+                                    <span class="tag is-info is-light">Discord Slash Commands</span>
+                                    <span class="tag is-info is-light">@Mentions</span>
+                                    <span class="tag is-info is-light">Web Dashboard</span>
+                                </div>
+                            </div>
+                            
+                            <div class="box">
+                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="fas fa-magic"></i></span>System Prompt</h3>
+                                <div class="field">
+                                    <div class="control">
+                                        <textarea class="textarea is-small" id="bot-system-prompt" rows="8" placeholder="Loading system prompt..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <button class="button is-small is-info is-fullwidth" id="btn-save-bot-prompt">Save Prompt</button>
+                                </div>
+                                
+                                <div class="message is-small is-info is-light mt-3">
+                                    <div class="message-header"><p>Replacement Tokens</p></div>
+                                    <div class="message-body content is-small">
+                                        <ul style="margin-top:0; padding-left:1em;">
+                                            <li><code>{bot_name}</code> - Replaced with bot namespace</li>
+                                            <li><code>{model_name}</code> - Replaced with active model ID</li>
+                                            <li><code>{mission_statement}</code> - Bot's configured mission</li>
+                                            <li><code>{user_name}</code> - Author of the prompt</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Column: Conversations List -->
+                        <div class="column is-8">
+                            <div class="box h-100 is-flex is-flex-direction-column">
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+                                    <h3 class="title is-5 m-0"><span class="icon is-small mr-2"><i class="fas fa-comments"></i></span>Bot Conversations</h3>
+                                    <div class="field has-addons m-0">
+                                        <div class="control">
+                                            <input class="input is-small" type="text" id="bot-conversations-search" placeholder="Search conversations...">
+                                        </div>
+                                        <div class="control">
+                                            <a class="button is-small is-info"><i class="fas fa-search"></i></a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-container flex-grow-1" style="overflow-y: auto; max-height: 600px;">
+                                    <table class="table is-fullwidth is-hoverable">
+                                        <thead>
+                                            <tr>
+                                                <th>Project/Channel</th>
+                                                <th>Conversation ID</th>
+                                                <th>Last Active</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="bot-conversations-list">
+                                            <tr><td colspan="4" class="has-text-centered has-text-grey">Loading conversations...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
 
                 <!-- Settings View -->
                 <main class="section view-section is-hidden pt-5" id="view-settings">
@@ -382,8 +469,8 @@
                                             <div class="select is-small is-fullwidth">
                                                 <select id="global-model-select">
                                                     <option value="">Default (System Fallback)</option>
-                                                    <option value="gemini-pro-agent">gemini-pro-agent (Recommended)</option>
-                                                    <option value="gemini-flash-agent">gemini-flash-agent (Fast)</option>
+                                                    <option value="Gemini 3.1 Pro (High)">Gemini 3.1 Pro (High) (Recommended)</option>
+                                                    <option value="Gemini Flash">Gemini Flash (Fast)</option>
                                                     <option value="gemini-1.5-pro-002">gemini-1.5-pro-002</option>
                                                     <option value="gemini-1.5-flash-002">gemini-1.5-flash-002</option>
                                                 </select>

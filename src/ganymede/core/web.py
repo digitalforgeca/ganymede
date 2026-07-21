@@ -4,6 +4,7 @@ import structlog
 import json
 from aiohttp import web
 from ganymede.config import AppConfig
+from ganymede.core import ContextKey
 
 logger = structlog.get_logger()
 
@@ -33,9 +34,27 @@ class DashboardServer:
         self.app.router.add_get('/api/rules', self.handle_rules_get)
         self.app.router.add_post('/api/rules', self.handle_rules_post)
         self.app.router.add_delete('/api/rules/{filename}', self.handle_rule_delete)
+        self.app.router.add_get('/api/bots/detail/conversations', self.handle_bot_conversations)
         self.app.router.add_get('/api/user', self.handle_user_info)
         self.app.router.add_get('/ws/telemetry', self.handle_telemetry_ws)
         self.app.router.add_get('/ws/dashboard', self.handle_dashboard_ws)
+        
+        # Internal IPC API for SSE Tools
+        self.app.router.add_post('/api/channel/history', self.handle_ipc_request('get_channel_history', ["channel_id", "limit"]))
+        self.app.router.add_post('/api/channel/info', self.handle_ipc_request('get_channel_info', ["channel_id"]))
+        self.app.router.add_post('/api/message/post', self.handle_ipc_request('post_message', ["channel_id", "content"]))
+        self.app.router.add_post('/api/message/reply', self.handle_ipc_request('reply_message', ["channel_id", "message_id", "content"]))
+        self.app.router.add_post('/api/message/edit', self.handle_ipc_request('edit_message', ["channel_id", "message_id", "content"]))
+        self.app.router.add_post('/api/message/react', self.handle_ipc_request('react_message', ["channel_id", "message_id", "emoji"]))
+        self.app.router.add_post('/api/message/get', self.handle_ipc_request('get_message', ["channel_id", "message_id"]))
+        self.app.router.add_post('/api/thread/create', self.handle_ipc_request('create_thread', ["channel_id", "name", "content"]))
+        
+        # Schedule cron is a special case since it interacts with the scheduler
+        self.app.router.add_post('/api/schedule/cron', self.handle_schedule_cron)
+        
+        # Additional IPC routes migrated from discord/ipc_server
+        self.app.router.add_post('/api/status/update', self.handle_status_update)
+        self.app.router.add_post('/api/test/invoke', self.handle_test_invoke)
         
         # Track connected frontend clients
         self.dashboard_clients = set()
@@ -83,8 +102,8 @@ class DashboardServer:
             wrapped_app = MCPAuthMiddleware(starlette_app)
             
             cfg = uvicorn.Config(wrapped_app, host="0.0.0.0", port=8081, log_level="warning")
-            server = uvicorn.Server(cfg)
-            await server.serve()
+            self.uvicorn_server = uvicorn.Server(cfg)
+            await self.uvicorn_server.serve()
         except Exception as e:
             logger.error("FastMCP SSE server crashed", error=str(e))
 
@@ -193,7 +212,8 @@ class DashboardServer:
             self.config.platform = data["platform"]
         if "agent" in data:
             if not hasattr(self.config, "agent"):
-                class AgentConfig: pass
+                class AgentConfig:
+                    pass
                 self.config.agent = AgentConfig()
             if "model" in data["agent"]:
                 self.config.agent.model = data["agent"]["model"]
@@ -229,7 +249,22 @@ class DashboardServer:
             if f.endswith(".md"):
                 files.append(f)
         return web.json_response({"rules": sorted(files)})
-        
+
+    async def handle_bot_conversations(self, request):
+        if not self.db:
+            return web.json_response({"error": "Database not available"}, status=500)
+            
+        async with self.db._conn.execute(
+            """
+            SELECT context_platform, context_channel, context_thread, MAX(created_at) as last_active, COUNT(id) as message_count
+            FROM conversations
+            GROUP BY context_platform, context_channel, context_thread
+            ORDER BY last_active DESC
+            """
+        ) as cursor:
+            rows = await cursor.fetchall()
+            return web.json_response({"conversations": [dict(row) for row in rows]})
+
     async def handle_rules_post(self, request):
         rules_dir = os.path.expanduser("~/.gemini/rules")
         if not os.path.exists(rules_dir):
@@ -367,10 +402,8 @@ class DashboardServer:
 
     async def handle_chats(self, request):
         # Return all unique contexts from the conversations table by doing a group by
-        db = self.config.db if hasattr(self.config, 'db') else None
         
         # We need a reference to DB. Let's see if we can get it from the globally injected db or router
-        from ganymede.core.agent_manager import AgentManager
         
         # We will just fetch directly from DB if available, else return empty
         # Wait, the DashboardServer doesn't have db injected in __init__ currently.
@@ -524,7 +557,8 @@ class DashboardServer:
                 try:
                     with open(transcript_path, 'r') as f:
                         for line in f:
-                            if not line.strip(): continue
+                            if not line.strip():
+                                continue
                             try:
                                 data = json.loads(line)
                             except Exception:
@@ -628,7 +662,8 @@ class DashboardServer:
         if os.path.exists(agy_brain_dir):
             for root, dirs, files in os.walk(agy_brain_dir):
                 # Optionally exclude logs
-                if ".system_generated" in root: continue
+                if ".system_generated" in root:
+                    continue
                 for file in files:
                     full_path = os.path.join(root, file)
                     rel_path = os.path.relpath(full_path, agy_brain_dir)
@@ -861,13 +896,13 @@ class DashboardServer:
                 channel_id = parts[1]
                 thread_id = parts[2] if parts[2] != 'main' else None
                 async with aiosqlite.connect(db_path) as conn:
-                    content = f"⚙️ *Administrator updated project settings:*"
+                    content = "⚙️ *Administrator updated project settings:*"
                     if model_override:
                         content += f"\n- **Model**: `{model_override}`"
                     if project_name:
                         content += f"\n- **Project Name**: `{project_name}`"
                     if not model_override and not project_name:
-                        content += f"\n- Restored to defaults."
+                        content += "\n- Restored to defaults."
                         
                     await conn.execute(
                         """
@@ -916,12 +951,178 @@ class DashboardServer:
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, '0.0.0.0', port, reuse_address=True, reuse_port=True)
         await self.site.start()
+        
+        try:
+            from ganymede.config import get_default_data_dir
+            self.rpc_port_path = os.path.join(get_default_data_dir(), "rpc_port.txt")
+            with open(self.rpc_port_path, "w") as f:
+                f.write(str(port))
+        except Exception as e:
+            logger.error("Failed to write rpc_port.txt", error=str(e))
+            
         logger.info("Starting internal MCP SSE Server on http://0.0.0.0:8081")
         self.mcp_task = asyncio.create_task(self.start_mcp_server())
 
     async def stop(self):
-        if self.mcp_task:
+        if hasattr(self, 'rpc_port_path') and os.path.exists(self.rpc_port_path):
+            try:
+                os.remove(self.rpc_port_path)
+            except Exception:
+                pass
+                
+        if hasattr(self, 'uvicorn_server') and self.uvicorn_server:
+            self.uvicorn_server.should_exit = True
+            if self.mcp_task:
+                try:
+                    await self.mcp_task
+                except Exception:
+                    pass
+        elif self.mcp_task:
             self.mcp_task.cancel()
+            
         if self.runner:
             logger.info("Stopping Ganymede dashboard")
             await self.runner.cleanup()
+
+    # --- IPC API Router Implementation ---
+    
+    def _get_provider_adapter(self, platform: str):
+        for provider in getattr(self, "providers", []):
+            provider_platform = getattr(provider.config, "platform", "discord").lower()
+            if provider_platform == platform.lower():
+                return getattr(provider, "adapter", None)
+        return None
+
+    def handle_ipc_request(self, method_name: str, required_args: list[str]):
+        async def handler(request: web.Request) -> web.Response:
+            try:
+                data = await request.json()
+                platform = data.get("platform", "discord")
+                
+                adapter = self._get_provider_adapter(platform)
+                if not adapter:
+                    return web.json_response({"error": f"Provider adapter for platform '{platform}' not found or not running."}, status=404)
+                    
+                method = getattr(adapter, method_name, None)
+                if not method:
+                    return web.json_response({"error": f"Method {method_name} not implemented for platform '{platform}'."}, status=501)
+                    
+                kwargs = {k: data[k] for k in required_args if k in data}
+                
+                # Special cases for optional arguments
+                if method_name == 'create_thread' and 'content' in data:
+                    kwargs['content'] = data['content']
+                elif method_name == 'create_thread' and 'content' not in data:
+                    kwargs['content'] = ""
+
+                result = await method(**kwargs)
+                
+                if isinstance(result, list):
+                    return web.json_response({"messages": result})
+                elif isinstance(result, dict):
+                    return web.json_response(result)
+                else:
+                    return web.json_response({"status": "ok", "data": result})
+                    
+            except Exception as e:
+                logger.error(f"IPC Server error on {method_name}", error=str(e))
+                return web.json_response({"error": str(e)}, status=500)
+        return handler
+
+    async def handle_schedule_cron(self, request: web.Request) -> web.Response:
+        data = await request.json()
+        platform = data.get("platform", "discord")
+        cron_expr = data.get("cron_expr")
+        prompt = data.get("prompt")
+        channel_id = data.get("channel_id")
+        
+        if not all([cron_expr, prompt, channel_id]):
+            return web.json_response({"error": "Missing cron_expr, prompt, or channel_id"}, status=400)
+            
+        for provider in getattr(self, "providers", []):
+            provider_platform = getattr(provider.config, "platform", "discord").lower()
+            if provider_platform == platform.lower() and hasattr(provider, "scheduler"):
+                import uuid
+                from ganymede.core import ContextKey
+                job_id = str(uuid.uuid4())
+                context = ContextKey(platform, str(channel_id), None)
+                try:
+                    await provider.scheduler.add_cron_job(job_id, context, "system", cron_expr, prompt)
+                    return web.json_response({"job_id": job_id, "status": "scheduled"})
+                except Exception as e:
+                    return web.json_response({"error": str(e)}, status=500)
+                    
+        return web.json_response({"error": f"Scheduler not found for platform '{platform}'."}, status=501)
+
+    async def handle_status_update(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            conversation_id = data.get("conversation_id")
+            tool_name = data.get("tool_name")
+            tool_args = data.get("tool_args", {})
+            platform = data.get("platform", "discord")
+            
+            if not conversation_id or not tool_name:
+                return web.json_response({"error": "Missing conversation_id or tool_name"}, status=400)
+                
+            adapter = self._get_provider_adapter(platform)
+            if adapter and hasattr(adapter, "update_streaming_status"):
+                # We need context key to update streaming status
+                from ganymede.core import ContextKey
+                import re
+                
+                # Best effort context recovery
+                channel_id = None
+                match = re.search(r"_(\d{17,20})$", conversation_id)
+                if match:
+                    channel_id = match.group(1)
+                
+                if channel_id:
+                    context = ContextKey(platform, channel_id, None)
+                    from ganymede.core.status import format_tool_status
+                    status_text = format_tool_status(tool_name, tool_args)
+                    await adapter.update_streaming_status(context, status_text)
+                    
+            return web.json_response({"status": "ok"})
+        except Exception as e:
+            logger.error("Failed to process status update request", error=str(e))
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def handle_test_invoke(self, request: web.Request) -> web.Response:
+        """Simulate an incoming message for testing purposes."""
+        try:
+            data = await request.json()
+            platform = data.get("platform", "discord")
+            channel_id = data.get("channel_id")
+            content = data.get("content")
+            author_id = data.get("author_id", "test_user_id")
+            author_name = data.get("author_name", "TestUser")
+            
+            if not channel_id or not content:
+                return web.json_response({"error": "Missing channel_id or content"}, status=400)
+                
+            adapter = self._get_provider_adapter(platform)
+            if not adapter or not hasattr(adapter, "_on_message_callback") or not adapter._on_message_callback:
+                return web.json_response({"error": "Adapter missing _on_message_callback"}, status=500)
+                
+            from ganymede.core import ContextKey
+            from ganymede.core.models import PlatformMessage
+            
+            context = ContextKey(platform=platform, channel_id=str(channel_id), thread_id=None)
+            normalized = PlatformMessage(
+                context=context,
+                author_id=str(author_id),
+                author_name=author_name,
+                content=content,
+                is_bot=False,
+                mentions_us=True,
+                attachments=[],
+                reply_to=None,
+                raw=None
+            )
+            
+            asyncio.create_task(adapter._on_message_callback(normalized))
+            return web.json_response({"status": "invoked", "channel_id": channel_id})
+        except Exception as e:
+            logger.error("Failed to process test invoke", error=str(e))
+            return web.json_response({"error": str(e)}, status=500)

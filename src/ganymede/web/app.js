@@ -256,27 +256,68 @@ document.addEventListener("DOMContentLoaded", () => {
         const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
         const views = document.querySelectorAll('.view-section');
 
-        navItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                
-                // Remove active class from all nav items
-                navItems.forEach(nav => nav.classList.remove('is-active'));
-                
-                // Add active class to clicked item
-                e.target.classList.add('is-active');
-                
-                // Hide all views
-                views.forEach(view => view.classList.add('is-hidden'));
-                
-                // Show target view
-                const targetId = e.target.getAttribute('data-target');
-                const targetView = document.getElementById(targetId);
-                if (targetView) {
-                    targetView.classList.remove('is-hidden');
+        function handleRoute() {
+            let hash = window.location.hash;
+            if (!hash) {
+                hash = '#view-dashboard';
+                // Don't replace state, just let it fall through
+            }
+            
+            // Extract the base view id (e.g., #view-bots?botId=xxx -> view-bots)
+            let targetId = hash.substring(1).split('?')[0];
+            if (!document.getElementById(targetId)) {
+                targetId = 'view-dashboard';
+            }
+            
+            // Remove active class from all nav items
+            navItems.forEach(nav => nav.classList.remove('is-active'));
+            
+            // Add active class to clicked item (match by data-target)
+            const activeNav = document.querySelector(`.sidebar-nav .nav-item[data-target="${targetId}"]`);
+            if (activeNav) activeNav.classList.add('is-active');
+            
+            // Hide all views
+            views.forEach(view => view.classList.add('is-hidden'));
+            
+            // Show target view
+            const targetView = document.getElementById(targetId);
+            if (targetView) {
+                targetView.classList.remove('is-hidden');
+            }
+            
+            // Trigger specific actions based on the view
+            if (targetId === 'view-bots') {
+                loadBots();
+            } else if (targetId === 'view-chats') {
+                const params = new URLSearchParams(hash.split('?')[1] || '');
+                if (params.has('chat') && window.selectChatById) {
+                    window.selectChatById(params.get('chat'));
                 }
-            });
-        });
+                if (params.has('tab') && window.selectChatTab) {
+                    window.selectChatTab(params.get('tab'));
+                } else if (window.selectChatTab) {
+                    window.selectChatTab('chat');
+                }
+            } else if (targetId === 'view-bot-detail') {
+                const params = new URLSearchParams(hash.split('?')[1] || '');
+                const botId = params.get('id');
+                if (botId) {
+                    loadBotDetails(botId);
+                }
+            } else if (targetId === 'view-settings') {
+                const params = new URLSearchParams(hash.split('?')[1] || '');
+                if (params.has('tab') && window.selectSettingsTab) {
+                    window.selectSettingsTab(params.get('tab'));
+                } else if (window.selectSettingsTab) {
+                    window.selectSettingsTab('global');
+                }
+            }
+        }
+
+        window.addEventListener('hashchange', handleRoute);
+        
+        // Initial route handling
+        handleRoute();
     }
 
     function setupPanes() {
@@ -335,62 +376,74 @@ document.addEventListener("DOMContentLoaded", () => {
         makeResizable(olympusSidebar, handleMain);
     }
     
-    function setupChatTabs() {
+    window.selectChatTab = function(target) {
+        if (!target) target = 'chat';
         const tabList = document.querySelectorAll('#chat-tabs-container li');
         const viewChat = document.getElementById('chat-history');
         const viewSettings = document.getElementById('chat-settings-view');
         const viewRules = document.getElementById('chat-rules-view');
         const viewInput = document.getElementById('chat-input-area');
         
+        tabList.forEach(t => t.classList.remove('is-active'));
+        const activeTab = document.querySelector(`#chat-tabs-container li[data-tab="${target}"]`);
+        if (activeTab) activeTab.classList.add('is-active');
+        
+        viewChat.classList.add('is-hidden');
+        viewInput.classList.add('is-hidden');
+        viewSettings.classList.add('is-hidden');
+        viewRules.classList.add('is-hidden');
+        
+        if (target === 'chat') {
+            viewChat.classList.remove('is-hidden');
+            viewInput.classList.remove('is-hidden');
+        } else if (target === 'settings') {
+            viewSettings.classList.remove('is-hidden');
+        } else if (target === 'rules') {
+            viewRules.classList.remove('is-hidden');
+        }
+    };
+
+    function setupChatTabs() {
+        const tabList = document.querySelectorAll('#chat-tabs-container li');
         tabList.forEach(tab => {
             tab.addEventListener('click', () => {
-                tabList.forEach(t => t.classList.remove('is-active'));
-                tab.classList.add('is-active');
-                
                 const target = tab.dataset.tab;
-                if (target === 'chat') {
-                    viewChat.classList.remove('is-hidden');
-                    viewInput.classList.remove('is-hidden');
-                    viewSettings.classList.add('is-hidden');
-                    viewRules.classList.add('is-hidden');
-                } else if (target === 'settings') {
-                    viewChat.classList.add('is-hidden');
-                    viewInput.classList.add('is-hidden');
-                    viewSettings.classList.remove('is-hidden');
-                    viewRules.classList.add('is-hidden');
-                } else if (target === 'rules') {
-                    viewChat.classList.add('is-hidden');
-                    viewInput.classList.add('is-hidden');
-                    viewSettings.classList.add('is-hidden');
-                    viewRules.classList.remove('is-hidden');
-                }
+                const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+                params.set('tab', target);
+                window.location.hash = `#view-chats?${params.toString()}`;
             });
         });
     }
 
-    function setupSettingsTabs() {
+    window.selectSettingsTab = function(target) {
+        if (!target) target = 'global';
         const tabList = document.querySelectorAll('#settings-tabs-container li');
         const viewGlobal = document.getElementById('settings-global-view');
         const viewRules = document.getElementById('settings-rules-view');
         const viewRaw = document.getElementById('settings-raw-view');
         
+        tabList.forEach(t => t.classList.remove('is-active'));
+        const activeTab = document.querySelector(`#settings-tabs-container li[data-tab="${target}"]`);
+        if (activeTab) activeTab.classList.add('is-active');
+        
+        viewGlobal.classList.add('is-hidden');
+        viewRules.classList.add('is-hidden');
+        viewRaw.classList.add('is-hidden');
+        
+        if (target === 'global') {
+            viewGlobal.classList.remove('is-hidden');
+        } else if (target === 'rules') {
+            viewRules.classList.remove('is-hidden');
+        } else if (target === 'raw') {
+            viewRaw.classList.remove('is-hidden');
+        }
+    };
+
+    function setupSettingsTabs() {
+        const tabList = document.querySelectorAll('#settings-tabs-container li');
         tabList.forEach(tab => {
             tab.addEventListener('click', () => {
-                tabList.forEach(t => t.classList.remove('is-active'));
-                tab.classList.add('is-active');
-                
-                const target = tab.dataset.tab;
-                viewGlobal.classList.add('is-hidden');
-                viewRules.classList.add('is-hidden');
-                viewRaw.classList.add('is-hidden');
-                
-                if (target === 'global') {
-                    viewGlobal.classList.remove('is-hidden');
-                } else if (target === 'rules') {
-                    viewRules.classList.remove('is-hidden');
-                } else if (target === 'raw') {
-                    viewRaw.classList.remove('is-hidden');
-                }
+                window.location.hash = `#view-settings?tab=${tab.dataset.tab}`;
             });
         });
     }
@@ -416,6 +469,41 @@ document.addEventListener("DOMContentLoaded", () => {
     
     document.getElementById('project-search').addEventListener('input', applyChatSearch);
     
+    window.selectChatById = function(chatId) {
+        if (!chatId) return;
+        
+        let targetChat = null;
+        for (const platform in chatGroups) {
+            const found = chatGroups[platform].find(c => c.id === chatId);
+            if (found) {
+                targetChat = found;
+                break;
+            }
+        }
+        
+        if (!targetChat) return;
+        
+        document.querySelectorAll('#chat-list a').forEach(el => {
+            if (el.getAttribute('href') === `#view-chats?chat=${chatId}`) {
+                el.classList.add('is-active');
+            } else {
+                el.classList.remove('is-active');
+            }
+        });
+        
+        const displayName = targetChat.project_name || `${targetChat.platform}-${targetChat.channel_id}${targetChat.thread_id ? `-${targetChat.thread_id}` : ''}`;
+        currentChatId = targetChat.id;
+        document.getElementById('chat-title').textContent = displayName;
+        document.getElementById('chat-subtitle').textContent = `Platform: ${targetChat.platform} | Channel: ${targetChat.channel_id} | AGY ID: ${targetChat.actual_conv_id}`;
+        document.getElementById('btn-export-chat').classList.remove('is-hidden');
+        document.getElementById('btn-fork-chat').classList.remove('is-hidden');
+        document.getElementById('btn-view-artifacts').classList.remove('is-hidden');
+        document.getElementById('btn-merge-context').classList.remove('is-hidden');
+        loadChatHistory(targetChat.id);
+        fetchChatFiles(targetChat.id);
+        fetchChatSettings(targetChat.id);
+    };
+
     function renderChats(chatsToRender) {
         const chatList = document.getElementById('chat-list');
         chatList.innerHTML = '';
@@ -423,6 +511,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const li = document.createElement('li');
             const a = document.createElement('a');
             a.className = "is-flex is-justify-content-space-between is-align-items-center";
+            a.href = `#view-chats?chat=${chat.id}`;
             const displayName = chat.project_name || `${chat.platform}-${chat.channel_id}${chat.thread_id ? `-${chat.thread_id}` : ''}`;
             a.innerHTML = `
                 <div class="is-flex is-flex-direction-column" style="width: 100%;">
@@ -443,22 +532,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (currentChatId === chat.id) {
                 a.classList.add('is-active');
             }
-            
-            a.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.querySelectorAll('#chat-list a').forEach(el => el.classList.remove('is-active'));
-                a.classList.add('is-active');
-                currentChatId = chat.id;
-                document.getElementById('chat-title').textContent = displayName;
-                document.getElementById('chat-subtitle').textContent = `Platform: ${chat.platform} | Channel: ${chat.channel_id} | AGY ID: ${chat.actual_conv_id}`;
-                document.getElementById('btn-export-chat').classList.remove('is-hidden');
-                document.getElementById('btn-fork-chat').classList.remove('is-hidden');
-                document.getElementById('btn-view-artifacts').classList.remove('is-hidden');
-                document.getElementById('btn-merge-context').classList.remove('is-hidden');
-                loadChatHistory(chat.id);
-                fetchChatFiles(chat.id);
-                fetchChatSettings(chat.id);
-            });
             
             li.appendChild(a);
             chatList.appendChild(li);
@@ -1101,3 +1174,124 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 30000);
     setInterval(fetchChats, 10000);
 });
+
+    async function loadBots() {
+        try {
+            const res = await fetch('/api/status');
+            if (res.ok) {
+                const data = await res.json();
+                const botName = data.bot_info?.bot_name || 'Ganymede';
+                document.getElementById('bot-card-name').textContent = botName;
+                document.getElementById('bot-card-id').textContent = 'Primary Gateway';
+                document.getElementById('bot-card-platform').textContent = data.config?.platform || 'Local/Discord';
+                
+                // Set the link to bot details
+                const btnView = document.getElementById('primary-bot-card').querySelector('button.is-info');
+                if (btnView) {
+                    btnView.onclick = () => window.location.hash = '#view-bot-detail?id=' + encodeURIComponent(botName);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load bots info', e);
+        }
+    }
+
+    async function loadBotDetails(botId) {
+        // Load the system prompt and mission from config
+        try {
+            const configRes = await fetch('/api/config');
+            if (configRes.ok) {
+                const configData = await configRes.json();
+                document.getElementById('bot-detail-name').textContent = configData.agent?.name || botId || 'Ganymede';
+                document.getElementById('bot-system-prompt').value = configData.agent?.system_instructions || '';
+            }
+            
+            // Load conversations
+            const convRes = await fetch('/api/chats');
+            if (convRes.ok) {
+                const chatsData = await convRes.json();
+                const list = document.getElementById('bot-conversations-list');
+                list.innerHTML = '';
+                
+                if (chatsData.length === 0) {
+                    list.innerHTML = '<tr><td colspan="4" class="has-text-centered has-text-grey">No conversations found.</td></tr>';
+                } else {
+                    chatsData.forEach(conv => {
+                        const tr = document.createElement('tr');
+                        
+                        let dateStr = 'Unknown';
+                        if (conv.last_active) {
+                            if (typeof conv.last_active === 'number') {
+                                dateStr = new Date(conv.last_active * 1000).toLocaleString();
+                            } else {
+                                dateStr = new Date(conv.last_active + (conv.last_active.endsWith('Z') ? '' : 'Z')).toLocaleString();
+                            }
+                        }
+                        
+                        tr.innerHTML = `
+                            <td>${conv.project_name || conv.platform}</td>
+                            <td><span class="tag is-light is-small">${conv.id}</span></td>
+                            <td class="is-size-7">${dateStr}</td>
+                            <td><a href="#view-chats?chat=${encodeURIComponent(conv.id)}" class="button is-small is-light">View</a></td>
+                        `;
+                        list.appendChild(tr);
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load bot details', e);
+        }
+    }
+
+    document.getElementById('btn-save-bot-prompt').addEventListener('click', async () => {
+        const prompt = document.getElementById('bot-system-prompt').value;
+        const btn = document.getElementById('btn-save-bot-prompt');
+        btn.classList.add('is-loading');
+        
+        try {
+            // First fetch existing config to preserve other fields
+            const configRes = await fetch('/api/config');
+            let data = {};
+            if (configRes.ok) {
+                data = await configRes.json();
+            }
+            
+            if (!data.agent) data.agent = {};
+            data.agent.system_instructions = prompt;
+            
+            const res = await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            
+            if (res.ok) {
+                btn.classList.remove('is-info', 'is-loading');
+                btn.classList.add('is-success');
+                btn.textContent = 'Saved!';
+                setTimeout(() => {
+                    btn.classList.remove('is-success');
+                    btn.classList.add('is-info');
+                    btn.textContent = 'Save Prompt';
+                }, 2000);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Failed to save prompt');
+            btn.classList.remove('is-loading');
+        }
+    });
+
+    // Add search listener for bot conversations
+    document.getElementById('bot-conversations-search').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#bot-conversations-list tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
