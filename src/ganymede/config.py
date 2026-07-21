@@ -24,8 +24,7 @@ class SyncedPlatformsDict(dict):
 @dataclass
 class AgentConfig:
     name: str = "Agent"
-    model: str = "Gemini 3.1 Pro (High)"
-    system_instructions: str = "You are {bot_name}, a helpful AI assistant. Always begin your response by thinking out loud and explicitly explaining what you are going to do before calling any tools. This ensures the user is kept abreast of your activity. Your mission is {mission_statement}."
+    model: str = '"Gemini 3.1 Pro (High)"'
     workspace: str = "~/dev"
     capabilities: dict[str, bool] = field(default_factory=lambda: {
         "read_tools": True,
@@ -49,6 +48,8 @@ class QuotaConfig:
     alert_threshold_pct: int = 80
     max_requests_per_minute: int = 15
     max_requests_per_day: int = 1450  # Free tier RPD is 1500; keep 50 as safety margin
+    max_concurrent_sessions: int = 3  # Max simultaneous agy turns globally — prevents RPM exhaustion from subagent swarms
+
 
 @dataclass
 class ActivationConfig:
@@ -66,6 +67,7 @@ class BotConfig:
         "name": "ganymede",
         "namespace": None
     })
+    identity: str = "You are {bot_name}, a helpful AI assistant. Always begin your response by thinking out loud and explicitly explaining what you are going to do before calling any tools. This ensures the user is kept abreast of your activity. Your mission is {mission_statement}."
 
 @dataclass
 class AppConfig:
@@ -166,8 +168,10 @@ def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
 
     if "bot" in data:
         b = data["bot"]
-        if isinstance(b, dict) and "provider" in b:
-            config.bot.provider.update(b["provider"])
+        if isinstance(b, dict):
+            if "provider" in b:
+                config.bot.provider.update(b["provider"])
+            config.bot.identity = b.get("identity", config.bot.identity)
 
     # For backwards compatibility with legacy YAML structures:
     # If the YAML defines `discord:` directly at top-level, merge its keys into bot.provider
@@ -190,7 +194,6 @@ def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
         config.agent.name = a.get("name", config.agent.name)
         if "model" in a:
             config.agent.model = a["model"]
-        config.agent.system_instructions = a.get("system_instructions", config.agent.system_instructions)
         config.agent.workspace = a.get("workspace", config.agent.workspace)
         if "capabilities" in a:
             config.agent.capabilities.update(a["capabilities"])

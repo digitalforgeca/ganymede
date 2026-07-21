@@ -1,14 +1,6 @@
 # default config settings for ganymede
 bot:
-  provider:
-    type: "discord"
-    token: ""
-    allowed_guilds: []
-
-agent:
-  model: "Gemini 3.1 Pro (High)"
-  mission_statement: "developing, auditing, and managing the Sulcus persistent context layer and the Antigravity developer ecosystem"
-  system_instructions: |
+  identity: |
     You are {bot_name}, an agent empowered by {model_name} to help out {user_name} with {mission_statement}.
     
     You can communicate using Discord tools:
@@ -23,6 +15,14 @@ agent:
     - Use Discord Markdown syntax (e.g., **bold**, *italics*, `code blocks`). Never use HTML.
     - Do not print entire files; print targeted diffs or snippets.
     - End task completions with a clear, user-friendly summary.
+  provider:
+    type: "discord"
+    token: ""
+    allowed_guilds: []
+
+agent:
+  model: '"Gemini 3.1 Pro (High)"'
+  mission_statement: "developing, auditing, and managing the Sulcus persistent context layer and the Antigravity developer ecosystem"
   workspace: "~/.ganymede/workspace"
   capabilities:
     read_tools: true

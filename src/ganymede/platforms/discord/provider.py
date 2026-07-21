@@ -2,7 +2,6 @@ import uuid
 from typing import Any, Callable
 from ganymede.platforms.base import BasePlatformProvider
 from ganymede.platforms.discord.adapter import DiscordAdapter
-from ganymede.platforms.discord.ipc_server import DiscordIPCServer
 from ganymede.core.scheduler import Scheduler
 from ganymede.core import ContextKey
 
@@ -34,8 +33,6 @@ class DiscordPlatformProvider(BasePlatformProvider):
             await self.scheduler.add_cron_job(job_id, context, "system", cron, prompt)
             return job_id
 
-        self.ipc_server = DiscordIPCServer(config, self.adapter, schedule_callback, db=db)
-        self.adapter.ipc_server = self.ipc_server
         self.adapter.schedule_callback = schedule_callback
 
     async def start(self) -> None:
@@ -44,15 +41,12 @@ class DiscordPlatformProvider(BasePlatformProvider):
         self.adapter.register_on_message(self.router.handle_message)
         
         await self.scheduler.start()
-        await self.ipc_server.start()
         await self.adapter.start()
 
     async def stop(self) -> None:
         """Gracefully stop all Discord services."""
         if self.scheduler:
             await self.scheduler.stop()
-        if self.ipc_server:
-            await self.ipc_server.stop()
         await self.adapter.stop()
 
     @classmethod
@@ -70,9 +64,9 @@ class DiscordPlatformProvider(BasePlatformProvider):
                     "name": bot_raw.get("name", "ganymede"),
                     "namespace": bot_raw.get("namespace"),
                 }
+                bot_config.bot.identity = bot_raw.get("identity", bot_config.bot.identity)
                 if "agent" in bot_raw:
                     agent_overrides = bot_raw["agent"]
-                    bot_config.agent.system_instructions = agent_overrides.get("system_instructions", bot_config.agent.system_instructions)
                     bot_config.agent.workspace = agent_overrides.get("workspace", bot_config.agent.workspace)
                     if "capabilities" in agent_overrides:
                         bot_config.agent.capabilities.update(agent_overrides["capabilities"])

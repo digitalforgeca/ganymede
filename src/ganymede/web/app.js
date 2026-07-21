@@ -893,7 +893,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 if (data.agent) {
                     if (globalModelSelect) globalModelSelect.value = data.agent.model || "";
-                    if (globalSystemInstructions) globalSystemInstructions.value = data.agent.system_instructions || "";
+                    if (globalSystemInstructions) globalSystemInstructions.value = data.bot?.identity || "";
                     const globalBotName = document.getElementById('global-bot-name');
                     if (globalBotName) globalBotName.value = data.agent.name || "Agent";
                     const globalMissionStatement = document.getElementById('global-mission-statement');
@@ -951,7 +951,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (modelVal) loadedConfig.agent.model = modelVal;
                 else delete loadedConfig.agent.model;
                 
-                loadedConfig.agent.system_instructions = globalSystemInstructions.value;
+                if (!loadedConfig.bot) loadedConfig.bot = {};
+                loadedConfig.bot.identity = globalSystemInstructions.value;
                 
                 const globalBotName = document.getElementById('global-bot-name');
                 if (globalBotName && globalBotName.value) {
@@ -1203,7 +1204,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (configRes.ok) {
                 const configData = await configRes.json();
                 document.getElementById('bot-detail-name').textContent = configData.agent?.name || botId || 'Ganymede';
-                document.getElementById('bot-system-prompt').value = configData.agent?.system_instructions || '';
+                document.getElementById('bot-system-prompt').value = configData.bot?.identity || '';
             }
             
             // Load conversations
@@ -1256,8 +1257,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 data = await configRes.json();
             }
             
-            if (!data.agent) data.agent = {};
-            data.agent.system_instructions = prompt;
+            if (!data.bot) data.bot = {};
+            data.bot.identity = prompt;
             
             const res = await fetch('/api/config', {
                 method: 'POST',

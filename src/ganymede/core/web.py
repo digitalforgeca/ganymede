@@ -219,10 +219,11 @@ class DashboardServer:
                 self.config.agent.model = data["agent"]["model"]
             if "name" in data["agent"]:
                 self.config.agent.name = data["agent"]["name"]
-            if "system_instructions" in data["agent"]:
-                self.config.agent.system_instructions = data["agent"]["system_instructions"]
             if "mission_statement" in data["agent"]:
                 self.config.agent.mission_statement = data["agent"]["mission_statement"]
+        if "bot" in data:
+            if "identity" in data["bot"]:
+                self.config.bot.identity = data["bot"]["identity"]
                 
         config_path = os.path.expanduser("~/.ganymede/config.yaml")
         try:

@@ -298,7 +298,8 @@ class ManagedAgent:
         if getattr(self, "ipc_port", None):
             subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
-        import fcntl, termios
+        import fcntl
+        import termios
         def _setup_ctty():
             os.setsid()
             fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
@@ -370,8 +371,8 @@ class ManagedAgent:
             is_new = not os.path.exists(os.path.join(db_dir, f"{self.sdk_conversation_id}.db"))
             
             final_prompt = prompt
-            if is_new and hasattr(self.config.agent, "system_instructions") and self.config.agent.system_instructions:
-                sys_inst = self.config.agent.system_instructions.replace("{bot_name}", self.bot_namespace)
+            if is_new and hasattr(self.config.bot, "identity") and self.config.bot.identity:
+                sys_inst = self.config.bot.identity.replace("{bot_name}", self.bot_namespace)
                 sys_inst = sys_inst.replace("{model_name}", self.config.agent.model)
                 mission = getattr(self.config.agent, "mission_statement", "to be of help")
                 sys_inst = sys_inst.replace("{mission_statement}", mission)
