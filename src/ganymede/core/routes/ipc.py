@@ -56,7 +56,7 @@ async def handle_schedule_cron(server, request: web.Request) -> web.Response:
     if not all([cron_expr, prompt, channel_id]):
         return web.json_response({"error": "Missing cron_expr, prompt, or channel_id"}, status=400)
         
-    for provider in getattr(self, "providers", []):
+    for provider in getattr(server, "providers", []):
         provider_platform = getattr(provider.config, "platform", "discord").lower()
         if provider_platform == platform.lower() and hasattr(provider, "scheduler"):
             import uuid

@@ -25569,3 +25569,574 @@ RuntimeError: Event loop is closed
 /opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/threading.py:1047: RuntimeWarning: coroutine 'DiscordWebSocket.send_heartbeat' was never awaited
   self._invoke_excepthook(self)
 RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+2026-07-22 16:34:17 [VALIDATION] Commencing Ganymede environment validation...
+2026-07-22 16:34:17 [VALIDATION] Checking for Antigravity (agy) CLI...
+2026-07-22 16:34:17 [VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+2026-07-22 16:34:17 [VALIDATION] Checking for Chalice telemetry plugin...
+2026-07-22 16:34:17 [VALIDATION]  ✓ Chalice plugin is installed and ready.
+2026-07-22 16:34:17 [VALIDATION] Chain validation complete. Proceeding to boot gateway...
+2026-07-22 16:34:17 [INFO] ganymede.cli: 2026-07-22 23:34:17 [info     ] Initializing ganymede bridge   [ganymede.cli] log_level=INFO
+2026-07-22 16:34:17 [INFO] ganymede.core.db: 2026-07-22 23:34:17 [info     ] Database initialized successfully [ganymede.core.db] path=/Users/mcdoolz/.ganymede/data/ganymede.db
+2026-07-22 16:34:17 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-07-22 16:34:17 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-07-22 16:34:17 [INFO] ganymede.cli: 2026-07-22 23:34:17 [info     ] Registered Ganymede SSE MCP server globally [ganymede.cli] url=http://127.0.0.1:8180/mcp
+Traceback (most recent call last):
+  File "/opt/homebrew/bin/ganymede", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/cli.py", line 376, in main
+    asyncio.run(run(config))
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/cli.py", line 258, in run
+    await dashboard.start()
+          ^^^^^^^^^^^^^^^
+AttributeError: 'DashboardServer' object has no attribute 'start'
+2026-07-22 16:40:45 [VALIDATION] Commencing Ganymede environment validation...
+2026-07-22 16:40:45 [VALIDATION] Checking for Antigravity (agy) CLI...
+2026-07-22 16:40:45 [VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+2026-07-22 16:40:45 [VALIDATION] Checking for Chalice telemetry plugin...
+2026-07-22 16:40:45 [VALIDATION]  ✓ Chalice plugin is installed and ready.
+2026-07-22 16:40:45 [VALIDATION] Chain validation complete. Proceeding to boot gateway...
+2026-07-22 16:40:45 [INFO] ganymede.cli: 2026-07-22 23:40:45 [info     ] Initializing ganymede bridge   [ganymede.cli] log_level=INFO
+2026-07-22 16:40:45 [INFO] ganymede.core.db: 2026-07-22 23:40:45 [info     ] Database initialized successfully [ganymede.core.db] path=/Users/mcdoolz/.ganymede/data/ganymede.db
+2026-07-22 16:40:45 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-07-22 16:40:45 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-07-22 16:40:45 [INFO] ganymede.cli: 2026-07-22 23:40:45 [info     ] Registered Ganymede SSE MCP server globally [ganymede.cli] url=http://127.0.0.1:8180/mcp
+2026-07-22 16:40:45 [INFO] ganymede.core.web: 2026-07-22 23:40:45 [info     ] Dashboard started on port 8180 [ganymede.core.web] url=http://localhost:8180
+2026-07-22 16:40:45 [INFO] ganymede.platforms.web.provider: 2026-07-22 23:40:45 [info     ] Starting WebProvider           [ganymede.platforms.web.provider] platform=web
+2026-07-22 16:40:45 [INFO] ganymede.platforms.web.provider: 2026-07-22 23:40:45 [info     ] WebAdapter started             [ganymede.platforms.web.provider]
+2026-07-22 16:40:45 [INFO] ganymede.platforms.web.provider: 2026-07-22 23:40:45 [info     ] Registered web invoke callback with dashboard instance [ganymede.platforms.web.provider]
+2026-07-22 16:40:45 [INFO] ganymede.core.scheduler: 2026-07-22 23:40:45 [info     ] APScheduler started in background. [ganymede.core.scheduler]
+2026-07-22 16:40:45 [INFO] ganymede.platforms.discord.adapter: 2026-07-22 23:40:45 [info     ] Connecting to Discord...       [ganymede.platforms.discord.adapter]
+2026-07-22 16:40:47 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:47 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:47 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:47 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:47 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:47 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:48 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:48 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:48 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:48 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:48 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:48 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:48 [INFO] ganymede.platforms.discord.adapter: 2026-07-22 23:40:48 [info     ] Bot is ready and connected     [ganymede.platforms.discord.adapter] id=1480323231847158131 user=Icarus#5182
+2026-07-22 16:40:49 [INFO] ganymede.platforms.discord.adapter: 2026-07-22 23:40:49 [info     ] Slash command tree synced successfully. [ganymede.platforms.discord.adapter]
+2026-07-22 16:40:53 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:53 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:53 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:53 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/dashboard.py", line 36, in handle_status
+    if getattr(self, "providers", None):
+               ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:53 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:53 -0700] "GET /api/status HTTP/1.1" 500 246 "-" "curl/8.7.1"
+2026-07-22 16:40:53 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:53 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:53 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:53 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:53 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:53 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:53 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:53 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:53 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:58 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:58 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:58 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:58 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:58 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:58 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:58 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:58 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:58 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:40:58 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:40:58 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:40:58 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:04 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:04 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:04 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:04 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/dashboard.py", line 36, in handle_status
+    if getattr(self, "providers", None):
+               ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:04 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:04 -0700] "GET /api/status HTTP/1.1" 500 246 "-" "curl/8.7.1"
+2026-07-22 16:41:05 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:05 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:05 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:05 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:05 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:05 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:05 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:05 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:05 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:05 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/dashboard.py", line 36, in handle_status
+    if getattr(self, "providers", None):
+               ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:05 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:05 -0700] "GET /api/status HTTP/1.1" 500 246 "http://localhost:8180/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+2026-07-22 16:41:05 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:05 -0700] "GET /api/chats/discord_1523810749804314646_main/files HTTP/1.1" 200 271 "http://localhost:8180/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+2026-07-22 16:41:05 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:05 -0700] "GET /api/chats HTTP/1.1" 200 11207 "http://localhost:8180/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+2026-07-22 16:41:11 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:11 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:11 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:11 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:11 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:11 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:11 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:11 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:11 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:11 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:11 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:11 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:16 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:16 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:16 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:16 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:16 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:16 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:16 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:16 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:16 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:16 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:16 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:16 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:22 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:22 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:22 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:22 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:22 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:22 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:22 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:22 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:22 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:22 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:22 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:22 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:27 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:27 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:27 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:28 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:28 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:28 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:28 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:28 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:28 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:28 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:28 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:28 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:33 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:33 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:33 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:33 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:33 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:33 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:33 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:33 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:33 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:33 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:33 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:33 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"
+2026-07-22 16:41:38 [ERROR] aiohttp.server: Error handling request from 127.0.0.1
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 575, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/aiohttp/web_app.py", line 559, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.0/libexec/lib/python3.11/site-packages/ganymede/core/routes/telemetry.py", line 63, in handle_telemetry_post
+    for listener in getattr(self, "telemetry_listeners", []):
+                            ^^^^
+NameError: name 'self' is not defined
+2026-07-22 16:41:38 [INFO] aiohttp.access: 127.0.0.1 [22/Jul/2026:16:41:38 -0700] "POST /api/telemetry HTTP/1.1" 500 246 "-" "Python-urllib/3.14"

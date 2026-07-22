@@ -33,7 +33,7 @@ async def handle_status(server, request):
     except Exception:
         pass
 
-    if getattr(self, "providers", None):
+    if getattr(server, "providers", None):
         for p in server.providers:
             if hasattr(p, "router") and p.router and p.router.agent_manager:
                 # Query ganymede.db for persistent tokens and requests

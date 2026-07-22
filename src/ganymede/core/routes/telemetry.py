@@ -60,7 +60,7 @@ async def handle_telemetry_post(server, request):
                 await client.send_json(data)
                 
         # Broadcast to internal python listeners
-        for listener in getattr(self, "telemetry_listeners", []):
+        for listener in getattr(server, "telemetry_listeners", []):
             asyncio.create_task(listener(data))
                 
         return web.json_response({"status": "received", "event": data.get("event", "unknown")})
