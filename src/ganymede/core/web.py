@@ -129,6 +129,25 @@ class DashboardServer:
             logger.error("FastMCP SSE server crashed", error=str(e))
 
 
+
+    async def start(self):
+        self.runner = web.AppRunner(self.app)
+        await self.runner.setup()
+        port = getattr(self.config.agent, "dashboard_port", 8180)
+        self.site = web.TCPSite(self.runner, '0.0.0.0', port)
+        await self.site.start()
+        logger.info(f"Dashboard started on port {port}", url=f"http://localhost:{port}")
+        
+        # Start SSE MCP server on 8081 natively
+        self.mcp_task = asyncio.create_task(self.start_mcp_server())
+
+    async def stop(self):
+        if getattr(self, 'mcp_task', None):
+            self.mcp_task.cancel()
+        if getattr(self, 'runner', None):
+            await self.runner.cleanup()
+        logger.info("Dashboard stopped")
+
 from ganymede.core.routes.dashboard import handle_index, handle_status, handle_user_info, handle_dashboard_ws, handle_files
 from ganymede.core.routes.chats import handle_chats, handle_chat_history, handle_chat_files, handle_chat_merge, handle_chat_fork, handle_chat_settings_get, handle_chat_settings_post, handle_chat_invoke
 from ganymede.core.routes.config import handle_config_get, handle_config_post, handle_rules_get, handle_rules_post, handle_rule_delete, handle_bot_conversations, handle_providers_get, handle_bots_get, handle_bot_post, handle_bot_delete
@@ -168,3 +187,4 @@ DashboardServer.handle_ipc_request = handle_ipc_request
 DashboardServer.handle_schedule_cron = handle_schedule_cron
 DashboardServer.handle_status_update = handle_status_update
 DashboardServer.handle_test_invoke = handle_test_invoke
+

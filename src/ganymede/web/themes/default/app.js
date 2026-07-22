@@ -1176,35 +1176,94 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(fetchChats, 10000);
 });
 
+
+    // Global to keep track of current bot in detail view
+    let currentBotDetailId = null;
+
     async function loadBots() {
         try {
-            const res = await fetch('/api/status');
+            const res = await fetch('/api/bots');
             if (res.ok) {
                 const data = await res.json();
-                const botName = data.bot_info?.bot_name || 'Ganymede';
-                document.getElementById('bot-card-name').textContent = botName;
-                document.getElementById('bot-card-id').textContent = 'Primary Gateway';
-                document.getElementById('bot-card-platform').textContent = data.config?.platform || 'Local/Discord';
+                const bots = data.bots;
                 
-                // Set the link to bot details
-                const btnView = document.getElementById('primary-bot-card').querySelector('button.is-info');
-                if (btnView) {
-                    btnView.onclick = () => window.location.hash = '#view-bot-detail?id=' + encodeURIComponent(botName);
+                const botsGrid = document.getElementById('bots-list');
+                if (!botsGrid) return;
+                botsGrid.innerHTML = '';
+                
+                for (const [botId, botData] of Object.entries(bots)) {
+                    const platformType = botData.provider?.type || 'discord';
+                    
+                    const html = `
+                    <div class="column is-4">
+                        <div class="card is-clickable metric" onclick="window.location.hash='#view-bot-detail?id=' + encodeURIComponent('${botId}')">
+                            <div class="card-content">
+                                <div class="media">
+                                    <div class="media-left">
+                                        <figure class="image is-48x48">
+                                            <span class="icon is-large has-text-info"><i class="fas fa-robot fa-2x"></i></span>
+                                        </figure>
+                                    </div>
+                                    <div class="media-content">
+                                        <p class="title is-4">${botData.name || botId}</p>
+                                        <p class="subtitle is-6">@${botId}</p>
+                                    </div>
+                                </div>
+                                <div class="content">
+                                    <div class="tags">
+                                        <span class="tag is-info is-light">Provider: ${platformType}</span>
+                                        <span class="tag is-primary is-light">Model: ${botData.model || 'Default'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                    botsGrid.insertAdjacentHTML('beforeend', html);
                 }
             }
         } catch (e) {
-            console.error('Failed to load bots info', e);
+            console.error('Failed to load bots from API', e);
         }
     }
 
     async function loadBotDetails(botId) {
-        // Load the system prompt and mission from config
+        if (!botId) return;
+        currentBotDetailId = botId;
         try {
-            const configRes = await fetch('/api/config');
-            if (configRes.ok) {
-                const configData = await configRes.json();
-                document.getElementById('bot-detail-name').textContent = configData.agent?.name || botId || 'Ganymede';
-                document.getElementById('bot-system-prompt').value = configData.bot?.identity || '';
+            const res = await fetch(`/api/bots/${botId}`);
+            if (!res.ok) throw new Error("Failed to load bot config");
+            const data = await res.json();
+            const botData = data.bot;
+            
+            document.getElementById('bot-detail-name').textContent = botData.name || botId;
+            document.getElementById('bot-setting-name').value = botData.name || '';
+            document.getElementById('bot-setting-model').value = botData.model || '';
+            document.getElementById('bot-system-prompt').value = botData.identity || '';
+            
+            const providerType = botData.provider?.type || 'discord';
+            document.getElementById('bot-provider-type-label').textContent = providerType;
+            
+            // Build dynamic fields from provider schema
+            const provRes = await fetch('/api/providers');
+            if (provRes.ok) {
+                const provData = await provRes.json();
+                const providerInfo = provData.providers.find(p => p.id === providerType);
+                const fieldsContainer = document.getElementById('bot-provider-fields');
+                fieldsContainer.innerHTML = '';
+                
+                if (providerInfo && providerInfo.schema) {
+                    for (const [key, details] of Object.entries(providerInfo.schema)) {
+                        const val = botData.provider[key] || '';
+                        fieldsContainer.innerHTML += `
+                            <div class="field">
+                                <label class="label is-small">${details.description || key}</label>
+                                <div class="control">
+                                    <input class="input is-small provider-field" data-key="${key}" type="${details.type === 'bool' ? 'checkbox' : 'text'}" ${details.type === 'bool' && val ? 'checked' : ''} value="${details.type !== 'bool' ? val : ''}">
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
             }
             
             // Load conversations
@@ -1214,12 +1273,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 const list = document.getElementById('bot-conversations-list');
                 list.innerHTML = '';
                 
+                // Filter chats to this bot if applicable (for now show all or filter by ID if the bot maps to a specific project)
                 if (chatsData.length === 0) {
                     list.innerHTML = '<tr><td colspan="4" class="has-text-centered has-text-grey">No conversations found.</td></tr>';
                 } else {
                     chatsData.forEach(conv => {
                         const tr = document.createElement('tr');
-                        
                         let dateStr = 'Unknown';
                         if (conv.last_active) {
                             if (typeof conv.last_active === 'number') {
@@ -1245,25 +1304,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById('btn-save-bot-prompt').addEventListener('click', async () => {
-        const prompt = document.getElementById('bot-system-prompt').value;
+        if (!currentBotDetailId) return;
         const btn = document.getElementById('btn-save-bot-prompt');
         btn.classList.add('is-loading');
         
         try {
-            // First fetch existing config to preserve other fields
-            const configRes = await fetch('/api/config');
-            let data = {};
-            if (configRes.ok) {
-                data = await configRes.json();
-            }
+            // Reconstruct config
+            const botData = {
+                name: document.getElementById('bot-setting-name').value,
+                model: document.getElementById('bot-setting-model').value,
+                identity: document.getElementById('bot-system-prompt').value,
+                provider: {
+                    type: document.getElementById('bot-provider-type-label').textContent.toLowerCase()
+                }
+            };
             
-            if (!data.bot) data.bot = {};
-            data.bot.identity = prompt;
+            document.querySelectorAll('.provider-field').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (el.type === 'checkbox') {
+                    botData.provider[key] = el.checked;
+                } else {
+                    botData.provider[key] = el.value;
+                }
+            });
             
-            const res = await fetch('/api/config', {
+            const res = await fetch(`/api/bots/${currentBotDetailId}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
+                body: JSON.stringify(botData)
             });
             
             if (res.ok) {
@@ -1278,10 +1346,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to save prompt');
+            alert('Failed to save config');
             btn.classList.remove('is-loading');
         }
     });
+
 
     // Add search listener for bot conversations
     document.getElementById('bot-conversations-search').addEventListener('input', (e) => {
