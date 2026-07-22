@@ -80,10 +80,24 @@ class AppConfig:
     dashboard_port: int = 8180
     platforms: dict[str, Any] = field(default_factory=dict)
 
+    bots: dict[str, Any] = field(default_factory=dict)
+    theme: str = "default"
+
     def __post_init__(self):
         self.platforms = SyncedPlatformsDict(self, self.platforms)
         p_type = self.bot.provider.get("type", "discord")
         self.platforms[p_type] = self.bot.provider
+        
+        # Populate default bots if none exist
+        if not self.bots:
+            self.bots = {
+                "default": {
+                    "name": self.agent.name,
+                    "model": self.agent.model,
+                    "identity": self.bot.identity,
+                    "provider": self.bot.provider
+                }
+            }
 
     @property
     def platform(self) -> str:
@@ -165,6 +179,12 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
 def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
     if "platform" in data:
         config.platform = data["platform"]
+
+    if "theme" in data:
+        config.theme = data["theme"]
+
+    if "bots" in data:
+        config.bots.update(data["bots"])
 
     if "bot" in data:
         b = data["bot"]

@@ -14,4 +14,4 @@ logger = logging.getLogger("ganymede-mcp")
 app = FastMCP("ganymede-tools")
 
 # Import tools so they register on the FastMCP app instance
-from ganymede.mcp_server import tools
+from ganymede.mcp_server import tools  # noqa: E402, F401

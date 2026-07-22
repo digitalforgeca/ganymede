@@ -105,8 +105,16 @@ class WebAdapter(PlatformAdapter):
 
 
 class WebProvider(BasePlatformProvider):
-    def __init__(self, config: Any, router: Any, db: Any):
-        super().__init__(config, router, db)
+    @classmethod
+    def get_config_schema(cls) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {},
+            "description": "The Web Provider does not require any additional configuration. It operates natively through the Ganymede Gateway UI."
+        }
+
+    def __init__(self, config: Any, router: Any, db: Any, bot_id: str = "default", bot_config: Any = None):
+        super().__init__(config, router, db, bot_id)
         self.adapter = WebAdapter(config)
         
     async def start(self) -> None:

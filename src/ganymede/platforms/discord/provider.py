@@ -10,10 +10,32 @@ from ganymede.platforms.discord.config import DiscordConfig
 class DiscordPlatformProvider(BasePlatformProvider):
     """Platform provider for Discord. Manages the Discord client adapter, scheduler, and local IPC server."""
     
-    def __init__(self, config: Any, router: Any, db: Any):
-        super().__init__(config, router, db)
+    @classmethod
+    def get_config_schema(cls) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "title": "Bot Token",
+                    "description": "Discord Bot Token for authentication"
+                },
+                "allowed_guilds": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "title": "Allowed Guilds",
+                    "description": "List of Server IDs this bot is allowed to operate in"
+                }
+            },
+            "required": ["token"]
+        }
+    
+    def __init__(self, config: Any, router: Any, db: Any, bot_id: str = "default", bot_config: Any = None):
+        super().__init__(config, router, db, bot_id)
         
-        raw_discord = config.platforms.get("discord", {})
+        # Pull provider-specific config from the bot config, fallback to legacy
+        raw_discord = bot_config.get("provider", {}) if bot_config else config.platforms.get("discord", {})
+        
         if isinstance(raw_discord, dict):
             self.discord_config = DiscordConfig(
                 token=raw_discord.get("token", ""),

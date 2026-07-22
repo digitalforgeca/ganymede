@@ -1,7 +1,6 @@
 import structlog
 import json
 import asyncio
-from typing import Any
 from google.antigravity.hooks import PreToolCallDecideHook, HookContext
 from google.antigravity.types import HookResult, ToolCall
 from ganymede.core import ContextKey

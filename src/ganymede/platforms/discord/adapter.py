@@ -1,4 +1,3 @@
-import asyncio
 import discord
 from discord import app_commands
 import structlog
@@ -211,6 +210,104 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         except Exception as e:
             logger.error("Error resolving channel from context", context=context, error=str(e))
             return None
+
+    # --- Standard Capability Methods for SSE Tools ---
+
+    async def get_channel_history(self, channel_id: str, limit: int) -> list[dict[str, Any]]:
+        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        if not channel:
+            raise ValueError("Channel not found")
+        history = []
+        async for msg in channel.history(limit=limit):
+            history.append({
+                "id": str(msg.id),
+                "author": msg.author.name,
+                "author_id": str(msg.author.id),
+                "content": msg.content,
+                "created_at": msg.created_at.isoformat()
+            })
+        return history
+
+    async def get_channel_info(self, channel_id: str) -> dict[str, Any]:
+        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        if not channel:
+            raise ValueError("Channel not found")
+        info = {
+            "id": str(channel.id),
+            "name": getattr(channel, "name", "DM"),
+            "type": str(channel.type),
+            "guild_id": str(channel.guild.id) if getattr(channel, "guild", None) else None
+        }
+        if hasattr(channel, "topic"):
+            info["topic"] = channel.topic
+        return info
+
+    async def post_message(self, channel_id: str, content: str) -> dict[str, Any]:
+        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        if not channel:
+            raise ValueError("Channel not found")
+        msg = await channel.send(content)
+        return {"id": str(msg.id), "status": "sent"}
+
+    async def reply_message(self, channel_id: str, message_id: str, content: str) -> dict[str, Any]:
+        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        if not channel:
+            raise ValueError("Channel not found")
+        message = await channel.fetch_message(int(message_id))
+        msg = await message.reply(content)
+        return {"id": str(msg.id), "status": "replied"}
+
+    async def edit_message(self, channel_id: str, message_id: str, content: str) -> dict[str, Any]:
+        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        if not channel:
+            raise ValueError("Channel not found")
+        message = await channel.fetch_message(int(message_id))
+        if message.author.id != self.user.id:
+            raise ValueError("Cannot edit messages sent by other users")
+        msg = await message.edit(content=content)
+        return {"id": str(msg.id), "status": "edited"}
+
+    async def react_message(self, channel_id: str, message_id: str, emoji: str) -> dict[str, Any]:
+        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        if not channel:
+            raise ValueError("Channel not found")
+        message = await channel.fetch_message(int(message_id))
+        await message.add_reaction(emoji)
+        return {"status": "reacted"}
+
+    async def get_message(self, channel_id: str, message_id: str) -> dict[str, Any]:
+        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        if not channel:
+            raise ValueError("Channel not found")
+        msg = await channel.fetch_message(int(message_id))
+        return {
+            "id": str(msg.id),
+            "author": msg.author.name,
+            "author_id": str(msg.author.id),
+            "content": msg.content,
+            "created_at": msg.created_at.isoformat()
+        }
+
+    async def create_thread(self, channel_id: str, name: str, content: str | None = None) -> dict[str, Any]:
+        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        if not channel:
+            raise ValueError("Channel not found")
+        if not isinstance(channel, discord.TextChannel):
+            raise ValueError("Threads can only be created in Text Channels")
+        thread = await channel.create_thread(name=name, auto_archive_duration=60)
+        if content:
+            await thread.send(content)
+        return {"id": str(thread.id), "status": "created"}
+
+    def get_system_instructions(self) -> str | None:
+        return """
+You can communicate using Discord tools:
+- `read_channel_history`: Reads recent messages from a channel.
+- `post_to_channel`: Sends a new text message.
+- `create_thread`: Creates a new thread under a message.
+- `get_channel_info`: Retrieves channel metadata.
+For the full set of capabilities, refer to the extended tools list.
+"""
 
 def time_ns() -> int:
     import time

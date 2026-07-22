@@ -1,7 +1,6 @@
 import os
 import aiohttp
-import structlog
-from ganymede.mcp_server import app, logger
+from ganymede.mcp_server import app
 from ganymede.config import get_default_data_dir
 
 # Reuse the config fallback logic to resolve rpc_port.txt path
@@ -45,15 +44,16 @@ async def _post_ipc(endpoint: str, payload: dict) -> dict:
 # --- Exposing Tools via FastMCP decorators ---
 
 @app.tool()
-async def read_channel_history(channel_id: str, limit: int = 50) -> str:
+async def read_channel_history(channel_id: str, limit: int = 50, platform: str = "discord") -> str:
     """Read recent messages from a specific channel.
     
     Args:
         channel_id: The Discord snowflake ID of the channel.
         limit: Number of messages to retrieve (maximum 100, default 50).
+        platform: The platform provider to route to (default 'discord').
     """
     try:
-        result = await _post_ipc("/api/channel/history", {"channel_id": channel_id, "limit": limit})
+        result = await _post_ipc("/api/channel/history", {"channel_id": channel_id, "limit": limit, "platform": platform})
         messages = result.get("messages", [])
         if not messages:
             return "No recent messages found in this channel."
@@ -66,16 +66,17 @@ async def read_channel_history(channel_id: str, limit: int = 50) -> str:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def read_thread_messages(thread_id: str, limit: int = 50) -> str:
+async def read_thread_messages(thread_id: str, limit: int = 50, platform: str = "discord") -> str:
     """Read recent messages from a specific active thread.
     
     Args:
         thread_id: The Discord snowflake ID of the target thread.
         limit: Number of messages to retrieve (maximum 100, default 50).
+        platform: The platform provider to route to (default 'discord').
     """
     # In Discord, threads are channels too, so we reuse history endpoint
     try:
-        result = await _post_ipc("/api/channel/history", {"channel_id": thread_id, "limit": limit})
+        result = await _post_ipc("/api/channel/history", {"channel_id": thread_id, "limit": limit, "platform": platform})
         messages = result.get("messages", [])
         if not messages:
             return "No recent messages found in this thread."
@@ -88,14 +89,15 @@ async def read_thread_messages(thread_id: str, limit: int = 50) -> str:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def get_channel_info(channel_id: str) -> str:
+async def get_channel_info(channel_id: str, platform: str = "discord") -> str:
     """Get metadata about a channel (name, type, topic, guild ID).
     
     Args:
         channel_id: The Discord snowflake ID of the target channel.
+        platform: The platform provider to route to (default 'discord').
     """
     try:
-        result = await _post_ipc("/api/channel/info", {"channel_id": channel_id})
+        result = await _post_ipc("/api/channel/info", {"channel_id": channel_id, "platform": platform})
         output = [
             f"Channel ID: {result.get('id')}",
             f"Name: {result.get('name')}",
@@ -109,112 +111,121 @@ async def get_channel_info(channel_id: str) -> str:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def post_to_channel(channel_id: str, content: str) -> str:
+async def post_to_channel(channel_id: str, content: str, platform: str = "discord") -> str:
     """Send a message to a specific channel.
     
     Args:
         channel_id: The Discord snowflake ID of the target channel.
         content: The text content of the message to send.
+        platform: The platform provider to route to (default 'discord').
     """
     try:
-        result = await _post_ipc("/api/message/post", {"channel_id": channel_id, "content": content})
+        result = await _post_ipc("/api/message/post", {"channel_id": channel_id, "content": content, "platform": platform})
         return f"Message sent successfully. Message ID: {result.get('id')}"
     except Exception as e:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def create_thread(channel_id: str, name: str, first_message: str = "") -> str:
+async def create_thread(channel_id: str, name: str, first_message: str = "", platform: str = "discord") -> str:
     """Create a new thread in a specific text channel.
     
     Args:
         channel_id: The parent Text Channel snowflake ID.
         name: Name of the thread to create.
         first_message: Optional first message to post inside the new thread.
+        platform: The platform provider to route to (default 'discord').
     """
     try:
         result = await _post_ipc("/api/thread/create", {
             "channel_id": channel_id,
             "name": name,
-            "content": first_message
+            "content": first_message,
+            "platform": platform
         })
         return f"Thread created successfully. Thread ID: {result.get('id')}"
     except Exception as e:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def schedule_cron(cron_expr: str, prompt: str, channel_id: str) -> str:
+async def schedule_cron(cron_expr: str, prompt: str, channel_id: str, platform: str = "discord") -> str:
     """Schedule a recurring prompt execution using cron syntax.
     
     Args:
         cron_expr: Standard 5-field cron expression (e.g. '0 9 * * *' for daily at 9am).
         prompt: The system query prompt to run when cron fires.
         channel_id: Target channel/thread ID where results will be posted.
+        platform: The platform provider to route to (default 'discord').
     """
     try:
         result = await _post_ipc("/api/schedule/cron", {
             "cron_expr": cron_expr,
             "prompt": prompt,
-            "channel_id": channel_id
+            "channel_id": channel_id,
+            "platform": platform
         })
         return f"Cron job scheduled successfully. Job ID: {result.get('job_id')}"
     except Exception as e:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def reply_to_message(channel_id: str, message_id: str, content: str) -> str:
+async def reply_to_message(channel_id: str, message_id: str, content: str, platform: str = "discord") -> str:
     """Reply directly to a specific message in a channel.
     
     Args:
         channel_id: The Discord snowflake ID of the channel containing the message.
         message_id: The Discord snowflake ID of the message to reply to.
         content: The text content of the reply message.
+        platform: The platform provider to route to (default 'discord').
     """
     try:
-        result = await _post_ipc("/api/message/reply", {"channel_id": channel_id, "message_id": message_id, "content": content})
+        result = await _post_ipc("/api/message/reply", {"channel_id": channel_id, "message_id": message_id, "content": content, "platform": platform})
         return f"Replied successfully. Message ID: {result.get('id')}"
     except Exception as e:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def edit_message(channel_id: str, message_id: str, content: str) -> str:
+async def edit_message(channel_id: str, message_id: str, content: str, platform: str = "discord") -> str:
     """Edit a message previously sent by this agent/bot.
     
     Args:
         channel_id: The Discord snowflake ID of the channel containing the message.
         message_id: The Discord snowflake ID of the message to edit.
         content: The new text content of the message.
+        platform: The platform provider to route to (default 'discord').
     """
     try:
-        result = await _post_ipc("/api/message/edit", {"channel_id": channel_id, "message_id": message_id, "content": content})
+        result = await _post_ipc("/api/message/edit", {"channel_id": channel_id, "message_id": message_id, "content": content, "platform": platform})
         return f"Message edited successfully. Message ID: {result.get('id')}"
     except Exception as e:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def add_reaction(channel_id: str, message_id: str, emoji: str) -> str:
+async def add_reaction(channel_id: str, message_id: str, emoji: str, platform: str = "discord") -> str:
     """Add an emoji reaction to a message.
     
     Args:
         channel_id: The Discord snowflake ID of the channel.
         message_id: The Discord snowflake ID of the message.
         emoji: The emoji character to react with (e.g. '👍' or '✅').
+        platform: The platform provider to route to (default 'discord').
     """
     try:
-        await _post_ipc("/api/message/react", {"channel_id": channel_id, "message_id": message_id, "emoji": emoji})
+        await _post_ipc("/api/message/react", {"channel_id": channel_id, "message_id": message_id, "emoji": emoji, "platform": platform})
         return f"Added reaction '{emoji}' successfully."
     except Exception as e:
         return f"Error: {str(e)}"
 
 @app.tool()
-async def get_message_by_id(channel_id: str, message_id: str) -> str:
+async def get_message_by_id(channel_id: str, message_id: str, platform: str = "discord") -> str:
     """Retrieve details and content of a specific message.
     
     Args:
         channel_id: The Discord snowflake ID of the channel containing the message.
         message_id: The Discord snowflake ID of the message to retrieve.
+        platform: The platform provider to route to (default 'discord').
     """
     try:
-        msg = await _post_ipc("/api/message/get", {"channel_id": channel_id, "message_id": message_id})
+        msg = await _post_ipc("/api/message/get", {"channel_id": channel_id, "message_id": message_id, "platform": platform})
         return f"[{msg['created_at']}] {msg['author']} ({msg['author_id']}): {msg['content']}"
     except Exception as e:
         return f"Error: {str(e)}"

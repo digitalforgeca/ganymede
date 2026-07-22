@@ -3,7 +3,7 @@ import time
 from typing import Any
 import structlog
 import json
-from google.antigravity.types import Text, ToolCall, ToolResult, Thought
+from google.antigravity.types import ToolResult
 from ganymede.core import ContextKey
 from ganymede.core.models import PlatformMessage
 from ganymede.config import AppConfig
@@ -280,7 +280,6 @@ class Router:
                 args = tool_call.get("args", {})
                 # Prefer human-readable toolAction/toolSummary from the payload
                 tool_action = args.get("toolAction", "")
-                tool_summary = args.get("toolSummary", "")
                 if tool_action:
                     status_text = f"\n\n⚙️ *{tool_action}* — `{tool}`"
                 else:

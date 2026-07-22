@@ -380,6 +380,10 @@ class ManagedAgent:
                 user_name = "user"
                 if self.manager:
                     user_name = self.manager.get_active_author_name(self.context_key) or "user"
+                    if self.manager.adapter and hasattr(self.manager.adapter, "get_system_instructions"):
+                        platform_inst = self.manager.adapter.get_system_instructions()
+                        if platform_inst:
+                            sys_inst = f"{sys_inst}\n\n{platform_inst.strip()}"
                 sys_inst = sys_inst.replace("{user_name}", user_name)
                 
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"

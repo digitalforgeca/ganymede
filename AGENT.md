@@ -10,7 +10,7 @@
 
 ## 2. Core Directories & Structure
 *   `src/ganymede/` — Main Python package.
-*   `src/ganymede/cli.py` — The core application entrypoint. It initializes configuration, structural logging, single-instance file locks, database connections, and platform providers.
+*   `src/ganymede/cli.py` — The core application entrypoint. It initializes configuration, human-readable structural logging (using `structlog.dev.ConsoleRenderer` for formatted timestamps and UI), single-instance file locks, database connections, and platform providers.
 *   `src/ganymede/core/web.py` — The embedded `aiohttp` web server that hosts the lightweight monitoring dashboard and telemetry endpoints (`/api/status`).
 *   `src/ganymede/web/` — The frontend static files (`index.html`, `style.css`, `app.js`). It uses a vanilla glassmorphism aesthetic; avoid pulling in heavy frameworks like React or Tailwind unless explicitly authorized by the user.
 *   `scripts/` — Deployment pipeline utilities (`bump_tag.sh`, `deploy.sh`).
@@ -38,4 +38,5 @@ Releases are handled automatically by the scripts in `scripts/`:
 *   **Aesthetics**: Any extensions to the web dashboard must maintain the established "Airy Olympus" theme (high contrast obsidian text on alabaster/marble backgrounds with classical serif typography) using vanilla HTML/CSS. Do not use glassmorphism.
 *   **Direct Pushing**: Never use `--force` or push without vetting against unit tests.
 *   **Subprocesses**: Avoid using terminal subshells (e.g. `cat` or `sed`) to manage Python configurations; prioritize programmatic AST or regex replacements within python scripts.
+*   **Context Mapping**: Always map remote threads as distinct conversations under the same parent project ID (`ContextKey.project_name` must NOT contain `thread_id`). Do not create new projects per thread to prevent isolated data siloing.
 *   **CRITICAL OPERATIONAL RULE**: Always validate, never assume. Do not ever assume. Always validate. Always legwork the solve, parameters, CLI flags, and configurations. Never assume a parameter or path exists without running the `help` menu, using `grep`, or reading the file first.

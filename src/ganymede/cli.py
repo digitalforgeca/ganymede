@@ -12,7 +12,6 @@ from ganymede.core.agent_manager import AgentManager
 from ganymede.core.router import Router
 from ganymede.core.activation import ActivationManager
 from ganymede.core.db import Database
-from ganymede.core import ContextKey
 
 try:
     import fcntl
@@ -26,10 +25,10 @@ structlog.configure(
     processors=[
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
-        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer()
+        structlog.dev.ConsoleRenderer(colors=sys.stdout.isatty())
     ],
     logger_factory=structlog.stdlib.LoggerFactory(),
     wrapper_class=structlog.stdlib.BoundLogger,
@@ -47,14 +46,15 @@ def setup_logging(level_name: str, log_file: str = "ganymede_live.log"):
     stdout_handler = logging.StreamHandler(sys.stdout)
     
     logging.basicConfig(
-        format="%(message)s",
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[file_handler, stdout_handler],
         level=numeric_level,
     )
     # Bridge standard logging to structlog
     root_logger = logging.getLogger()
     for handler in root_logger.handlers:
-        handler.setFormatter(logging.Formatter("%(message)s"))
+        handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
     # Suppress overly verbose discord.py debug logs if we aren't in debug
     if numeric_level > logging.DEBUG:
         logging.getLogger("discord").setLevel(logging.WARNING)
@@ -125,11 +125,9 @@ async def run(config: AppConfig):
     db = Database(config)
     await db.init()
     
-    # Dynamically resolve and load active platform provider class
-    platform_name = getattr(config, "platform", "discord").lower()
     from ganymede.platforms.base import get_platform_provider_class
-    provider_class = get_platform_provider_class(platform_name)
-    
+    import copy
+
     # Factory function to create a Router and its subsystems for a config copy
     def router_factory(inst_config: AppConfig) -> Router:
         quota_tracker = QuotaTracker(inst_config)
@@ -138,13 +136,50 @@ async def run(config: AppConfig):
         router = Router(inst_config, agent_manager, activation, db)
         return router
 
-    # The platform provider class provides the runner instances
-    providers = provider_class.create_providers(config, router_factory, db)
+    providers = []
     
-    # Force-attach the native Web Provider alongside any other configured platform
-    from ganymede.platforms.web.provider import WebProvider
-    web_provider = WebProvider(config, router_factory(config), db)
-    providers.append(web_provider)
+    # Iterate through all configured bots
+    for bot_id, bot_cfg in config.bots.items():
+        try:
+            bot_config_copy = copy.copy(config)
+            
+            # Create a clone of the agent config to override model/identity
+            bot_config_copy.agent = copy.copy(config.agent)
+            bot_config_copy.bot = copy.copy(config.bot)
+            
+            if "model" in bot_cfg:
+                bot_config_copy.agent.model = bot_cfg["model"]
+            if "name" in bot_cfg:
+                bot_config_copy.agent.name = bot_cfg["name"]
+            if "identity" in bot_cfg:
+                bot_config_copy.bot.identity = bot_cfg["identity"]
+            if "provider" in bot_cfg:
+                bot_config_copy.bot.provider = bot_cfg["provider"]
+                
+            platform_name = bot_cfg.get("provider", {}).get("type", "discord").lower()
+            provider_class = get_platform_provider_class(platform_name)
+            
+            router = router_factory(bot_config_copy)
+            
+            # Check if the provider class accepts bot_config in its signature
+            import inspect
+            sig = inspect.signature(provider_class.__init__)
+            if "bot_config" in sig.parameters:
+                provider = provider_class(bot_config_copy, router, db, bot_id=bot_id, bot_config=bot_cfg)
+            else:
+                provider = provider_class(bot_config_copy, router, db)
+                provider.bot_id = bot_id
+                
+            providers.append(provider)
+        except Exception as e:
+            logger.error("Failed to load provider for bot", bot_id=bot_id, error=str(e))
+            
+    # Force-attach the native Web Provider if not already present
+    has_web = any(p.__class__.__name__ == "WebProvider" for p in providers)
+    if not has_web:
+        from ganymede.platforms.web.provider import WebProvider
+        web_provider = WebProvider(config, router_factory(config), db, bot_id="web-default")
+        providers.append(web_provider)
     
     # Auto-register Ganymede SSE MCP server globally for agy CLI clients
     import json
@@ -343,20 +378,28 @@ def main():
 def validate_environment():
     """Strictly validates the Antigravity ecosystem chain before booting."""
     import shutil
+    from datetime import datetime
     
-    print("[VALIDATION] Commencing Ganymede environment validation...", file=sys.stdout)
+    def log_print(msg, is_err=False):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if is_err:
+            print(f"{timestamp} [ERROR] {msg}", file=sys.stderr)
+        else:
+            print(f"{timestamp} {msg}", file=sys.stdout)
+
+    log_print("[VALIDATION] Commencing Ganymede environment validation...")
     
     # 1. Validate agy CLI
-    print("[VALIDATION] Checking for Antigravity (agy) CLI...", file=sys.stdout)
+    log_print("[VALIDATION] Checking for Antigravity (agy) CLI...")
     agy_path = shutil.which("agy")
     if not agy_path:
-        print("[ERROR] Fatal: The 'agy' CLI tool was not found in your PATH.", file=sys.stderr)
-        print("[ERROR] Please ensure Antigravity 2.0 is installed before running Ganymede.", file=sys.stderr)
+        log_print("Fatal: The 'agy' CLI tool was not found in your PATH.", is_err=True)
+        log_print("Please ensure Antigravity 2.0 is installed before running Ganymede.", is_err=True)
         sys.exit(1)
-    print(f"[VALIDATION]  ✓ Found agy binary at: {agy_path}", file=sys.stdout)
+    log_print(f"[VALIDATION]  ✓ Found agy binary at: {agy_path}")
         
     # 2. Validate Chalice Plugin
-    print("[VALIDATION] Checking for Chalice telemetry plugin...", file=sys.stdout)
+    log_print("[VALIDATION] Checking for Chalice telemetry plugin...")
     plugin_path_target = os.path.expanduser("~/.gemini/config/plugins/chalice")
     plugin_path_json = os.path.join(plugin_path_target, "plugin.json")
     
@@ -378,25 +421,25 @@ def validate_environment():
         source_chalice_path = next((p for p in possible_paths if os.path.exists(os.path.join(p, "plugin.json"))), None)
         
         if source_chalice_path:
-            print("[VALIDATION]  - Chalice plugin not found or needs upgrade in ~/.gemini. Auto-installing...", file=sys.stdout)
+            log_print("[VALIDATION]  - Chalice plugin not found or needs upgrade in ~/.gemini. Auto-installing...")
             os.makedirs(os.path.dirname(plugin_path_target), exist_ok=True)
             try:
                 import shutil
                 if os.path.exists(plugin_path_target):
                     shutil.rmtree(plugin_path_target)
                 shutil.copytree(source_chalice_path, plugin_path_target)
-                print(f"[VALIDATION]  ✓ Successfully copied Chalice plugin to {plugin_path_target}", file=sys.stdout)
+                log_print(f"[VALIDATION]  ✓ Successfully copied Chalice plugin to {plugin_path_target}")
             except Exception as e:
-                print(f"[ERROR] Fatal: Could not copy Chalice plugin: {e}", file=sys.stderr)
+                log_print(f"Fatal: Could not copy Chalice plugin: {e}", is_err=True)
                 sys.exit(1)
         else:
-            print(f"[ERROR] Fatal: Chalice plugin not found at {plugin_path_json}", file=sys.stderr)
-            print("[ERROR] Your installer failed to install the telemetry plugin. Ganymede cannot operate without accurate records.", file=sys.stderr)
+            log_print(f"Fatal: Chalice plugin not found at {plugin_path_json}", is_err=True)
+            log_print("Your installer failed to install the telemetry plugin. Ganymede cannot operate without accurate records.", is_err=True)
             sys.exit(1)
     else:
-        print("[VALIDATION]  ✓ Chalice plugin is installed and ready.", file=sys.stdout)
+        log_print("[VALIDATION]  ✓ Chalice plugin is installed and ready.")
         
-    print("[VALIDATION] Chain validation complete. Proceeding to boot gateway...", file=sys.stdout)
+    log_print("[VALIDATION] Chain validation complete. Proceeding to boot gateway...")
 
 if __name__ == "__main__":
     main()

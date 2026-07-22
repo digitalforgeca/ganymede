@@ -9,8 +9,6 @@ class ContextKey:
     @property
     def project_name(self) -> str:
         """Deterministic name for agy projects. Strictly uses provider IDs; no friendly names."""
-        if self.thread_id:
-            return f"{self.platform}-{self.channel_id}-{self.thread_id}"
         return f"{self.platform}-{self.channel_id}"
         
     @property

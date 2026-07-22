@@ -6,8 +6,8 @@ import importlib
 
 # Static imports for PyInstaller analysis to ensure bundling in single-file binary
 try:
-    import ganymede.platforms.discord.provider
-    import ganymede.platforms.console.provider
+    import ganymede.platforms.discord.provider  # noqa: F401
+    import ganymede.platforms.console.provider  # noqa: F401
 except ImportError:
     pass
 
@@ -55,15 +55,59 @@ class PlatformAdapter(Protocol):
         """Generate a unique, stable conversation identifier for the given context key."""
         ...
 
+    def get_system_instructions(self) -> str | None:
+        """Return platform-specific system instructions to append to the bot identity."""
+        return None
+
+    # --- Standard Capability Methods for SSE Tools ---
+
+    async def get_channel_history(self, channel_id: str, limit: int) -> list[dict[str, Any]]:
+        """Retrieve recent message history from a channel."""
+        ...
+
+    async def get_channel_info(self, channel_id: str) -> dict[str, Any]:
+        """Retrieve metadata about a channel."""
+        ...
+
+    async def post_message(self, channel_id: str, content: str) -> dict[str, Any]:
+        """Send a standard text message to a channel."""
+        ...
+
+    async def reply_message(self, channel_id: str, message_id: str, content: str) -> dict[str, Any]:
+        """Reply to a specific message."""
+        ...
+
+    async def edit_message(self, channel_id: str, message_id: str, content: str) -> dict[str, Any]:
+        """Edit a previously sent message."""
+        ...
+
+    async def react_message(self, channel_id: str, message_id: str, emoji: str) -> dict[str, Any]:
+        """Add an emoji reaction to a message."""
+        ...
+
+    async def get_message(self, channel_id: str, message_id: str) -> dict[str, Any]:
+        """Retrieve a specific message by its ID."""
+        ...
+
+    async def create_thread(self, channel_id: str, name: str, content: str | None = None) -> dict[str, Any]:
+        """Create a new thread in a channel."""
+        ...
+
 
 class BasePlatformProvider:
     """Base class for platform provider integrations, encapsulating transport, IPC, and scheduler lifecycles."""
     
-    def __init__(self, config: Any, router: Any, db: Any):
+    def __init__(self, config: Any, router: Any, db: Any, bot_id: str = "default"):
         self.config = config
         self.router = router
         self.db = db
+        self.bot_id = bot_id
         self.adapter: Any = None
+
+    @classmethod
+    def get_config_schema(cls) -> dict[str, Any]:
+        """Return the JSON schema defining the provider's specific configuration fields."""
+        return {}
 
     @classmethod
     def create_providers(cls, config: Any, router_factory: Callable[[Any], Any], db: Any) -> list['BasePlatformProvider']:
@@ -84,13 +128,28 @@ class BasePlatformProvider:
 def get_platform_provider_class(platform_name: str) -> type[BasePlatformProvider]:
     """Dynamically import and retrieve the BasePlatformProvider subclass for a given platform name."""
     platform_name = platform_name.lower()
-    try:
-        module_path = f"ganymede.platforms.{platform_name}.provider"
-        module = importlib.import_module(module_path)
-        for name in dir(module):
-            obj = getattr(module, name)
-            if isinstance(obj, type) and issubclass(obj, BasePlatformProvider) and obj is not BasePlatformProvider:
-                return obj
-        raise ValueError(f"No BasePlatformProvider subclass found in {module_path}")
-    except ModuleNotFoundError as e:
-        raise ValueError(f"Platform provider module for '{platform_name}' not found: {str(e)}")
+    
+    # Allow loading from ~/.ganymede/plugins
+    import sys
+    import os
+    plugin_dir = os.path.expanduser("~/.ganymede/plugins")
+    if plugin_dir not in sys.path:
+        sys.path.insert(0, plugin_dir)
+        
+    modules_to_try = [
+        f"ganymede.platforms.{platform_name}.provider",
+        f"{platform_name}.provider",  # For external plugins in ~/.ganymede/plugins/{platform_name}/provider.py
+        platform_name  # If the plugin is just a single file ~/.ganymede/plugins/{platform_name}.py
+    ]
+    
+    for module_path in modules_to_try:
+        try:
+            module = importlib.import_module(module_path)
+            for name in dir(module):
+                obj = getattr(module, name)
+                if isinstance(obj, type) and issubclass(obj, BasePlatformProvider) and obj is not BasePlatformProvider:
+                    return obj
+        except ModuleNotFoundError:
+            continue
+            
+    raise ValueError(f"Platform provider module for '{platform_name}' not found in any standard or plugin paths.")

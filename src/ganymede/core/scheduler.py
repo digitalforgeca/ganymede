@@ -21,7 +21,7 @@ class Scheduler:
                 await self.scheduler.run_until_stopped()
         except asyncio.CancelledError:
             pass
-        except Exception as e:
+        except Exception:
             logger.error("APScheduler task crashed", exc_info=True)
 
     async def start(self) -> None:

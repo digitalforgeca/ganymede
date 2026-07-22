@@ -1,0 +1,233 @@
+import os
+import asyncio
+import structlog
+import json
+import yaml
+from aiohttp import web
+from ganymede.config import AppConfig
+from ganymede.core import ContextKey
+
+logger = structlog.get_logger()
+
+async def handle_config_get(server, request):
+    import yaml
+    config_path = os.path.expanduser("~/.ganymede/config.yaml")
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+            return web.json_response(data)
+    return web.json_response({})
+    
+
+async def handle_config_post(server, request):
+    import yaml
+    data = await request.json()
+        
+    # Update in-memory config for immediate application
+    if "log_level" in data:
+        server.config.log_level = data["log_level"]
+    if "platform" in data:
+        server.config.platform = data["platform"]
+    if "theme" in data:
+        server.config.theme = data["theme"]
+    if "agent" in data:
+        if not hasattr(server.config, "agent"):
+            class AgentConfig:
+                pass
+            server.config.agent = AgentConfig()
+        if "model" in data["agent"]:
+            server.config.agent.model = data["agent"]["model"]
+        if "name" in data["agent"]:
+            server.config.agent.name = data["agent"]["name"]
+        if "mission_statement" in data["agent"]:
+            server.config.agent.mission_statement = data["agent"]["mission_statement"]
+    if "bot" in data:
+        if "identity" in data["bot"]:
+            server.config.bot.identity = data["bot"]["identity"]
+            
+    config_path = os.path.expanduser("~/.ganymede/config.yaml")
+    try:
+        with open(config_path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False)
+        return web.json_response({"status": "saved"})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+async def handle_rules_get(server, request):
+    rules_dir = os.path.expanduser("~/.gemini/rules")
+    if not os.path.exists(rules_dir):
+        os.makedirs(rules_dir, exist_ok=True)
+        
+    filename = request.query.get("filename")
+    if filename:
+        file_path = os.path.join(rules_dir, filename)
+        if not os.path.exists(file_path):
+            return web.json_response({"error": "Rule not found"}, status=404)
+        with open(file_path, "r") as f:
+            return web.json_response({"content": f.read()})
+            
+    files = []
+    for f in os.listdir(rules_dir):
+        if f.endswith(".md"):
+            files.append(f)
+    return web.json_response({"rules": sorted(files)})
+
+
+async def handle_rules_post(server, request):
+    rules_dir = os.path.expanduser("~/.gemini/rules")
+    if not os.path.exists(rules_dir):
+        os.makedirs(rules_dir, exist_ok=True)
+        
+    data = await request.json()
+    filename = data.get("filename")
+    content = data.get("content", "")
+    
+    if not filename or not filename.endswith(".md"):
+        return web.json_response({"error": "Invalid filename. Must end with .md"}, status=400)
+        
+    file_path = os.path.join(rules_dir, filename)
+    with open(file_path, "w") as f:
+        f.write(content)
+        
+    return web.json_response({"status": "saved", "filename": filename})
+    
+
+async def handle_rule_delete(server, request):
+    filename = request.match_info['filename']
+    if not filename or not filename.endswith(".md"):
+        return web.json_response({"error": "Invalid filename"}, status=400)
+        
+    file_path = os.path.join(os.path.expanduser("~/.gemini/rules"), filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return web.json_response({"status": "deleted"})
+    return web.json_response({"error": "Rule not found"}, status=404)
+
+
+async def handle_bot_conversations(server, request):
+    if not server.db:
+        return web.json_response({"error": "Database not available"}, status=500)
+        
+    async with server.db._conn.execute(
+        """
+        SELECT context_platform, context_channel, context_thread, MAX(created_at) as last_active, COUNT(id) as message_count
+        FROM conversations
+        GROUP BY context_platform, context_channel, context_thread
+        ORDER BY last_active DESC
+        """
+    ) as cursor:
+        rows = await cursor.fetchall()
+        return web.json_response({"conversations": [dict(row) for row in rows]})
+
+
+
+async def handle_providers_get(server, request):
+    # Dynamically list all providers and their schemas
+    import pkgutil
+    import importlib
+    import os
+    import sys
+    import ganymede.platforms
+    from ganymede.platforms.base import BasePlatformProvider
+    
+    providers = []
+    
+    # 1. Load built-in providers
+    for _, name, _ in pkgutil.iter_modules(ganymede.platforms.__path__):
+        if name == "base":
+            continue
+        try:
+            module = importlib.import_module(f"ganymede.platforms.{name}.provider")
+            for obj_name in dir(module):
+                obj = getattr(module, obj_name)
+                if isinstance(obj, type) and issubclass(obj, BasePlatformProvider) and obj is not BasePlatformProvider:
+                    providers.append({
+                        "id": name,
+                        "name": name.capitalize(),
+                        "schema": obj.get_config_schema()
+                    })
+                    break
+        except Exception:
+            pass
+
+    # 2. Load external plugins from ~/.ganymede/plugins
+    plugin_dir = os.path.expanduser("~/.ganymede/plugins")
+    if os.path.exists(plugin_dir):
+        if plugin_dir not in sys.path:
+            sys.path.insert(0, plugin_dir)
+            
+        for name in os.listdir(plugin_dir):
+            path = os.path.join(plugin_dir, name)
+            if os.path.isdir(path) and not name.startswith('.') and not name.startswith('__'):
+                try:
+                    module = importlib.import_module(f"{name}.provider")
+                    for obj_name in dir(module):
+                        obj = getattr(module, obj_name)
+                        if isinstance(obj, type) and issubclass(obj, BasePlatformProvider) and obj is not BasePlatformProvider:
+                            providers.append({
+                                "id": name,
+                                "name": name.capitalize() + " (External)",
+                                "schema": obj.get_config_schema()
+                            })
+                            break
+                except Exception:
+                    pass
+                    
+    return web.json_response({"providers": providers})
+
+async def handle_bots_get(server, request):
+    import yaml
+    config_path = os.path.expanduser("~/.ganymede/config.yaml")
+    bots = {}
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+            bots = data.get("bots", {})
+    return web.json_response({"bots": bots})
+
+async def handle_bot_post(server, request):
+    import yaml
+    bot_id = request.match_info['bot_id']
+    bot_data = await request.json()
+    
+    config_path = os.path.expanduser("~/.ganymede/config.yaml")
+    data = {}
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+            
+    if "bots" not in data:
+        data["bots"] = {}
+        
+    data["bots"][bot_id] = bot_data
+    
+    # Also update in-memory config
+    server.config.bots[bot_id] = bot_data
+    
+    with open(config_path, "w") as f:
+        yaml.dump(data, f, default_flow_style=False)
+        
+    return web.json_response({"status": "saved", "bot_id": bot_id})
+
+async def handle_bot_delete(server, request):
+    import yaml
+    bot_id = request.match_info['bot_id']
+    
+    config_path = os.path.expanduser("~/.ganymede/config.yaml")
+    data = {}
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+            
+    if "bots" in data and bot_id in data["bots"]:
+        del data["bots"][bot_id]
+        
+        # Also update in-memory config
+        if bot_id in server.config.bots:
+            del server.config.bots[bot_id]
+            
+        with open(config_path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False)
+            
+        return web.json_response({"status": "deleted", "bot_id": bot_id})
+    return web.json_response({"error": "Bot not found"}, status=404)

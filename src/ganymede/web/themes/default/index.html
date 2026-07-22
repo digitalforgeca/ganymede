@@ -12,10 +12,11 @@
     <!-- Bulma Opinionated Layout Library -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
     <!-- Top Inline Status Bar -->
-    <nav class="navbar has-shadow is-fixed-top" style="z-index: 100; min-height: 2.5rem; background-color: var(--header-gold, #926315);">
+    <nav class="navbar has-shadow is-fixed-top" style="z-index: 100; min-height: 2.5rem; background-color: var(--header-gold, var(--accent-gold));">
         <div class="navbar-brand">
             <a role="button" class="navbar-item" id="main-sidebar-toggle" style="color: white;">
                 <span class="icon"><i class="fas fa-bars"></i></span>
@@ -381,7 +382,27 @@
                             </div>
                             
                             <div class="box">
-                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="fas fa-magic"></i></span>System Prompt</h3>
+
+                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="fas fa-robot"></i></span>Bot Settings</h3>
+                                <div class="field">
+                                    <label class="label is-small">Name</label>
+                                    <div class="control">
+                                        <input class="input is-small" type="text" id="bot-setting-name">
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label is-small">Default Model</label>
+                                    <div class="control">
+                                        <input class="input is-small" type="text" id="bot-setting-model">
+                                    </div>
+                                </div>
+                                
+                                <div id="bot-provider-config-container" class="mt-4 mb-4" style="border-left: 2px solid #3273dc; padding-left: 10px;">
+                                    <h4 class="title is-6 mb-2 has-text-info">Provider Settings (<span id="bot-provider-type-label"></span>)</h4>
+                                    <div id="bot-provider-fields"></div>
+                                </div>
+                                <hr>
+                                                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="fas fa-magic"></i></span>System Prompt</h3>
                                 <div class="field">
                                     <div class="control">
                                         <textarea class="textarea is-small" id="bot-system-prompt" rows="8" placeholder="Loading system prompt..."></textarea>
@@ -457,26 +478,7 @@
                         <div id="settings-global-view">
                             <div class="columns">
                                 <div class="column is-6">
-                                    <div class="field">
-                                        <label class="label is-small">Web Console Bot Name</label>
-                                        <div class="control">
-                                            <input class="input is-small" type="text" id="global-bot-name" placeholder="Agent">
-                                        </div>
-                                    </div>
-                                    <div class="field">
-                                        <label class="label is-small">Global Model Override</label>
-                                        <div class="control">
-                                            <div class="select is-small is-fullwidth">
-                                                <select id="global-model-select">
-                                                    <option value="">Default (System Fallback)</option>
-                                                    <option value="Gemini 3.1 Pro (High)">Gemini 3.1 Pro (High) (Recommended)</option>
-                                                    <option value="Gemini Flash">Gemini Flash (Fast)</option>
-                                                    <option value="gemini-1.5-pro-002">gemini-1.5-pro-002</option>
-                                                    <option value="gemini-1.5-flash-002">gemini-1.5-flash-002</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
+
                                     
                                     <div class="columns is-mobile is-vcentered mb-2 mt-2">
                                         <div class="column is-6">

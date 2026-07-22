@@ -3,7 +3,6 @@ from discord import app_commands
 import asyncio
 import uuid
 import structlog
-import time
 from ganymede.core import ContextKey
 from ganymede.core.models import PlatformMessage
 from apscheduler.triggers.cron import CronTrigger
@@ -13,21 +12,20 @@ logger = structlog.get_logger()
 def setup_commands(adapter: discord.Client):
     tree = adapter.tree
 
+    def _get_context(interaction: discord.Interaction) -> ContextKey:
+        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
+        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
+        return ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id)
+
+
     @tree.command(name="private", description="Ask the agent a question privately and get a streamed response")
     @app_commands.describe(prompt="The prompt to send to the agent")
     async def private(interaction: discord.Interaction, prompt: str):
         # 1. Send initial response acknowledging the command
-        await interaction.response.send_message(f"💬 *Processing query...*", ephemeral=True)
+        await interaction.response.send_message("💬 *Processing query...*", ephemeral=True)
 
         # 2. Construct PlatformMessage
-        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
-        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
-        
-        context = ContextKey(
-            platform="discord",
-            channel_id=channel_id,
-            thread_id=thread_id
-        )
+        context = _get_context(interaction)
 
         message = PlatformMessage(
             context=context,
@@ -52,14 +50,7 @@ def setup_commands(adapter: discord.Client):
         # Initial response acknowledging the task has started
         await interaction.response.send_message(f"⏳ Task started. ID: `{task_id}`", ephemeral=True)
 
-        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
-        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
-        
-        context = ContextKey(
-            platform="discord",
-            channel_id=channel_id,
-            thread_id=thread_id
-        )
+        context = _get_context(interaction)
 
         # Save to DB with status 'running'
         db = adapter.router.db
@@ -245,7 +236,7 @@ def setup_commands(adapter: discord.Client):
     @tree.command(name="plan", description="Ask the agent to create a step-by-step plan before execution")
     @app_commands.describe(prompt="The task or objective to plan for")
     async def plan(interaction: discord.Interaction, prompt: str):
-        await interaction.response.send_message(f"📝 *Planning execution...*", ephemeral=True)
+        await interaction.response.send_message("📝 *Planning execution...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
@@ -265,7 +256,7 @@ def setup_commands(adapter: discord.Client):
     @tree.command(name="goal", description="Set a long-running goal and run until achieved")
     @app_commands.describe(prompt="The long-running goal description")
     async def goal(interaction: discord.Interaction, prompt: str):
-        await interaction.response.send_message(f"🎯 *Executing goal cascade...*", ephemeral=True)
+        await interaction.response.send_message("🎯 *Executing goal cascade...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
@@ -285,7 +276,7 @@ def setup_commands(adapter: discord.Client):
     @tree.command(name="grill", description="Align on a plan through an interactive interview")
     @app_commands.describe(prompt="Optional context or topic to align on")
     async def grill(interaction: discord.Interaction, prompt: str | None = None):
-        await interaction.response.send_message(f"🔥 *Starting interview alignment...*", ephemeral=True)
+        await interaction.response.send_message("🔥 *Starting interview alignment...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
@@ -306,7 +297,7 @@ def setup_commands(adapter: discord.Client):
     @tree.command(name="learn", description="Persist a behavioral pattern or solution for future tasks")
     @app_commands.describe(prompt="The instruction or rule to persist")
     async def learn(interaction: discord.Interaction, prompt: str):
-        await interaction.response.send_message(f"🧠 *Saving behavioral instruction...*", ephemeral=True)
+        await interaction.response.send_message("🧠 *Saving behavioral instruction...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
@@ -326,7 +317,7 @@ def setup_commands(adapter: discord.Client):
     @tree.command(name="teamwork-preview", description="Preview teamwork options with autonomous agents")
     @app_commands.describe(prompt="Optional description of the project or team setup")
     async def teamwork_preview(interaction: discord.Interaction, prompt: str | None = None):
-        await interaction.response.send_message(f"👥 *Previewing team setup...*", ephemeral=True)
+        await interaction.response.send_message("👥 *Previewing team setup...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
@@ -418,7 +409,7 @@ def setup_commands(adapter: discord.Client):
 
     @tree.command(name="new", description="Wipe the active conversation history and start a fresh session")
     async def new_session(interaction: discord.Interaction):
-        await interaction.response.send_message(f"🧹 *Wiping conversation memory and starting fresh...*", ephemeral=True)
+        await interaction.response.send_message("🧹 *Wiping conversation memory and starting fresh...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
@@ -437,7 +428,7 @@ def setup_commands(adapter: discord.Client):
 
     @tree.command(name="models", description="List all available models")
     async def models_cmd(interaction: discord.Interaction):
-        await interaction.response.send_message(f"🔍 *Fetching available models...*", ephemeral=True)
+        await interaction.response.send_message("🔍 *Fetching available models...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
@@ -455,7 +446,7 @@ def setup_commands(adapter: discord.Client):
         asyncio.create_task(adapter.router.handle_message(message))
 
     @tree.command(name="model", description="Switch the model for the current channel")
-    @app_commands.describe(model_name="The exact model name to switch to (e.g. gemini-pro-agent)")
+    @app_commands.describe(model_name='The exact model name to switch to (e.g. "Gemini 3.1 Pro (High)")')
     async def model_cmd(interaction: discord.Interaction, model_name: str):
         await interaction.response.send_message(f"🔄 *Switching model to {model_name}...*", ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
