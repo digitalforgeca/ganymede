@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ganymede</title>
+    <title>Ganymede Gateway</title>
     <link rel="icon" type="image/x-icon" href="/favicon-dark.ico" media="(prefers-color-scheme: light)">
     <link rel="icon" type="image/x-icon" href="/favicon-light.ico" media="(prefers-color-scheme: dark)">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,13 +13,14 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="theme.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
     <!-- Top Inline Status Bar -->
     <nav class="navbar has-shadow is-fixed-top" style="z-index: 100; min-height: 2.5rem; background-color: var(--header-gold, var(--accent-gold));">
         <div class="navbar-brand">
             <a role="button" class="navbar-item" id="main-sidebar-toggle" style="color: white;">
-                <span class="icon"><i class="ph ph-list"></i></span>
+                <span class="icon"><i class="ph ph-bars"></i></span>
             </a>
             <div class="navbar-item cinzel has-text-weight-bold is-flex is-align-items-center pl-0" style="color: white; font-size: 1.1rem;">
                 <img src="ganymede-logo-light.png" alt="Ganymede Logo" style="max-height: 28px; margin-right: 10px;">
@@ -66,13 +66,13 @@
                 <aside class="menu">
                     <p class="menu-label">Main</p>
                     <ul class="menu-list sidebar-nav mb-4">
-                        <li><a class="is-active nav-item" href="#view-dashboard" data-target="view-dashboard"><span class="icon is-small mr-2"><i class="ph ph-house"></i></span>Dashboard</a></li>
+                        <li><a class="is-active nav-item" href="#view-dashboard" data-target="view-dashboard"><span class="icon is-small mr-2"><i class="ph ph-home"></i></span>Dashboard</a></li>
                         <li><a class="nav-item" href="#view-chats" data-target="view-chats"><span class="icon is-small mr-2"><i class="ph ph-folder"></i></span>Projects</a></li>
                     </ul>
                     <p class="menu-label">Configuration</p>
                     <ul class="menu-list sidebar-nav">
                         <li><a class="nav-item" href="#view-bots" data-target="view-bots"><span class="icon is-small mr-2"><i class="ph ph-robot"></i></span>Bots</a></li>
-                        <li><a class="nav-item" href="#view-settings" data-target="view-settings"><span class="icon is-small mr-2"><i class="ph ph-gear"></i></span>Settings</a></li>
+                        <li><a class="nav-item" href="#view-settings" data-target="view-settings"><span class="icon is-small mr-2"><i class="ph ph-cog"></i></span>Settings</a></li>
                     </ul>
                 </aside>
             </div>
@@ -81,7 +81,7 @@
                 <div class="has-text-centered is-size-7" style="border-top: 1px solid var(--border-marble); padding-top: 1rem;">
                     <p class="has-text-grey mb-2" style="line-height: 1.2;">Powered by<br><strong class="has-text-info">Digital Forge Studios Inc.</strong></p>
                     <a href="https://www.patreon.com/c/DigitalForgeStudios" target="_blank" class="button is-small is-fullwidth" style="background-color: #FF424D; color: white; border: none; font-weight: 600;">
-                        <span class="icon is-small"><i class="ph ph-patreon-logo"></i></span>
+                        <span class="icon is-small"><i class="ph ph-patreon"></i></span>
                         <span>Support on Patreon</span>
                     </a>
                 </div>
@@ -127,7 +127,7 @@
 
                         <!-- Right Column: Telemetry -->
                         <div class="column is-two-thirds">
-                            <div class="box facet h-100 is-flex is-flex-direction-column">
+                            <div class="box facet is-flex is-flex-direction-column" style="height: calc(100vh - 150px);">
                                 <div class="is-flex is-justify-content-space-between is-align-items-center facet-title">
                                     <h2 class="title is-4 cinzel mb-0" style="border-bottom: none; padding-bottom: 0;">Chalice Telemetry</h2>
                                     <button class="button is-small is-outlined is-info" id="btn-export-telemetry">Export JSON</button>
@@ -329,6 +329,30 @@
                         <!-- TODO: Currently Ganymede runs a single primary bot gateway. Multi-bot support is in active development. -->
                         <div class="columns is-multiline" id="bots-list">
                             <!-- Populated by JS -->
+                            <div class="column is-4">
+                                <div class="card" id="primary-bot-card">
+                                    <div class="card-content has-text-centered">
+                                        <div class="mb-3">
+                                            <figure class="image is-96x96 is-inline-block">
+                                                <img class="is-rounded" id="bot-card-avatar" src="ganymede-logo.png" alt="Bot Avatar" referrerpolicy="no-referrer" style="background: #f5f5f5;">
+                                            </figure>
+                                        </div>
+                                        <p class="title is-4 cinzel mb-1" id="bot-card-name">Loading Bot...</p>
+                                        <p class="subtitle is-6 has-text-grey" id="bot-card-id">--</p>
+                                        
+                                        <div class="mt-4 pt-4" style="border-top: 1px solid #eee;">
+                                            <div class="is-flex is-justify-content-space-between mb-2">
+                                                <span class="has-text-grey is-size-7">Platform</span>
+                                                <span class="has-text-info has-text-weight-bold is-size-7" id="bot-card-platform">--</span>
+                                            </div>
+                            <div class="is-flex is-justify-content-space-between">
+                                                <span class="has-text-grey is-size-7">Status</span>
+                                                <span class="has-text-success has-text-weight-bold is-size-7">Online</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="box p-5 mt-4 is-hidden" id="no-rules-message">
@@ -350,7 +374,7 @@
                                     </div>
                                 </div>
                                 <hr>
-                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-plugs"></i></span>Invocation Points</h3>
+                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-plug"></i></span>Invocation Points</h3>
                                 <div class="tags mb-4">
                                     <span class="tag is-info is-light">Discord Slash Commands</span>
                                     <span class="tag is-info is-light">@Mentions</span>
@@ -379,7 +403,7 @@
                                     <div id="bot-provider-fields"></div>
                                 </div>
                                 <hr>
-                                                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-magic-wand"></i></span>System Prompt</h3>
+                                                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-magic"></i></span>System Prompt</h3>
                                 <div class="field">
                                     <div class="control">
                                         <textarea class="textarea is-small" id="bot-system-prompt" rows="8" placeholder="Loading system prompt..."></textarea>
@@ -407,13 +431,13 @@
                         <div class="column is-8">
                             <div class="box h-100 is-flex is-flex-direction-column">
                                 <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
-                                    <h3 class="title is-5 m-0"><span class="icon is-small mr-2"><i class="ph ph-chats"></i></span>Bot Conversations</h3>
+                                    <h3 class="title is-5 m-0"><span class="icon is-small mr-2"><i class="ph ph-comments"></i></span>Bot Conversations</h3>
                                     <div class="field has-addons m-0">
                                         <div class="control">
                                             <input class="input is-small" type="text" id="bot-conversations-search" placeholder="Search conversations...">
                                         </div>
                                         <div class="control">
-                                            <a class="button is-small is-info"><i class="ph ph-magnifying-glass"></i></a>
+                                            <a class="button is-small is-info"><i class="ph ph-search"></i></a>
                                         </div>
                                     </div>
                                 </div>
