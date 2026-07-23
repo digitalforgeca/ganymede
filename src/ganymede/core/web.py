@@ -2,70 +2,52 @@ import os
 import asyncio
 import structlog
 import json
-from aiohttp import web
+from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from ganymede.config import AppConfig
 from ganymede.core import ContextKey
+import uvicorn
+import shutil
 
 logger = structlog.get_logger()
 
 dashboard_instance = None
 
 class DashboardServer:
-    def __init__(self, config: AppConfig):
+    def __init__(self, config: AppConfig, db=None):
         global dashboard_instance
         dashboard_instance = self
         self.config = config
-        self.app = web.Application()
+        self.db = db
+        self.app = FastAPI(title="Ganymede API")
+        self.app.state.server = self
         
-        # API Routes
-        self.app.router.add_get('/api/status', self.handle_status)
-        self.app.router.add_get('/api/files', self.handle_files)
-        self.app.router.add_get('/api/chats', self.handle_chats)
-        self.app.router.add_get('/api/chats/{id}/history', self.handle_chat_history)
-        self.app.router.add_get('/api/chats/{id}/files', self.handle_chat_files)
-        self.app.router.add_get('/api/chats/{id}/settings', self.handle_chat_settings_get)
-        self.app.router.add_post('/api/chats/{id}/settings', self.handle_chat_settings_post)
-        self.app.router.add_post('/api/chats/{id}/merge', self.handle_chat_merge)
-        self.app.router.add_post('/api/chats/{id}/fork', self.handle_chat_fork)
-        self.app.router.add_post('/api/telemetry', self.handle_telemetry_post)
-        self.app.router.add_post('/api/chat/invoke', self.handle_chat_invoke)
-        self.app.router.add_get('/api/config', self.handle_config_get)
-        self.app.router.add_get('/api/providers', self.handle_providers_get)
-        self.app.router.add_get('/api/bots', self.handle_bots_get)
-        self.app.router.add_post('/api/bots/{bot_id}', self.handle_bot_post)
-        self.app.router.add_delete('/api/bots/{bot_id}', self.handle_bot_delete)
-        self.app.router.add_post('/api/config', self.handle_config_post)
-        self.app.router.add_get('/api/rules', self.handle_rules_get)
-        self.app.router.add_post('/api/rules', self.handle_rules_post)
-        self.app.router.add_delete('/api/rules/{filename}', self.handle_rule_delete)
-        self.app.router.add_get('/api/bots/detail/conversations', self.handle_bot_conversations)
-        self.app.router.add_get('/api/user', self.handle_user_info)
-        self.app.router.add_get('/ws/telemetry', self.handle_telemetry_ws)
-        self.app.router.add_get('/ws/dashboard', self.handle_dashboard_ws)
+        from ganymede.core.routes import dashboard, chats, config as config_routes, telemetry, ipc
+
+        # Mount routers
+        self.app.include_router(dashboard.router)
+        self.app.include_router(chats.router)
+        self.app.include_router(config_routes.router)
+        self.app.include_router(telemetry.router)
+        self.app.include_router(ipc.router)
         
         # Internal IPC API for SSE Tools
-        self.app.router.add_post('/api/channel/history', self.handle_ipc_request('get_channel_history', ["channel_id", "limit"]))
-        self.app.router.add_post('/api/channel/info', self.handle_ipc_request('get_channel_info', ["channel_id"]))
-        self.app.router.add_post('/api/message/post', self.handle_ipc_request('post_message', ["channel_id", "content"]))
-        self.app.router.add_post('/api/message/reply', self.handle_ipc_request('reply_message', ["channel_id", "message_id", "content"]))
-        self.app.router.add_post('/api/message/edit', self.handle_ipc_request('edit_message', ["channel_id", "message_id", "content"]))
-        self.app.router.add_post('/api/message/react', self.handle_ipc_request('react_message', ["channel_id", "message_id", "emoji"]))
-        self.app.router.add_post('/api/message/get', self.handle_ipc_request('get_message', ["channel_id", "message_id"]))
-        self.app.router.add_post('/api/thread/create', self.handle_ipc_request('create_thread', ["channel_id", "name", "content"]))
-        
-        # Schedule cron is a special case since it interacts with the scheduler
-        self.app.router.add_post('/api/schedule/cron', self.handle_schedule_cron)
-        
-        # Additional IPC routes migrated from discord/ipc_server
-        self.app.router.add_post('/api/status/update', self.handle_status_update)
-        self.app.router.add_post('/api/test/invoke', self.handle_test_invoke)
+        self.app.add_api_route('/api/channel/history', ipc.handle_ipc_request(self, 'get_channel_history', ["channel_id", "limit"]), methods=["POST"])
+        self.app.add_api_route('/api/channel/info', ipc.handle_ipc_request(self, 'get_channel_info', ["channel_id"]), methods=["POST"])
+        self.app.add_api_route('/api/message/post', ipc.handle_ipc_request(self, 'post_message', ["channel_id", "content"]), methods=["POST"])
+        self.app.add_api_route('/api/message/reply', ipc.handle_ipc_request(self, 'reply_message', ["channel_id", "message_id", "content"]), methods=["POST"])
+        self.app.add_api_route('/api/message/edit', ipc.handle_ipc_request(self, 'edit_message', ["channel_id", "message_id", "content"]), methods=["POST"])
+        self.app.add_api_route('/api/message/react', ipc.handle_ipc_request(self, 'react_message', ["channel_id", "message_id", "emoji"]), methods=["POST"])
+        self.app.add_api_route('/api/message/get', ipc.handle_ipc_request(self, 'get_message', ["channel_id", "message_id"]), methods=["POST"])
+        self.app.add_api_route('/api/thread/create', ipc.handle_ipc_request(self, 'create_thread', ["channel_id", "name", "content"]), methods=["POST"])
         
         # Track connected frontend clients
         self.dashboard_clients = set()
         self.telemetry_listeners = []
         
         # Static Dashboard Routes
-        import shutil
         embedded_web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web')
         user_web_dir = os.path.expanduser('~/.ganymede/web')
         
@@ -84,10 +66,27 @@ class DashboardServer:
             logger.warning(f"Theme '{active_theme}' not found, falling back to 'default'")
             theme_dir = os.path.join(user_web_dir, 'themes', 'default')
                 
-        self.web_dir = theme_dir
+        # Check if dist exists in the theme dir
+        dist_dir = os.path.join(theme_dir, "dist")
+        if os.path.exists(dist_dir):
+            self.web_dir = dist_dir
+        else:
+            self.web_dir = theme_dir
             
-        self.app.router.add_get('/', self.handle_index)
-        self.app.router.add_static('/', self.web_dir, name='static')
+        # Mount static files. We want to serve index.html at /, so we mount at /
+        self.app.mount('/', StaticFiles(directory=self.web_dir, html=True), name='static')
+        
+        @self.app.exception_handler(StarletteHTTPException)
+        async def catch_all_handler(request: Request, exc: StarletteHTTPException):
+            if exc.status_code == 404:
+                if request.url.path.startswith("/api/") or request.url.path.startswith("/ws/") or request.url.path.startswith("/mcp/"):
+                    return JSONResponse({"error": "Not found"}, status_code=404)
+                
+                index_path = os.path.join(self.web_dir, "index.html")
+                if os.path.exists(index_path):
+                    return FileResponse(index_path)
+            
+            return JSONResponse({"error": exc.detail}, status_code=exc.status_code)
             
         self.runner = None
         self.site = None
@@ -100,7 +99,6 @@ class DashboardServer:
 
     async def start_mcp_server(self):
         try:
-            import uvicorn
             from ganymede.mcp_server import app as mcp_app
             starlette_app = mcp_app.sse_app("/mcp")
             
@@ -123,19 +121,20 @@ class DashboardServer:
             wrapped_app = MCPAuthMiddleware(starlette_app)
             
             cfg = uvicorn.Config(wrapped_app, host="0.0.0.0", port=8081, log_level="warning")
-            self.uvicorn_server = uvicorn.Server(cfg)
-            await self.uvicorn_server.serve()
+            self.mcp_uvicorn_server = uvicorn.Server(cfg)
+            await self.mcp_uvicorn_server.serve()
         except Exception as e:
             logger.error("FastMCP SSE server crashed", error=str(e))
 
-
-
     async def start(self):
-        self.runner = web.AppRunner(self.app)
-        await self.runner.setup()
         port = getattr(self.config.agent, "dashboard_port", 8180)
-        self.site = web.TCPSite(self.runner, '0.0.0.0', port)
-        await self.site.start()
+        
+        cfg = uvicorn.Config(self.app, host="0.0.0.0", port=port, log_level="warning")
+        self.uvicorn_server = uvicorn.Server(cfg)
+        
+        # Start dashboard server
+        self.server_task = asyncio.create_task(self.uvicorn_server.serve())
+        
         logger.info(f"Dashboard started on port {port}", url=f"http://localhost:{port}")
         
         # Start SSE MCP server on 8081 natively
@@ -144,47 +143,10 @@ class DashboardServer:
     async def stop(self):
         if getattr(self, 'mcp_task', None):
             self.mcp_task.cancel()
-        if getattr(self, 'runner', None):
-            await self.runner.cleanup()
+        if getattr(self, 'mcp_uvicorn_server', None):
+            self.mcp_uvicorn_server.should_exit = True
+        if getattr(self, 'uvicorn_server', None):
+            self.uvicorn_server.should_exit = True
+            if hasattr(self, 'server_task'):
+                await self.server_task
         logger.info("Dashboard stopped")
-
-from ganymede.core.routes.dashboard import handle_index, handle_status, handle_user_info, handle_dashboard_ws, handle_files
-from ganymede.core.routes.chats import handle_chats, handle_chat_history, handle_chat_files, handle_chat_merge, handle_chat_fork, handle_chat_settings_get, handle_chat_settings_post, handle_chat_invoke
-from ganymede.core.routes.config import handle_config_get, handle_config_post, handle_rules_get, handle_rules_post, handle_rule_delete, handle_bot_conversations, handle_providers_get, handle_bots_get, handle_bot_post, handle_bot_delete
-from ganymede.core.routes.telemetry import handle_telemetry_ws, handle_telemetry_post
-from ganymede.core.routes.ipc import handle_ipc_request, handle_schedule_cron, handle_status_update, handle_test_invoke
-
-DashboardServer.handle_index = handle_index
-DashboardServer.handle_status = handle_status
-DashboardServer.handle_user_info = handle_user_info
-DashboardServer.handle_dashboard_ws = handle_dashboard_ws
-DashboardServer.handle_files = handle_files
-
-DashboardServer.handle_chats = handle_chats
-DashboardServer.handle_chat_history = handle_chat_history
-DashboardServer.handle_chat_files = handle_chat_files
-DashboardServer.handle_chat_merge = handle_chat_merge
-DashboardServer.handle_chat_fork = handle_chat_fork
-DashboardServer.handle_chat_settings_get = handle_chat_settings_get
-DashboardServer.handle_chat_settings_post = handle_chat_settings_post
-DashboardServer.handle_chat_invoke = handle_chat_invoke
-
-DashboardServer.handle_config_get = handle_config_get
-DashboardServer.handle_providers_get = handle_providers_get
-DashboardServer.handle_bots_get = handle_bots_get
-DashboardServer.handle_bot_post = handle_bot_post
-DashboardServer.handle_bot_delete = handle_bot_delete
-DashboardServer.handle_config_post = handle_config_post
-DashboardServer.handle_rules_get = handle_rules_get
-DashboardServer.handle_rules_post = handle_rules_post
-DashboardServer.handle_rule_delete = handle_rule_delete
-DashboardServer.handle_bot_conversations = handle_bot_conversations
-
-DashboardServer.handle_telemetry_ws = handle_telemetry_ws
-DashboardServer.handle_telemetry_post = handle_telemetry_post
-
-DashboardServer.handle_ipc_request = handle_ipc_request
-DashboardServer.handle_schedule_cron = handle_schedule_cron
-DashboardServer.handle_status_update = handle_status_update
-DashboardServer.handle_test_invoke = handle_test_invoke
-

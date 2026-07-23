@@ -219,41 +219,19 @@ class ManagedAgent:
         self.conversation_id = conversation_id
         self.bot_namespace = bot_namespace
         self.ipc_port = ipc_port
-        self.current_process: asyncio.subprocess.Process | None = None
-        self.master_fd: int | None = None
         self.sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
         self.turn_completed_event = asyncio.Event()
         self.aborted = False
         self._chalice_transcript_path = None  # Set by handle_telemetry when Stop fires
         self._chalice_error = None  # Set by handle_telemetry if Stop fires with an error
 
-    async def _sink_pty_output(self):
-        """Read and discard the PTY output in the background so the buffer doesn't fill up."""
-        loop = asyncio.get_running_loop()
-        def read_pty():
-            import select
-            try:
-                r, _, _ = select.select([self.master_fd], [], [], 1.0)
-                if r:
-                    return os.read(self.master_fd, 4096)
-            except OSError:
-                pass
-            return b''
-            
-        while self.current_process and self.current_process.returncode is None:
-            chunk = await loop.run_in_executor(None, read_pty)
-            if not chunk:
-                await asyncio.sleep(0.1)
-
     async def ensure_running(self):
-        if self.current_process and self.current_process.returncode is None:
-            return
 
         db_dir = os.path.expanduser("~/.gemini/antigravity-cli/conversations")
         db_path = os.path.join(db_dir, f"{self.sdk_conversation_id}.db")
         is_new_conversation = not os.path.exists(db_path)
 
-        args = ["agy", "--continue", "--conversation", self.sdk_conversation_id]
+        args = ["agy", "--continue", self.sdk_conversation_id]
         
         project_name = self.context_key.project_name
             
@@ -266,6 +244,10 @@ class ManagedAgent:
             
         if is_new_conversation:
             args.extend(["--new-project", project_name])
+        else:
+            args.extend(["--project", project_name])
+            
+        args.extend(["--mode", "accept-edits"])
             
         # Model resolution — ALWAYS pass --model to prevent agy's global
         # settings.json from applying its own model (which may be Opus/Claude).
@@ -284,12 +266,17 @@ class ManagedAgent:
         if getattr(self.config.agent, "skip_permissions", True):
             args.append("--dangerously-skip-permissions")
             
-        workspace_dir = os.path.expanduser(self.config.agent.workspace)
-        os.makedirs(workspace_dir, exist_ok=True)
+        session_name = f"ganymede-{self.sdk_conversation_id}"
+        import subprocess
         
-        master_fd, slave_fd = pty.openpty()
-        self.master_fd = master_fd
-        
+        try:
+            res = subprocess.run(["tmux", "has-session", "-t", session_name], capture_output=True)
+            if res.returncode == 0:
+                logger.info("Found existing decoupled agy session, reattaching", session=session_name)
+                return
+        except Exception:
+            pass
+
         subprocess_env = os.environ.copy()
         subprocess_env["SULCUS_NAMESPACE"] = getattr(self, "bot_namespace", "ganymede")
         subprocess_env["NO_COLOR"] = "1"
@@ -298,38 +285,31 @@ class ManagedAgent:
         if getattr(self, "ipc_port", None):
             subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
-        import fcntl
-        import termios
-        def _setup_ctty():
-            os.setsid()
-            fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
-
-        logger.info("Spawning agy subprocess", command=" ".join(args), model=resolved_model, context=self.context_key)
-        self.current_process = await asyncio.create_subprocess_exec(
-            *args,
-            stdin=slave_fd,
-            stdout=slave_fd,
-            stderr=slave_fd,
-            cwd=workspace_dir,
-            env=subprocess_env,
-            preexec_fn=_setup_ctty,
-        )
-        os.close(slave_fd)
+        cmd = " ".join(f'"{a}"' if " " in a else a for a in args)
         
-        # Write PID→conversation_id mapping so Chalice broadcast.py can correlate
-        # telemetry events back to this ManagedAgent. We can't use env vars because
-        # agy sanitizes the subprocess environment before running hook commands.
+        logger.info("Spawning decoupled agy in tmux", command=cmd, session=session_name, model=resolved_model, context=self.context_key)
+        
+        subprocess.run(["tmux", "new-session", "-d", "-s", session_name, "-c", workspace_dir, cmd], env=subprocess_env, check=True)
+        
+        # Fetch the PID of the pane to map to chalice
+        res = subprocess.run(["tmux", "display-message", "-p", "-t", session_name, "#{pane_pid}"], capture_output=True, text=True, check=True)
+        pane_pid = res.stdout.strip()
+        self.pane_pid = int(pane_pid)
+        self.tmux_session_name = session_name
+        
         pid_map_dir = os.path.expanduser("~/.ganymede/data/pid_map")
         os.makedirs(pid_map_dir, exist_ok=True)
-        pid_map_file = os.path.join(pid_map_dir, str(self.current_process.pid))
+        pid_map_file = os.path.join(pid_map_dir, pane_pid)
         with open(pid_map_file, "w") as f:
             f.write(self.conversation_id)
         
-        # Start background sink
-        asyncio.create_task(self._sink_pty_output())
-        
-        # Wait a moment for agy to boot up before injecting initial input
-        await asyncio.sleep(2)
+        # Wait for agy to boot up and display its interactive prompt before injecting input
+        for _ in range(40):  # Wait up to 20 seconds
+            res = subprocess.run(["tmux", "capture-pane", "-p", "-t", session_name], capture_output=True, text=True)
+            if ">" in res.stdout or "Error" in res.stdout:
+                await asyncio.sleep(0.5) # Give it just a moment to settle
+                break
+            await asyncio.sleep(0.5)
 
     async def chat(self, prompt: str) -> CliResponse:
         self.last_active = time.time()
@@ -388,10 +368,15 @@ class ManagedAgent:
                 
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
-            # Write prompt as simulated keystrokes to the PTY.
-            # \r is required to trigger bubbletea's Enter key (submit action) in raw mode.
-            # Output reading is handled entirely by Chalice telemetry, not the PTY.
-            os.write(self.master_fd, (final_prompt + '\r').encode('utf-8'))
+            # Write prompt as simulated keystrokes to tmux session.
+            import subprocess
+            import uuid
+            buf_name = f"buf-{uuid.uuid4().hex[:8]}"
+            proc = subprocess.Popen(["tmux", "load-buffer", "-b", buf_name, "-"], stdin=subprocess.PIPE)
+            proc.communicate((final_prompt + '\r').encode('utf-8'))
+            
+            subprocess.run(["tmux", "paste-buffer", "-b", buf_name, "-t", f"ganymede-{self.sdk_conversation_id}"])
+            subprocess.run(["tmux", "delete-buffer", "-b", buf_name])
             
             return CliResponse(self, prompt)
 
@@ -401,43 +386,24 @@ class ManagedAgent:
         self.aborted = True
         self.turn_completed_event.set()
 
-        if self.current_process:
-            logger.info("Terminating active agy subprocess and its process group", conversation_id=self.conversation_id)
+        if getattr(self, "tmux_session_name", None):
+            logger.info("Terminating decoupled tmux session", session=self.tmux_session_name)
+            import subprocess
             try:
-                import signal
-                try:
-                    os.killpg(self.current_process.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-                    
-                try:
-                    await asyncio.wait_for(self.current_process.wait(), timeout=1.0)
-                except asyncio.TimeoutError:
-                    logger.warn("Subprocess did not exit gracefully, killing process group", conversation_id=self.conversation_id)
-                    try:
-                        os.killpg(self.current_process.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
-                    await self.current_process.wait()
+                subprocess.run(["tmux", "kill-session", "-t", self.tmux_session_name], capture_output=True)
             except Exception as e:
-                logger.error("Error terminating agy subprocess", error=str(e))
+                logger.error("Error terminating tmux session", error=str(e))
             finally:
-                # Clean up PID mapping file
-                if self.current_process:
+                if getattr(self, "pane_pid", None):
                     pid_map_file = os.path.join(
                         os.path.expanduser("~/.ganymede/data/pid_map"),
-                        str(self.current_process.pid))
+                        str(self.pane_pid))
                     try:
                         os.remove(pid_map_file)
                     except FileNotFoundError:
                         pass
-                self.current_process = None
-                if self.master_fd is not None:
-                    try:
-                        os.close(self.master_fd)
-                    except Exception:
-                        pass
-                    self.master_fd = None
+                self.tmux_session_name = None
+                self.pane_pid = None
 
     async def close(self):
         await self.terminate()

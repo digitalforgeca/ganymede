@@ -3,23 +3,30 @@ import asyncio
 import structlog
 import json
 import yaml
-from aiohttp import web
+from fastapi import APIRouter, Request, Response
+from fastapi.responses import JSONResponse
 from ganymede.config import AppConfig
 from ganymede.core import ContextKey
 
 logger = structlog.get_logger()
 
-async def handle_config_get(server, request):
+router = APIRouter()
+
+@router.get('/api/config')
+async def handle_config_get(request: Request):
+    server = request.app.state.server
     import yaml
     config_path = os.path.expanduser("~/.ganymede/config.yaml")
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             data = yaml.safe_load(f) or {}
-            return web.json_response(data)
-    return web.json_response({})
+            return data
+    return {}
     
 
-async def handle_config_post(server, request):
+@router.post('/api/config')
+async def handle_config_post(request: Request):
+    server = request.app.state.server
     import yaml
     data = await request.json()
         
@@ -49,11 +56,13 @@ async def handle_config_post(server, request):
     try:
         with open(config_path, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
-        return web.json_response({"status": "saved"})
+        return {"status": "saved"}
     except Exception as e:
-        return web.json_response({"error": str(e)}, status=500)
+        return JSONResponse({"error": str(e)}, status_code=500)
 
-async def handle_rules_get(server, request):
+@router.get('/api/rules')
+async def handle_rules_get(request: Request):
+    server = request.app.state.server
     rules_dir = os.path.expanduser("~/.gemini/rules")
     if not os.path.exists(rules_dir):
         os.makedirs(rules_dir, exist_ok=True)
@@ -62,18 +71,20 @@ async def handle_rules_get(server, request):
     if filename:
         file_path = os.path.join(rules_dir, filename)
         if not os.path.exists(file_path):
-            return web.json_response({"error": "Rule not found"}, status=404)
+            return JSONResponse({"error": "Rule not found"}, status_code=404)
         with open(file_path, "r") as f:
-            return web.json_response({"content": f.read()})
+            return {"content": f.read()}
             
     files = []
     for f in os.listdir(rules_dir):
         if f.endswith(".md"):
             files.append(f)
-    return web.json_response({"rules": sorted(files)})
+    return {"rules": sorted(files)}
 
 
-async def handle_rules_post(server, request):
+@router.post('/api/rules')
+async def handle_rules_post(request: Request):
+    server = request.app.state.server
     rules_dir = os.path.expanduser("~/.gemini/rules")
     if not os.path.exists(rules_dir):
         os.makedirs(rules_dir, exist_ok=True)
@@ -83,30 +94,34 @@ async def handle_rules_post(server, request):
     content = data.get("content", "")
     
     if not filename or not filename.endswith(".md"):
-        return web.json_response({"error": "Invalid filename. Must end with .md"}, status=400)
+        return JSONResponse({"error": "Invalid filename. Must end with .md"}, status_code=400)
         
     file_path = os.path.join(rules_dir, filename)
     with open(file_path, "w") as f:
         f.write(content)
         
-    return web.json_response({"status": "saved", "filename": filename})
+    return {"status": "saved", "filename": filename}
     
 
-async def handle_rule_delete(server, request):
-    filename = request.match_info['filename']
+@router.delete('/api/rules/{filename}')
+async def handle_rule_delete(request: Request):
+    server = request.app.state.server
+    filename = request.path_params.get('filename')
     if not filename or not filename.endswith(".md"):
-        return web.json_response({"error": "Invalid filename"}, status=400)
+        return JSONResponse({"error": "Invalid filename"}, status_code=400)
         
     file_path = os.path.join(os.path.expanduser("~/.gemini/rules"), filename)
     if os.path.exists(file_path):
         os.remove(file_path)
-        return web.json_response({"status": "deleted"})
-    return web.json_response({"error": "Rule not found"}, status=404)
+        return {"status": "deleted"}
+    return JSONResponse({"error": "Rule not found"}, status_code=404)
 
 
-async def handle_bot_conversations(server, request):
+@router.get('/api/bots/detail/conversations')
+async def handle_bot_conversations(request: Request):
+    server = request.app.state.server
     if not server.db:
-        return web.json_response({"error": "Database not available"}, status=500)
+        return JSONResponse({"error": "Database not available"}, status_code=500)
         
     async with server.db._conn.execute(
         """
@@ -117,11 +132,13 @@ async def handle_bot_conversations(server, request):
         """
     ) as cursor:
         rows = await cursor.fetchall()
-        return web.json_response({"conversations": [dict(row) for row in rows]})
+        return {"conversations": [dict(row) for row in rows]}
 
 
 
-async def handle_providers_get(server, request):
+@router.get('/api/providers')
+async def handle_providers_get(request: Request):
+    server = request.app.state.server
     # Dynamically list all providers and their schemas
     import pkgutil
     import importlib
@@ -173,9 +190,11 @@ async def handle_providers_get(server, request):
                 except Exception:
                     pass
                     
-    return web.json_response({"providers": providers})
+    return {"providers": providers}
 
-async def handle_bots_get(server, request):
+@router.get('/api/bots')
+async def handle_bots_get(request: Request):
+    server = request.app.state.server
     import yaml
     config_path = os.path.expanduser("~/.ganymede/config.yaml")
     bots = {}
@@ -183,11 +202,13 @@ async def handle_bots_get(server, request):
         with open(config_path, "r") as f:
             data = yaml.safe_load(f) or {}
             bots = data.get("bots", {})
-    return web.json_response({"bots": bots})
+    return {"bots": bots}
 
-async def handle_bot_post(server, request):
+@router.post('/api/bots/{bot_id}')
+async def handle_bot_post(request: Request):
+    server = request.app.state.server
     import yaml
-    bot_id = request.match_info['bot_id']
+    bot_id = request.path_params.get('bot_id')
     bot_data = await request.json()
     
     config_path = os.path.expanduser("~/.ganymede/config.yaml")
@@ -207,11 +228,13 @@ async def handle_bot_post(server, request):
     with open(config_path, "w") as f:
         yaml.dump(data, f, default_flow_style=False)
         
-    return web.json_response({"status": "saved", "bot_id": bot_id})
+    return {"status": "saved", "bot_id": bot_id}
 
-async def handle_bot_delete(server, request):
+@router.delete('/api/bots/{bot_id}')
+async def handle_bot_delete(request: Request):
+    server = request.app.state.server
     import yaml
-    bot_id = request.match_info['bot_id']
+    bot_id = request.path_params.get('bot_id')
     
     config_path = os.path.expanduser("~/.ganymede/config.yaml")
     data = {}
@@ -229,5 +252,5 @@ async def handle_bot_delete(server, request):
         with open(config_path, "w") as f:
             yaml.dump(data, f, default_flow_style=False)
             
-        return web.json_response({"status": "deleted", "bot_id": bot_id})
-    return web.json_response({"error": "Bot not found"}, status=404)
+        return {"status": "deleted", "bot_id": bot_id}
+    return JSONResponse({"error": "Bot not found"}, status_code=404)

@@ -125,8 +125,10 @@ async def run(config: AppConfig):
     db = Database(config)
     await db.init()
     
-    from ganymede.platforms.base import get_platform_provider_class
+    from ganymede.core.plugin_manager import PluginManager
     import copy
+    
+    plugin_manager = PluginManager()
 
     # Factory function to create a Router and its subsystems for a config copy
     def router_factory(inst_config: AppConfig) -> Router:
@@ -157,7 +159,7 @@ async def run(config: AppConfig):
                 bot_config_copy.bot.provider = bot_cfg["provider"]
                 
             platform_name = bot_cfg.get("provider", {}).get("type", "discord").lower()
-            provider_class = get_platform_provider_class(platform_name)
+            provider_class = plugin_manager.get_provider_class(platform_name)
             
             router = router_factory(bot_config_copy)
             
@@ -177,9 +179,12 @@ async def run(config: AppConfig):
     # Force-attach the native Web Provider if not already present
     has_web = any(p.__class__.__name__ == "WebProvider" for p in providers)
     if not has_web:
-        from ganymede.platforms.web.provider import WebProvider
-        web_provider = WebProvider(config, router_factory(config), db, bot_id="web-default")
-        providers.append(web_provider)
+        try:
+            web_provider_class = plugin_manager.get_provider_class("web")
+            web_provider = web_provider_class(config, router_factory(config), db, bot_id="web-default")
+            providers.append(web_provider)
+        except ValueError:
+            logger.warning("Web provider plugin not found, dashboard bots will be unavailable.")
     
     # Auto-register Ganymede SSE MCP server globally for agy CLI clients
     import json
@@ -219,8 +224,7 @@ async def run(config: AppConfig):
             if 'dashboard' in locals():
                 await dashboard.stop()
             for provider in providers:
-                if provider.router and provider.router.agent_manager:
-                    await provider.router.agent_manager.destroy_all()
+                # Do NOT call destroy_all() anymore, so tmux sessions survive gateway restarts!
                 await provider.stop()
             await db.close()
             
@@ -253,8 +257,9 @@ async def run(config: AppConfig):
             
     # Start dashboard web server
     from ganymede.core.web import DashboardServer
-    dashboard = DashboardServer(config)
+    dashboard = DashboardServer(config, db)
     dashboard.providers = providers
+    dashboard.web_invoke_callback = providers[-1].adapter.handle_invoke
     await dashboard.start()
     
     # Start platform provider services concurrently

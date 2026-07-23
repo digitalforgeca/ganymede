@@ -3,20 +3,25 @@ import asyncio
 import structlog
 import json
 import yaml
-from aiohttp import web
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse, FileResponse
 from ganymede.config import AppConfig
 from ganymede.core import ContextKey
 
 logger = structlog.get_logger()
+router = APIRouter()
 
-async def handle_index(server, request):
+@router.get('/')
+async def handle_index(request: Request):
+    server = request.app.state.server
     index_path = os.path.join(server.web_dir, 'index.html')
     if os.path.exists(index_path):
-        return web.FileResponse(index_path)
-    return web.Response(text="Dashboard initializing...", status=404)
+        return FileResponse(index_path)
+    return JSONResponse(content="Dashboard initializing...", status_code=404)
 
-
-async def handle_status(server, request):
+@router.get('/api/status')
+async def handle_status(request: Request):
+    server = request.app.state.server
     status_str = "online" if any(server.platform_states.values()) else "offline"
     
     active_instances = 0
@@ -36,15 +41,13 @@ async def handle_status(server, request):
     if getattr(server, "providers", None):
         for p in server.providers:
             if hasattr(p, "router") and p.router and p.router.agent_manager:
-                # Query ganymede.db for persistent tokens and requests
                 import sqlite3
-                import os
                 db_path = os.path.expanduser("~/.ganymede/data/ganymede.db")
                 if os.path.exists(db_path):
                     try:
                         with sqlite3.connect(db_path) as conn:
                             c = conn.cursor()
-                            c.execute("SELECT sum(tokens) FROM conversations WHERE created_at >= datetime('now', '-1 hour')")
+                            c.execute("SELECT sum(tokens_total) FROM telemetry WHERE created_at >= datetime('now', '-1 hour')")
                             row = c.fetchone()
                             if row and row[0]:
                                 tokens_hour += int(row[0])
@@ -74,7 +77,7 @@ async def handle_status(server, request):
             "avatar_url": None
         }
                 
-    return web.json_response({
+    return {
         "status": status_str,
         "platform": server.config.platform,
         "log_level": server.config.log_level,
@@ -88,10 +91,11 @@ async def handle_status(server, request):
             "quota_limit": quota_limit
         },
         "bot_info": bot_info
-    })
+    }
 
 
-async def handle_user_info(server, request):
+@router.get('/api/user')
+async def handle_user_info(request: Request):
     import base64
     import json
     creds_path = os.path.expanduser("~/.gemini/oauth_creds.json")
@@ -111,24 +115,27 @@ async def handle_user_info(server, request):
                     user_info["avatar_url"] = payload["picture"]
         except Exception as e:
             logger.error("Failed to parse oauth_creds.json", error=str(e))
-    return web.json_response(user_info)
+    return user_info
 
 
-async def handle_dashboard_ws(server, request):
-    ws = web.WebSocketResponse()
-    await ws.prepare(request)
-    server.dashboard_clients.add(ws)
+@router.websocket('/ws/dashboard')
+async def handle_dashboard_ws(websocket: WebSocket):
+    server = websocket.app.state.server
+    await websocket.accept()
+    server.dashboard_clients.add(websocket)
     
     try:
-        async for msg in ws:
-            pass # Dashboard only listens
+        while True:
+            await websocket.receive_text() # Dashboard only listens
+    except WebSocketDisconnect:
+        pass
     finally:
-        server.dashboard_clients.remove(ws)
-        
-    return ws
+        server.dashboard_clients.remove(websocket)
 
 
-async def handle_files(server, request):
+@router.get('/api/files')
+async def handle_files(request: Request):
+    server = request.app.state.server
     workspace = server.config.workspace if hasattr(server.config, 'workspace') else os.path.expanduser("~/.ganymede/workspace")
     files_data = []
     
@@ -140,6 +147,4 @@ async def handle_files(server, request):
                 size = os.path.getsize(full_path)
                 files_data.append({"name": file, "path": rel_path, "size": size})
                 
-    return web.json_response({"files": files_data, "workspace": workspace})
-
-
+    return {"files": files_data, "workspace": workspace}

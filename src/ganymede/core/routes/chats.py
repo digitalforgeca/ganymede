@@ -3,13 +3,18 @@ import asyncio
 import structlog
 import json
 import yaml
-from aiohttp import web
+from fastapi import APIRouter, Request, Response
+from fastapi.responses import JSONResponse
 from ganymede.config import AppConfig
 from ganymede.core import ContextKey
 
 logger = structlog.get_logger()
 
-async def handle_chats(server, request):
+router = APIRouter()
+
+@router.get('/api/chats')
+async def handle_chats(request: Request):
+    server = request.app.state.server
     # Return all unique contexts from the conversations table by doing a group by
     
     # We need a reference to DB. Let's see if we can get it from the globally injected db or router
@@ -127,14 +132,16 @@ async def handle_chats(server, request):
             
     # Re-sort combined list
     chats.sort(key=lambda x: x["last_active"], reverse=True)
-    return web.json_response({"chats": chats})
+    return {"chats": chats}
 
 
-async def handle_chat_history(server, request):
-    context_id = request.match_info.get('id', '')
+@router.get('/api/chats/{id}/history')
+async def handle_chat_history(request: Request):
+    server = request.app.state.server
+    context_id = request.path_params.get('id', '')
     parts = context_id.split('_')
     if len(parts) < 3:
-        return web.json_response({"error": "Invalid context ID format"}, status=400)
+        return JSONResponse({"error": "Invalid context ID format"}, status_code=400)
         
     platform = parts[0]
     channel_id = parts[1]
@@ -233,14 +240,16 @@ async def handle_chat_history(server, request):
                             "created_at": r["created_at"]
                         })
                         
-    return web.json_response({"messages": history})
+    return {"messages": history}
 
 
-async def handle_chat_files(server, request):
-    context_id = request.match_info.get('id', '')
+@router.get('/api/chats/{id}/files')
+async def handle_chat_files(request: Request):
+    server = request.app.state.server
+    context_id = request.path_params.get('id', '')
     parts = context_id.split('_')
     if len(parts) < 3:
-        return web.json_response({"error": "Invalid context ID format"}, status=400)
+        return JSONResponse({"error": "Invalid context ID format"}, status_code=400)
         
     platform = parts[0]
     channel_id = parts[1]
@@ -281,20 +290,22 @@ async def handle_chat_files(server, request):
                 size = os.path.getsize(full_path)
                 files_data.append({"name": file, "path": rel_path, "size": size})
                 
-    return web.json_response({"files": files_data, "workspace": agy_brain_dir})
+    return {"files": files_data, "workspace": agy_brain_dir}
 
 
-async def handle_chat_merge(server, request):
-    context_id = request.match_info.get('id', '')
+@router.post('/api/chats/{id}/merge')
+async def handle_chat_merge(request: Request):
+    server = request.app.state.server
+    context_id = request.path_params.get('id', '')
     data = await request.json()
     target_conversation_id = data.get('target_conversation_id')
     
     if not target_conversation_id:
-        return web.json_response({"error": "Missing target_conversation_id"}, status=400)
+        return JSONResponse({"error": "Missing target_conversation_id"}, status_code=400)
         
     parts = context_id.split('_')
     if len(parts) < 3:
-        return web.json_response({"error": "Invalid context ID format"}, status=400)
+        return JSONResponse({"error": "Invalid context ID format"}, status_code=400)
         
     platform = parts[0]
     channel_id = parts[1]
@@ -316,17 +327,19 @@ async def handle_chat_merge(server, request):
             )
             await conn.commit()
     
-    return web.json_response({"status": "merged", "target_conversation_id": target_conversation_id})
+    return {"status": "merged", "target_conversation_id": target_conversation_id}
 
 
-async def handle_chat_fork(server, request):
+@router.post('/api/chats/{id}/fork')
+async def handle_chat_fork(request: Request):
+    server = request.app.state.server
     import uuid
     import shutil
     
-    context_id = request.match_info.get('id', '')
+    context_id = request.path_params.get('id', '')
     conversation_id = await server._resolve_conversation_id(context_id)
     if not conversation_id:
-        return web.json_response({"error": "Invalid context ID format"}, status=400)
+        return JSONResponse({"error": "Invalid context ID format"}, status_code=400)
         
     parts = context_id.split('_')
     platform = parts[0]
@@ -359,14 +372,16 @@ async def handle_chat_fork(server, request):
             await conn.commit()
             
     new_context_id = f"{platform}_{channel_id}_{new_thread_id}"
-    return web.json_response({"status": "forked", "new_context_id": new_context_id})
+    return {"status": "forked", "new_context_id": new_context_id}
 
 
-async def handle_chat_settings_get(server, request):
-    context_id = request.match_info.get('id', '')
+@router.get('/api/chats/{id}/settings')
+async def handle_chat_settings_get(request: Request):
+    server = request.app.state.server
+    context_id = request.path_params.get('id', '')
     conversation_id = await server._resolve_conversation_id(context_id)
     if not conversation_id:
-        return web.json_response({"error": "Invalid context ID format"}, status=400)
+        return JSONResponse({"error": "Invalid context ID format"}, status_code=400)
         
     brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
     
@@ -413,20 +428,22 @@ async def handle_chat_settings_get(server, request):
         with open(skip_permissions_path, "r") as f:
             skip_permissions = f.read().strip() == "true"
             
-    return web.json_response({
+    return {
         "model": model_override, 
         "project_name": project_name,
         "mode": mode,
         "skip_permissions": skip_permissions,
         "rules": rules
-    })
+    }
     
 
-async def handle_chat_settings_post(server, request):
-    context_id = request.match_info.get('id', '')
+@router.post('/api/chats/{id}/settings')
+async def handle_chat_settings_post(request: Request):
+    server = request.app.state.server
+    context_id = request.path_params.get('id', '')
     conversation_id = await server._resolve_conversation_id(context_id)
     if not conversation_id:
-        return web.json_response({"error": "Invalid context ID format"}, status=400)
+        return JSONResponse({"error": "Invalid context ID format"}, status_code=400)
         
     data = await request.json()
     model_override = data.get("model", "").strip()
@@ -504,12 +521,14 @@ async def handle_chat_settings_post(server, request):
     except Exception as e:
         logger.error("Failed to log settings change to db", error=str(e))
         
-    return web.json_response({"status": "saved", "model": model_override, "project_name": project_name})
+    return {"status": "saved", "model": model_override, "project_name": project_name}
 
 
-async def handle_chat_invoke(server, request):
+@router.post('/api/chat/invoke')
+async def handle_chat_invoke(request: Request):
+    server = request.app.state.server
     if server.web_invoke_callback:
         return await server.web_invoke_callback(request)
-    return web.json_response({"error": "WebProvider not initialized"}, status=503)
+    return JSONResponse({"error": "WebProvider not initialized"}, status_code=503)
 
 

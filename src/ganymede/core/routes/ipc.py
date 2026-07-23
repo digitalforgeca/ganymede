@@ -3,25 +3,28 @@ import asyncio
 import structlog
 import json
 import yaml
-from aiohttp import web
+from fastapi import APIRouter, Request, Response
+from fastapi.responses import JSONResponse
 from ganymede.config import AppConfig
 from ganymede.core import ContextKey
 
 logger = structlog.get_logger()
 
+router = APIRouter()
+
 def handle_ipc_request(server, method_name: str, required_args: list[str]):
-    async def handler(request: web.Request) -> web.Response:
+    async def handler(request: Request):
         try:
             data = await request.json()
             platform = data.get("platform", "discord")
             
             adapter = server._get_provider_adapter(platform)
             if not adapter:
-                return web.json_response({"error": f"Provider adapter for platform '{platform}' not found or not running."}, status=404)
+                return JSONResponse({"error": f"Provider adapter for platform '{platform}' not found or not running."}, status_code=404)
                 
             method = getattr(adapter, method_name, None)
             if not method:
-                return web.json_response({"error": f"Method {method_name} not implemented for platform '{platform}'."}, status=501)
+                return JSONResponse({"error": f"Method {method_name} not implemented for platform '{platform}'."}, status_code=501)
                 
             kwargs = {k: data[k] for k in required_args if k in data}
             
@@ -34,19 +37,21 @@ def handle_ipc_request(server, method_name: str, required_args: list[str]):
             result = await method(**kwargs)
             
             if isinstance(result, list):
-                return web.json_response({"messages": result})
+                return {"messages": result}
             elif isinstance(result, dict):
-                return web.json_response(result)
+                return result
             else:
-                return web.json_response({"status": "ok", "data": result})
+                return {"status": "ok", "data": result}
                 
         except Exception as e:
             logger.error(f"IPC Server error on {method_name}", error=str(e))
-            return web.json_response({"error": str(e)}, status=500)
+            return JSONResponse({"error": str(e)}, status_code=500)
     return handler
 
 
-async def handle_schedule_cron(server, request: web.Request) -> web.Response:
+@router.post('/api/schedule/cron')
+async def handle_schedule_cron(request: Request):
+    server = request.app.state.server
     data = await request.json()
     platform = data.get("platform", "discord")
     cron_expr = data.get("cron_expr")
@@ -54,7 +59,7 @@ async def handle_schedule_cron(server, request: web.Request) -> web.Response:
     channel_id = data.get("channel_id")
     
     if not all([cron_expr, prompt, channel_id]):
-        return web.json_response({"error": "Missing cron_expr, prompt, or channel_id"}, status=400)
+        return JSONResponse({"error": "Missing cron_expr, prompt, or channel_id"}, status_code=400)
         
     for provider in getattr(server, "providers", []):
         provider_platform = getattr(provider.config, "platform", "discord").lower()
@@ -65,14 +70,16 @@ async def handle_schedule_cron(server, request: web.Request) -> web.Response:
             context = ContextKey(platform, str(channel_id), None)
             try:
                 await provider.scheduler.add_cron_job(job_id, context, "system", cron_expr, prompt)
-                return web.json_response({"job_id": job_id, "status": "scheduled"})
+                return {"job_id": job_id, "status": "scheduled"}
             except Exception as e:
-                return web.json_response({"error": str(e)}, status=500)
+                return JSONResponse({"error": str(e)}, status_code=500)
                 
-    return web.json_response({"error": f"Scheduler not found for platform '{platform}'."}, status=501)
+    return JSONResponse({"error": f"Scheduler not found for platform '{platform}'."}, status_code=501)
 
 
-async def handle_status_update(server, request: web.Request) -> web.Response:
+@router.post('/api/status/update')
+async def handle_status_update(request: Request):
+    server = request.app.state.server
     try:
         data = await request.json()
         conversation_id = data.get("conversation_id")
@@ -81,7 +88,7 @@ async def handle_status_update(server, request: web.Request) -> web.Response:
         platform = data.get("platform", "discord")
         
         if not conversation_id or not tool_name:
-            return web.json_response({"error": "Missing conversation_id or tool_name"}, status=400)
+            return JSONResponse({"error": "Missing conversation_id or tool_name"}, status_code=400)
             
         adapter = server._get_provider_adapter(platform)
         if adapter and hasattr(adapter, "update_streaming_status"):
@@ -101,13 +108,15 @@ async def handle_status_update(server, request: web.Request) -> web.Response:
                 status_text = format_tool_status(tool_name, tool_args)
                 await adapter.update_streaming_status(context, status_text)
                 
-        return web.json_response({"status": "ok"})
+        return {"status": "ok"}
     except Exception as e:
         logger.error("Failed to process status update request", error=str(e))
-        return web.json_response({"error": str(e)}, status=500)
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
-async def handle_test_invoke(server, request: web.Request) -> web.Response:
+@router.post('/api/test/invoke')
+async def handle_test_invoke(request: Request):
+    server = request.app.state.server
     """Simulate an incoming message for testing purposes."""
     try:
         data = await request.json()
@@ -118,11 +127,11 @@ async def handle_test_invoke(server, request: web.Request) -> web.Response:
         author_name = data.get("author_name", "TestUser")
         
         if not channel_id or not content:
-            return web.json_response({"error": "Missing channel_id or content"}, status=400)
+            return JSONResponse({"error": "Missing channel_id or content"}, status_code=400)
             
         adapter = server._get_provider_adapter(platform)
         if not adapter or not hasattr(adapter, "_on_message_callback") or not adapter._on_message_callback:
-            return web.json_response({"error": "Adapter missing _on_message_callback"}, status=500)
+            return JSONResponse({"error": "Adapter missing _on_message_callback"}, status_code=500)
             
         from ganymede.core import ContextKey
         from ganymede.core.models import PlatformMessage
@@ -141,8 +150,8 @@ async def handle_test_invoke(server, request: web.Request) -> web.Response:
         )
         
         asyncio.create_task(adapter._on_message_callback(normalized))
-        return web.json_response({"status": "invoked", "channel_id": channel_id})
+        return {"status": "invoked", "channel_id": channel_id}
     except Exception as e:
         logger.error("Failed to process test invoke", error=str(e))
-        return web.json_response({"error": str(e)}, status=500)
+        return JSONResponse({"error": str(e)}, status_code=500)
 

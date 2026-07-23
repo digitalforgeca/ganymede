@@ -3,56 +3,72 @@ import asyncio
 import structlog
 import json
 import yaml
-from aiohttp import web
+from fastapi import APIRouter, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from ganymede.config import AppConfig
 from ganymede.core import ContextKey
 
 logger = structlog.get_logger()
 
-async def handle_telemetry_ws(server, request):
-    ws = web.WebSocketResponse()
-    await ws.prepare(request)
+router = APIRouter()
+
+@router.websocket('/ws/telemetry')
+async def handle_telemetry_ws(websocket: WebSocket):
+    server = websocket.app.state.server
+    await websocket.accept()
     
     logger.info("Chalice plugin connected via WebSocket")
     
     try:
-        async for msg in ws:
-            if msg.type == web.WSMsgType.TEXT:
-                try:
-                    data = json.loads(msg.data)
-                    logger.debug("Chalice Telemetry", payload=data)
-                    
-                    # Broadcast to all connected dashboard clients
-                    for client in server.dashboard_clients:
-                        if not client.closed:
-                            await client.send_json(data)
+        while True:
+            msg = await websocket.receive_text()
+            try:
+                data = json.loads(msg)
+                logger.debug("Chalice Telemetry", payload=data)
+                
+                # Broadcast to all connected dashboard clients
+                for client in server.dashboard_clients:
+                    if not client.closed:
+                        await client.send_json(data)
                             
-                    # Echo acknowledgement for 2-way sync
-                    await ws.send_json({"status": "received", "event": data.get("event", "unknown")})
-                except json.JSONDecodeError:
-                    logger.warning("Received invalid JSON from Chalice")
-            elif msg.type == web.WSMsgType.ERROR:
-                logger.error("WebSocket connection closed with exception", error=ws.exception())
+                # Echo acknowledgement for 2-way sync
+                await websocket.send_json({"status": "received", "event": data.get("event", "unknown")})
+            except json.JSONDecodeError:
+                logger.warning("Received invalid JSON from Chalice")
+    except WebSocketDisconnect:
+        logger.warning("WebSocket connection closed")
     finally:
         logger.info("Chalice plugin disconnected")
-        
-    return ws
 
 
-async def handle_telemetry_post(server, request):
+@router.post('/api/telemetry')
+async def handle_telemetry_post(request: Request):
+    server = request.app.state.server
     try:
         data = await request.json()
         logger.debug("Chalice Telemetry via POST", payload=data)
         
-        # Log telemetry to disk
+        # Log telemetry to database
         try:
-            log_dir = os.path.join(server.config.data_dir, "telemetry")
-            os.makedirs(log_dir, exist_ok=True)
-            log_file = os.path.join(log_dir, "telemetry.jsonl")
-            with open(log_file, "a") as f:
-                f.write(json.dumps(data) + "\n")
+            if hasattr(server, 'db') and server.db and server.db._conn:
+                event = data.get("event", "unknown")
+                model = data.get("model")
+                usage = data.get("usage", {})
+                tokens_prompt = usage.get("prompt_tokens", 0)
+                tokens_completion = usage.get("completion_tokens", 0)
+                tokens_total = usage.get("total_tokens", 0)
+                latency = data.get("latency_ms")
+                
+                await server.db._conn.execute(
+                    """
+                    INSERT INTO telemetry (event_type, model, tokens_prompt, tokens_completion, tokens_total, latency_ms, payload)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (event, model, tokens_prompt, tokens_completion, tokens_total, latency, json.dumps(data))
+                )
+                await server.db._conn.commit()
         except Exception as e:
-            logger.error("Failed to write telemetry to disk", error=str(e))
+            logger.error("Failed to write telemetry to database", error=str(e))
         
         # Broadcast to all connected dashboard clients
         for client in server.dashboard_clients:
@@ -63,9 +79,9 @@ async def handle_telemetry_post(server, request):
         for listener in getattr(server, "telemetry_listeners", []):
             asyncio.create_task(listener(data))
                 
-        return web.json_response({"status": "received", "event": data.get("event", "unknown")})
+        return {"status": "received", "event": data.get("event", "unknown")}
     except json.JSONDecodeError:
         logger.warning("Received invalid JSON from Chalice POST")
-        return web.json_response({"error": "Invalid JSON"}, status=400)
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
 
 

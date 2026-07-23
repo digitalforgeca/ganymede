@@ -19,6 +19,21 @@ class Database:
         self._conn = await aiosqlite.connect(self.db_path)
         self._conn.row_factory = aiosqlite.Row
 
+        # Telemetry Table
+        await self._conn.execute("""
+            CREATE TABLE IF NOT EXISTS telemetry (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT NOT NULL,
+                model TEXT,
+                tokens_prompt INTEGER DEFAULT 0,
+                tokens_completion INTEGER DEFAULT 0,
+                tokens_total INTEGER DEFAULT 0,
+                latency_ms INTEGER,
+                payload TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # Conversations Table
         await self._conn.execute("""
             CREATE TABLE IF NOT EXISTS conversations (
