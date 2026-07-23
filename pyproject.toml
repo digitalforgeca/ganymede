@@ -32,4 +32,4 @@ packages = ["src/ganymede"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "config/default.yaml" = "ganymede/config/default.yaml"
-"src/ganymede/web/themes/default/dist" = "ganymede/web/themes/default/dist"
+"src/ganymede/web/themes/default" = "ganymede/web/themes/default"

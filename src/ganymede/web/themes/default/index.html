@@ -1,20 +1,568 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon-dark.ico" media="(prefers-color-scheme: light)" />
-    <link rel="icon" type="image/x-icon" href="/favicon-light.ico" media="(prefers-color-scheme: dark)" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ganymede</title>
+    <link rel="icon" type="image/x-icon" href="/favicon-dark.ico" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/x-icon" href="/favicon-light.ico" media="(prefers-color-scheme: dark)">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Bulma Opinionated Layout Library -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
-    <link rel="stylesheet" href="/style.css">
-    <link rel="stylesheet" href="/theme.css">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+    <!-- Top Inline Status Bar -->
+    <nav class="navbar has-shadow is-fixed-top" style="z-index: 100; min-height: 2.5rem; background-color: var(--header-gold, var(--accent-gold));">
+        <div class="navbar-brand">
+            <a role="button" class="navbar-item" id="main-sidebar-toggle" style="color: white;">
+                <span class="icon"><i class="ph ph-list"></i></span>
+            </a>
+            <div class="navbar-item cinzel has-text-weight-bold is-flex is-align-items-center pl-0" style="color: white; font-size: 1.1rem;">
+                <img src="ganymede-logo-light.png" alt="Ganymede Logo" style="max-height: 28px; margin-right: 10px;">
+            </div>
+        </div>
+        <div class="navbar-menu is-active">
+            <div class="navbar-end pr-4">
+                <div class="navbar-item is-size-7" style="color: white;">
+                    <span class="pulse offline mr-2" id="pulse-indicator"></span>
+                    <span id="status-text" class="has-text-weight-semibold mr-4">Disconnected</span>
+                </div>
+                <div class="navbar-item is-size-7" style="color: white;">
+                    <span style="opacity: 0.8;" class="mr-1">Log Level:</span> <span id="val-loglevel" class="has-text-weight-bold">--</span>
+                </div>
+                <div class="navbar-item is-size-7" style="color: white;">
+                    <span style="opacity: 0.8;" class="mr-1">Data:</span> <span id="val-datadir" class="has-text-weight-bold">--</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="is-flex is-fullheight" style="margin-top: 2.5rem; height: calc(100vh - 2.5rem);">
+        <!-- Sidebar Navigation -->
+        <aside class="olympus-sidebar" style="width: 250px; min-width: 150px; max-width: 50%; overflow-y: auto; overflow-x: hidden; flex-shrink: 0; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color);">
+            <div class="drag-handle" id="handle-main"></div>
+            <div class="account-badge section">
+                <div class="avatar" style="background-color: white; border: 2px solid var(--border-color); overflow: hidden;">
+                    <!-- Simple Google 'G' logo representation -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="40px" height="40px">
+                        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+                    </svg>
+                </div>
+                <div class="account-info mt-2">
+                    <p class="title is-5 mb-0 cinzel" style="font-size: 1.1rem !important;">Antigravity Profile</p>
+                    <p class="is-size-7 has-text-grey mt-1" style="line-height: 1.2;">Google Account Authorized</p>
+                </div>
+            </div>
+            
+            <div class="section pt-0">
+                <aside class="menu">
+                    <p class="menu-label">Main</p>
+                    <ul class="menu-list sidebar-nav mb-4">
+                        <li><a class="is-active nav-item" href="#view-dashboard" data-target="view-dashboard"><span class="icon is-small mr-2"><i class="ph ph-house"></i></span>Dashboard</a></li>
+                        <li><a class="nav-item" href="#view-chats" data-target="view-chats"><span class="icon is-small mr-2"><i class="ph ph-folder"></i></span>Projects</a></li>
+                    </ul>
+                    <p class="menu-label">Configuration</p>
+                    <ul class="menu-list sidebar-nav">
+                        <li><a class="nav-item" href="#view-bots" data-target="view-bots"><span class="icon is-small mr-2"><i class="ph ph-robot"></i></span>Bots</a></li>
+                        <li><a class="nav-item" href="#view-settings" data-target="view-settings"><span class="icon is-small mr-2"><i class="ph ph-gear"></i></span>Settings</a></li>
+                    </ul>
+                </aside>
+            </div>
+            
+            <div class="section pt-0 mt-auto" style="padding-bottom: 1.5rem;">
+                <div class="has-text-centered is-size-7" style="border-top: 1px solid var(--border-marble); padding-top: 1rem;">
+                    <p class="has-text-grey mb-2" style="line-height: 1.2;">Powered by<br><strong class="has-text-info">Digital Forge Studios Inc.</strong></p>
+                    <a href="https://www.patreon.com/c/DigitalForgeStudios" target="_blank" class="button is-small is-fullwidth" style="background-color: #FF424D; color: white; border: none; font-weight: 600;">
+                        <span class="icon is-small"><i class="ph ph-patreon-logo"></i></span>
+                        <span>Support on Patreon</span>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-content" style="flex: 1; min-width: 0; overflow-y: auto;">
+            <div class="view-container">
+                <!-- Dashboard View -->
+                <main class="section view-section pt-5" id="view-dashboard">
+                    <div class="columns">
+                        <!-- Left Column: Metrics -->
+                        <div class="column is-one-third">
+                            <div class="box facet mb-4">
+                                <h2 class="title is-5 cinzel facet-title mb-3" style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">System Metrics</h2>
+                                
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+                                    <span class="has-text-grey">Active Instances</span>
+                                    <span class="has-text-weight-bold is-size-5 has-text-info" id="metric-active-instances">0</span>
+                                </div>
+                                
+                                <div class="mt-4 pt-3" style="border-top: 1px solid #eee;">
+                                    <div class="is-flex is-justify-content-space-between mb-1">
+                                        <span class="is-size-7 has-text-grey">Tokens Streamed (Last Hour)</span>
+                                        <span class="is-size-7 has-text-weight-bold" id="metric-tokens-text">0 / 0</span>
+                                    </div>
+                                    <progress class="progress is-warning is-small mb-3" id="metric-tokens-bar" value="0" max="100"></progress>
+
+                                    <div class="is-flex is-justify-content-space-between mb-1">
+                                        <span class="is-size-7 has-text-grey">API Requests vs Quota (Daily)</span>
+                                        <span class="is-size-7 has-text-weight-bold" id="metric-quota-text">0 / 0</span>
+                                    </div>
+                                    <progress class="progress is-primary is-small mb-3" id="metric-quota-bar" value="0" max="100"></progress>
+                                    
+                                    <div class="is-flex is-justify-content-space-between mb-1">
+                                        <span class="is-size-7 has-text-grey">Global Model Setting</span>
+                                        <span class="is-size-7 has-text-weight-bold has-text-success" id="metric-model-text">Default</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Telemetry -->
+                        <div class="column is-two-thirds">
+                            <div class="box facet h-100 is-flex is-flex-direction-column">
+                                <div class="is-flex is-justify-content-space-between is-align-items-center facet-title">
+                                    <h2 class="title is-4 cinzel mb-0" style="border-bottom: none; padding-bottom: 0;">Chalice Telemetry</h2>
+                                    <button class="button is-small is-outlined is-info" id="btn-export-telemetry">Export JSON</button>
+                                </div>
+                                <div class="log-container flex-grow-1" id="log-container">
+                                    <div class="log-entry system">Waiting for agent telemetry stream...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Projects View (formerly Chats) -->
+                <main class="section view-section is-hidden pt-5" id="view-chats">
+                    <div class="box facet">
+                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+                            <h2 class="title is-3 cinzel facet-title mb-0" style="border:none;">Projects</h2>
+                            <button class="button is-small is-outlined" id="btn-toggle-channels">
+                                <span>Toggle Channels</span>
+                            </button>
+                        </div>
+                        <div class="field">
+                            <div class="control has-icons-left">
+                                <input class="input" type="text" id="project-search" placeholder="Search channels by name, thread, or context...">
+                            </div>
+                        </div>
+                        <div class="columns mt-4 is-variable is-2">
+                            <!-- Left: Project List & Artifacts -->
+                            <div id="channels-pane" style="width: 330px; max-width: 50%; min-width: 200px; overflow-y: auto; overflow-x: hidden; padding-right: 15px; border-right: 1px solid #eee; height: calc(100vh - 250px); flex-shrink: 0;">
+                                <div class="drag-handle" id="handle-channels"></div>
+                                <div class="menu mb-5">
+                                    <p class="menu-label">Channels</p>
+                                    <div class="tabs is-small is-toggle is-fullwidth mb-3">
+                                        <ul id="project-tabs">
+                                            <li class="is-active"><a>Loading...</a></li>
+                                        </ul>
+                                    </div>
+                                    <ul class="menu-list" id="chat-list">
+                                        <li><a class="is-active">Loading projects...</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <!-- Right: Chat Interface -->
+                            <div class="column" id="chat-pane" style="flex: 1; min-width: 0;">
+                                <div class="box is-flex is-flex-direction-column" style="height: calc(100vh - 250px); background-color: #fafafa; overflow: hidden;">
+                                    <div class="chat-header pb-3 mb-3 border-bottom is-flex is-justify-content-space-between is-align-items-center">
+                                        <div>
+                                            <h3 class="title is-5 mb-0" id="chat-title">Select or start a chat</h3>
+                                            <p class="subtitle is-6" id="chat-subtitle"></p>
+                                        </div>
+                                        <div>
+                                            <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-view-artifacts">View Artifacts</button>
+                                            <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-export-chat">Export Markdown</button>
+                                            <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-fork-chat">Fork Chat</button>
+                                            <button class="button is-small is-warning is-outlined is-hidden" id="btn-merge-context">Merge Context</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="tabs is-small is-boxed mb-0 is-hidden" id="chat-tabs-container">
+                                        <ul>
+                                            <li class="is-active" data-tab="chat"><a>Chat</a></li>
+                                            <li data-tab="settings"><a>Settings</a></li>
+                                            <li data-tab="rules"><a>Rules</a></li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="chat-history flex-grow-1 content" id="chat-history" style="overflow-y: auto;">
+                                        <!-- Messages will go here -->
+                                        <div class="has-text-centered has-text-grey mt-5" id="chat-empty-state"></div>
+                                    </div>
+                                    
+                                    <div class="chat-settings is-hidden" id="chat-settings-view" style="flex: 1; padding: 20px; overflow-y: auto;">
+                                        <h4 class="title is-5 cinzel">Project Settings</h4>
+                                        <p class="has-text-grey mb-4">These settings are isolated to this specific project context.</p>
+                                        <div class="field">
+                                            <label class="label is-small">Project Name</label>
+                                            <div class="control">
+                                                <input class="input is-small is-fullwidth" type="text" id="chat-project-name" placeholder="e.g. discord-123456">
+                                            </div>
+                                        </div>
+                                        <div class="field">
+                                            <label class="label is-small">Agent Model Override</label>
+                                            <div class="control">
+                                                <div class="select is-small is-fullwidth">
+                                                    <select id="chat-model-select">
+                                                        <option value="">Default (Global Config)</option>
+                                                        <option value="Gemini 3.1 Pro (High)">Gemini 3.1 Pro (High) (Recommended)</option>
+                                                        <option value="Gemini Flash">Gemini Flash (Fast)</option>
+                                                        <option value="gemini-1.5-pro-002">gemini-1.5-pro-002</option>
+                                                        <option value="gemini-1.5-flash-002">gemini-1.5-flash-002</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="columns is-mobile is-vcentered mb-2 mt-2">
+                                            <div class="column is-6">
+                                                <div class="field">
+                                                    <label class="label is-small">Execution Mode Override</label>
+                                                    <div class="control">
+                                                        <div class="select is-small is-fullwidth">
+                                                            <select id="chat-mode-select">
+                                                                <option value="">Default (Global Config)</option>
+                                                                <option value="accept-edits">accept-edits</option>
+                                                                <option value="plan">plan</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="column is-6">
+                                                <div class="field pt-3">
+                                                    <label class="checkbox is-size-7 pt-2">
+                                                        <input type="checkbox" id="chat-skip-permissions">
+                                                        Skip Permissions (Danger)
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="button is-small is-primary mt-4" id="btn-save-project-settings">Save Project Settings</button>
+                                    </div>
+                                    
+                                    <div class="chat-rules is-hidden" id="chat-rules-view" style="flex: 1; padding: 20px; overflow-y: auto;">
+                                        <h4 class="title is-5 cinzel">Project Rules</h4>
+                                        <p class="has-text-grey mb-4">These rules are injected as system instructions specific to this channel.</p>
+                                        <div class="field">
+                                            <div class="control">
+                                                <textarea class="textarea" id="chat-project-rules" rows="10" placeholder="e.g. Always respond in JSON format..."></textarea>
+                                            </div>
+                                        </div>
+                                        <button class="button is-small is-primary mt-4" id="btn-save-project-rules">Save Rules</button>
+                                    </div>
+
+                                    <div class="chat-input mt-4 pt-3 border-top" id="chat-input-area">
+                                        <div class="field has-addons">
+                                            <div class="control is-expanded">
+                                                <input class="input" type="text" id="chat-input-field" placeholder="Chat natively with the executing agent...">
+                                            </div>
+                                            <div class="control">
+                                                <button class="button is-info" id="chat-send-btn">Send</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Artifacts Modal -->
+                <div class="modal" id="modal-artifacts">
+                    <div class="modal-background" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')"></div>
+                    <div class="modal-card">
+                        <header class="modal-card-head">
+                            <p class="modal-card-title cinzel">Project Artifacts</p>
+                            <button class="delete" aria-label="close" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')"></button>
+                        </header>
+                        <section class="modal-card-body">
+                            <p class="is-size-7 has-text-grey mb-3" id="artifacts-subtitle">Select a project to view files.</p>
+                            <ul class="file-list" id="file-list" style="list-style: none; margin: 0; font-size: 0.9rem;">
+                                <!-- Files will go here -->
+                            </ul>
+                        </section>
+                        <footer class="modal-card-foot">
+                            <button class="button" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')">Close</button>
+                        </footer>
+                    </div>
+                </div>
+
+                <!-- Merge Context Modal -->
+                <div class="modal" id="modal-merge">
+                    <div class="modal-background"></div>
+                    <div class="modal-content">
+                        <div class="box">
+                            <h3 class="title is-4 cinzel">Merge Contexts</h3>
+                            <p class="mb-4">Enter a target Antigravity <code>conversation_id</code> to merge this network channel into.</p>
+                            <div class="field">
+                                <label class="label">Target Conversation ID</label>
+                                <div class="control">
+                                    <input class="input" type="text" id="input-merge-target" placeholder="e.g. 5a1b2c3d-...">
+                                </div>
+                            </div>
+                            <div class="field is-grouped is-grouped-right mt-5">
+                                <p class="control">
+                                    <button class="button is-light" id="btn-merge-cancel">Cancel</button>
+                                </p>
+                                <p class="control">
+                                    <button class="button is-warning" id="btn-merge-confirm">Force Merge</button>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bots View -->
+                <main class="section view-section is-hidden pt-5" id="view-bots">
+                    <div class="box facet">
+                        <h2 class="title is-3 cinzel facet-title">Bots</h2>
+                        <p class="has-text-grey mb-4">Manage connected bot identities and their associated providers.</p>
+                        <!-- TODO: Currently Ganymede runs a single primary bot gateway. Multi-bot support is in active development. -->
+                        <div class="columns is-multiline" id="bots-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div class="box p-5 mt-4 is-hidden" id="no-rules-message">
+                        <p class="has-text-grey has-text-centered">No rules found. Create one to get started.</p>
+                    </div>
+                </main>
+
+                <!-- Bot Detail View -->
+                <main class="section view-section pt-5 is-hidden" id="view-bot-detail">
+                    <div class="columns">
+                        <!-- Left Column: Bot Profile & Config -->
+                        <div class="column is-4">
+                            <div class="box mb-4">
+                                <div class="is-flex is-align-items-center mb-4">
+                                    <span class="icon is-large has-text-info mr-3"><i class="ph ph-robot fa-2x"></i></span>
+                                    <div>
+                                        <h2 class="title is-4 mb-1" id="bot-detail-name">Ganymede</h2>
+                                        <p class="subtitle is-6 has-text-grey">Bot Configuration</p>
+                                    </div>
+                                </div>
+                                <hr>
+                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-plugs"></i></span>Invocation Points</h3>
+                                <div class="tags mb-4">
+                                    <span class="tag is-info is-light">Discord Slash Commands</span>
+                                    <span class="tag is-info is-light">@Mentions</span>
+                                    <span class="tag is-info is-light">Web Dashboard</span>
+                                </div>
+                            </div>
+                            
+                            <div class="box">
+
+                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-robot"></i></span>Bot Settings</h3>
+                                <div class="field">
+                                    <label class="label is-small">Name</label>
+                                    <div class="control">
+                                        <input class="input is-small" type="text" id="bot-setting-name">
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label is-small">Default Model</label>
+                                    <div class="control">
+                                        <input class="input is-small" type="text" id="bot-setting-model">
+                                    </div>
+                                </div>
+                                
+                                <div id="bot-provider-config-container" class="mt-4 mb-4" style="border-left: 2px solid #3273dc; padding-left: 10px;">
+                                    <h4 class="title is-6 mb-2 has-text-info">Provider Settings (<span id="bot-provider-type-label"></span>)</h4>
+                                    <div id="bot-provider-fields"></div>
+                                </div>
+                                <hr>
+                                                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-magic-wand"></i></span>System Prompt</h3>
+                                <div class="field">
+                                    <div class="control">
+                                        <textarea class="textarea is-small" id="bot-system-prompt" rows="8" placeholder="Loading system prompt..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <button class="button is-small is-info is-fullwidth" id="btn-save-bot-prompt">Save Prompt</button>
+                                </div>
+                                
+                                <div class="message is-small is-info is-light mt-3">
+                                    <div class="message-header"><p>Replacement Tokens</p></div>
+                                    <div class="message-body content is-small">
+                                        <ul style="margin-top:0; padding-left:1em;">
+                                            <li><code>{bot_name}</code> - Replaced with bot namespace</li>
+                                            <li><code>{model_name}</code> - Replaced with active model ID</li>
+                                            <li><code>{mission_statement}</code> - Bot's configured mission</li>
+                                            <li><code>{user_name}</code> - Author of the prompt</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Column: Conversations List -->
+                        <div class="column is-8">
+                            <div class="box h-100 is-flex is-flex-direction-column">
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+                                    <h3 class="title is-5 m-0"><span class="icon is-small mr-2"><i class="ph ph-chats"></i></span>Bot Conversations</h3>
+                                    <div class="field has-addons m-0">
+                                        <div class="control">
+                                            <input class="input is-small" type="text" id="bot-conversations-search" placeholder="Search conversations...">
+                                        </div>
+                                        <div class="control">
+                                            <a class="button is-small is-info"><i class="ph ph-magnifying-glass"></i></a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-container flex-grow-1" style="overflow-y: auto; max-height: 600px;">
+                                    <table class="table is-fullwidth is-hoverable">
+                                        <thead>
+                                            <tr>
+                                                <th>Project/Channel</th>
+                                                <th>Conversation ID</th>
+                                                <th>Last Active</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="bot-conversations-list">
+                                            <tr><td colspan="4" class="has-text-centered has-text-grey">Loading conversations...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Settings View -->
+                <main class="section view-section is-hidden pt-5" id="view-settings">
+                    <div class="box facet">
+                        <h2 class="title is-3 cinzel facet-title">Settings</h2>
+                        <p class="has-text-grey mb-4">Direct manipulation of Antigravity configuration files. These settings reflect exactly what is loaded from <code>~/.ganymede/config.yaml</code>.</p>
+                        
+                        <div class="tabs is-boxed is-small mb-4" id="settings-tabs-container">
+                            <ul>
+                                <li class="is-active" data-tab="global"><a><span class="icon is-small"><i class="ph ph-globe"></i></span><span>Global Settings</span></a></li>
+                                <li data-tab="rules"><a><span class="icon is-small"><i class="ph ph-book"></i></span><span>Rules & Workflows</span></a></li>
+                                <li data-tab="raw"><a><span class="icon is-small"><i class="ph ph-code"></i></span><span>Raw Config</span></a></li>
+                            </ul>
+                        </div>
+                        
+                        <div id="settings-global-view">
+                            <div class="columns">
+                                <div class="column is-6">
+
+                                    
+                                    <div class="columns is-mobile is-vcentered mb-2 mt-2">
+                                        <div class="column is-6">
+                                            <div class="field">
+                                                <label class="label is-small">Execution Mode</label>
+                                                <div class="control">
+                                                    <div class="select is-small is-fullwidth">
+                                                        <select id="global-mode-select">
+                                                            <option value="accept-edits">accept-edits</option>
+                                                            <option value="plan">plan</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="column is-6">
+                                            <div class="field pt-3">
+                                                <label class="checkbox is-size-7 pt-2">
+                                                    <input type="checkbox" id="global-skip-permissions">
+                                                    Skip Permissions (Danger)
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label class="label is-small">Mission Statement</label>
+                                        <div class="control">
+                                            <textarea class="textarea is-small" id="global-mission-statement" rows="2" placeholder="assisting the user..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label class="label is-small">System Instructions Base</label>
+                                        <div class="control">
+                                            <textarea class="textarea is-small" id="global-system-instructions" rows="4" placeholder="Agent base instructions..."></textarea>
+                                        </div>
+                                    </div>
+                                    <button class="button is-small is-primary mt-2" id="btn-save-global-settings">Save Global Settings</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="settings-raw-view" class="is-hidden">
+                            <div class="field">
+                                <div class="control">
+                                    <textarea class="textarea has-background-light" id="config-editor" rows="18" style="font-family: monospace; font-size: 0.9rem;" placeholder="Loading config..."></textarea>
+                                </div>
+                            </div>
+                            
+                            <div class="field is-grouped mt-4">
+                                <div class="control">
+                                    <button class="button is-primary" id="btn-save-config">Save Configuration</button>
+                                </div>
+                                <div class="control">
+                                    <button class="button is-light" id="btn-reload-config">Discard Changes</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="settings-rules-view" class="is-hidden">
+                            <p class="has-text-grey mb-4">Manage Antigravity system rules (<code>~/.gemini/rules/</code>). These markdown files dictate system-wide agent instructions.</p>
+                            
+                            <div class="columns">
+                                <!-- Left: File List -->
+                                <div class="column is-4">
+                                    <div class="menu mb-5">
+                                        <p class="menu-label is-flex is-justify-content-space-between is-align-items-center">
+                                            <span>Active Rules</span>
+                                            <button class="button is-small is-success is-outlined" id="btn-new-rule">+ New</button>
+                                        </p>
+                                        <ul class="menu-list" id="rule-list">
+                                            <li><a class="is-active">Loading rules...</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <!-- Right: Editor -->
+                                <div class="column is-8">
+                                    <div class="box is-flex is-flex-direction-column" style="background-color: #fafafa;">
+                                        <div class="field mb-2">
+                                            <div class="control">
+                                                <input class="input cinzel has-text-weight-bold is-size-5" type="text" id="rule-filename" placeholder="rule_name.md" disabled>
+                                            </div>
+                                        </div>
+                                        <div class="field flex-grow-1 is-flex is-flex-direction-column">
+                                            <div class="control flex-grow-1 is-flex">
+                                                <textarea class="textarea" id="rule-editor" style="height: 300px; font-family: monospace;" placeholder="Select a rule or create a new one..." disabled></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="field is-grouped is-grouped-right mt-3">
+                                            <p class="control">
+                                                <button class="button is-danger is-outlined" id="btn-delete-rule" disabled>Delete</button>
+                                            </p>
+                                            <p class="control">
+                                                <button class="button is-primary" id="btn-save-rule" disabled>Save Changes</button>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="app.js"></script>
+</body>
 </html>
