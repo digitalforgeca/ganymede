@@ -378,9 +378,8 @@ class ManagedAgent:
             proc = subprocess.Popen(["tmux", "load-buffer", "-b", buf_name, "-"], stdin=subprocess.PIPE)
             proc.communicate((final_prompt + '\r').encode('utf-8'))
             
-            subprocess.run(["tmux", "paste-buffer", "-p", "-b", buf_name, "-t", f"ganymede-{self.sdk_conversation_id}"])
+            subprocess.run(["tmux", "paste-buffer", "-r", "-b", buf_name, "-t", f"ganymede-{self.sdk_conversation_id}"])
             subprocess.run(["tmux", "delete-buffer", "-b", buf_name])
-            subprocess.run(["tmux", "send-keys", "-t", f"ganymede-{self.sdk_conversation_id}", "Enter", "Enter"])
             
             return CliResponse(self, prompt)
 
