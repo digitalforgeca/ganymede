@@ -20,6 +20,7 @@ import {
   Textarea,
   Heading,
   Divider,
+  Image,
 } from '@chakra-ui/react';
 
 export default function App() {
@@ -71,10 +72,11 @@ export default function App() {
   }, [logs]);
 
   return (
-    <Flex h="100vh" flexDirection="column" bg="gray.50">
-      <Flex bg="yellow.500" p={2} color="white" alignItems="center" justify="space-between">
-        <HStack>
-          <Text fontWeight="bold" fontSize="lg">Ganymede Gateway</Text>
+    <Flex h="100vh" flexDirection="column" bg="gray.50" fontFamily="'Inter', sans-serif">
+      <Flex bg="#C6A87C" p={2} color="white" alignItems="center" justify="space-between" borderBottom="1px solid rgba(0,0,0,0.1)" shadow="sm">
+        <HStack spacing={4}>
+          <Image src="/ganymede-logo-light.png" alt="Ganymede Logo" h="28px" />
+          <Text fontWeight="bold" fontSize="lg" fontFamily="'Cinzel', serif">Ganymede Gateway</Text>
         </HStack>
         <HStack>
           <Text fontSize="sm">{status?.status === 'online' ? 'Gateway Online' : 'Disconnected'}</Text>
@@ -102,7 +104,7 @@ export default function App() {
             <Route path="/" element={
               <Flex gap={6}>
                 <Box w="33%" bg="white" p={4} shadow="sm" borderRadius="md">
-                  <Heading size="md" mb={4}>System Metrics</Heading>
+                  <Heading size="md" mb={4} fontFamily="'Cinzel', serif">System Metrics</Heading>
                   <HStack justify="space-between" mb={2}>
                     <Text color="gray.500">Active Instances</Text>
                     <Text fontWeight="bold" color="blue.500">{status?.metrics?.active_instances || 0}</Text>
@@ -129,7 +131,7 @@ export default function App() {
                 </Box>
                 <Box flex={1} bg="white" p={4} shadow="sm" borderRadius="md" display="flex" flexDirection="column">
                   <HStack justify="space-between" mb={4}>
-                    <Heading size="md">Chalice Telemetry</Heading>
+                    <Heading size="md" fontFamily="'Cinzel', serif">Chalice Telemetry</Heading>
                     <Button size="sm" variant="outline" colorScheme="blue">Export JSON</Button>
                   </HStack>
                   <Box flex={1} overflowY="auto" bg="gray.900" color="green.300" p={4} borderRadius="md" fontFamily="monospace" fontSize="sm">
@@ -150,7 +152,7 @@ export default function App() {
 
             <Route path="/projects" element={
               <Box bg="white" p={6} shadow="sm" borderRadius="md" h="100%" display="flex" flexDirection="column">
-                <Heading size="lg" mb={4}>Projects</Heading>
+                <Heading size="lg" mb={4} fontFamily="'Cinzel', serif">Projects</Heading>
                 <Input placeholder="Search channels by name..." mb={4} />
                 <Flex flex={1} gap={4} overflow="hidden">
                   <Box w="300px" borderRight="1px" borderColor="gray.200" pr={4} overflowY="auto">
@@ -203,7 +205,7 @@ export default function App() {
 
             <Route path="/bots" element={
               <Box bg="white" p={6} shadow="sm" borderRadius="md">
-                <Heading size="lg" mb={2}>Bots</Heading>
+                <Heading size="lg" mb={2} fontFamily="'Cinzel', serif">Bots</Heading>
                 <Text color="gray.500" mb={6}>Manage connected bot identities and their associated providers.</Text>
                 {Object.keys(botsList).length > 0 ? (
                   <VStack align="stretch" spacing={4}>
@@ -237,7 +239,7 @@ export default function App() {
 
             <Route path="/settings" element={
               <Box bg="white" p={6} shadow="sm" borderRadius="md">
-                <Heading size="lg" mb={2}>Settings</Heading>
+                <Heading size="lg" mb={2} fontFamily="'Cinzel', serif">Settings</Heading>
                 <Text color="gray.500" mb={6}>Direct manipulation of Antigravity configuration files.</Text>
                 
                 <Tabs variant="enclosed" colorScheme="blue">
