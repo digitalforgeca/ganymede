@@ -1174,26 +1174,65 @@ document.addEventListener("DOMContentLoaded", () => {
         if (currentChatId) fetchChatFiles(currentChatId);
     }, 30000);
     setInterval(fetchChats, 10000);
+    
+    // Hamburger menu toggle for mobile
+    const mainToggleBtn = document.getElementById('main-sidebar-toggle');
+    const olympusSidebar = document.querySelector('.olympus-sidebar');
+    if (mainToggleBtn && olympusSidebar) {
+        mainToggleBtn.addEventListener('click', () => {
+            olympusSidebar.classList.toggle('is-mobile-active');
+            if (olympusSidebar.style.display === 'none' || olympusSidebar.style.display === '') {
+                olympusSidebar.style.display = 'block';
+            } else {
+                olympusSidebar.style.display = 'none';
+            }
+        });
+    }
 });
 
     async function loadBots() {
         try {
-            const res = await fetch('/api/status');
+            const res = await fetch('/api/bots');
             if (res.ok) {
                 const data = await res.json();
-                const botName = data.bot_info?.bot_name || 'Ganymede';
-                document.getElementById('bot-card-name').textContent = botName;
-                document.getElementById('bot-card-id').textContent = 'Primary Gateway';
-                document.getElementById('bot-card-platform').textContent = data.config?.platform || 'Local/Discord';
+                const bots = data.bots;
                 
-                // Set the link to bot details
-                const btnView = document.getElementById('primary-bot-card').querySelector('button.is-info');
-                if (btnView) {
-                    btnView.onclick = () => window.location.hash = '#view-bot-detail?id=' + encodeURIComponent(botName);
+                const botsGrid = document.getElementById('bots-list');
+                if (!botsGrid) return;
+                botsGrid.innerHTML = ''; // Clear hardcoded
+                
+                for (const [botId, botData] of Object.entries(bots)) {
+                    const platformType = botData.provider?.type || 'discord';
+                    
+                    const html = `
+                    <div class="column is-4">
+                        <div class="card is-clickable metric" onclick="window.location.hash='#view-bot-detail?id=' + encodeURIComponent('${botId}')">
+                            <div class="card-content">
+                                <div class="media">
+                                    <div class="media-left">
+                                        <figure class="image is-48x48">
+                                            <span class="icon is-large has-text-info"><i class="ph ph-robot" style="font-size: 2rem;"></i></span>
+                                        </figure>
+                                    </div>
+                                    <div class="media-content">
+                                        <p class="title is-4">${botData.name || botId}</p>
+                                        <p class="subtitle is-6">@${botId}</p>
+                                    </div>
+                                </div>
+                                <div class="content">
+                                    <div class="tags">
+                                        <span class="tag is-info is-light">Provider: ${platformType}</span>
+                                        <span class="tag is-primary is-light">Model: ${botData.model || 'Default'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                    botsGrid.insertAdjacentHTML('beforeend', html);
                 }
             }
         } catch (e) {
-            console.error('Failed to load bots info', e);
+            console.error('Failed to load bots from API', e);
         }
     }
 
