@@ -52,6 +52,13 @@ class QuotaConfig:
 
 
 @dataclass
+class AuthConfig:
+    enabled: bool = False
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    allowed_emails: list[str] = field(default_factory=list)
+
+@dataclass
 class ActivationConfig:
     default_mode: str = "mention"  # "mention" | "inference" | "always"
     respond_to_bots: bool = False
@@ -74,6 +81,7 @@ class AppConfig:
     bot: BotConfig = field(default_factory=BotConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
     quota: QuotaConfig = field(default_factory=QuotaConfig)
+    auth: AuthConfig = field(default_factory=AuthConfig)
     activation: ActivationConfig = field(default_factory=ActivationConfig)
     data_dir: str = ""
     log_level: str = "INFO"
@@ -237,5 +245,11 @@ def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
         config.activation.respond_to_bots = ac.get("respond_to_bots", config.activation.respond_to_bots)
         config.activation.trigger_patterns = ac.get("trigger_patterns", config.activation.trigger_patterns)
         config.activation.per_channel = ac.get("per_channel", config.activation.per_channel)
+    if "auth" in data:
+        au = data["auth"]
+        config.auth.enabled = au.get("enabled", config.auth.enabled)
+        config.auth.google_client_id = au.get("google_client_id", config.auth.google_client_id)
+        config.auth.google_client_secret = au.get("google_client_secret", config.auth.google_client_secret)
+        config.auth.allowed_emails = au.get("allowed_emails", config.auth.allowed_emails)
     config.log_level = data.get("log_level", config.log_level)
     config.dashboard_port = data.get("dashboard_port", config.dashboard_port)
