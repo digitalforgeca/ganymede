@@ -202,6 +202,9 @@ async def handle_bots_get(request: Request):
         with open(config_path, "r") as f:
             data = yaml.safe_load(f) or {}
             bots = data.get("bots", {})
+            if not bots and "bot" in data:
+                # Fallback mapping for single bot gateway configurations
+                bots = {"primary": data["bot"]}
     return {"bots": bots}
 
 @router.post('/api/bots/{bot_id}')

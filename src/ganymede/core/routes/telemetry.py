@@ -28,7 +28,7 @@ async def handle_telemetry_ws(websocket: WebSocket):
                 
                 # Broadcast to all connected dashboard clients
                 for client in server.dashboard_clients:
-                    if not client.closed:
+                    if client.client_state.name == "CONNECTED":
                         await client.send_json(data)
                             
                 # Echo acknowledgement for 2-way sync
@@ -72,7 +72,7 @@ async def handle_telemetry_post(request: Request):
         
         # Broadcast to all connected dashboard clients
         for client in server.dashboard_clients:
-            if not client.closed:
+            if client.client_state.name == "CONNECTED":
                 await client.send_json(data)
                 
         # Broadcast to internal python listeners
