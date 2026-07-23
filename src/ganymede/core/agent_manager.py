@@ -119,9 +119,12 @@ class CliResponse:
                 except json.JSONDecodeError:
                     continue
                             
+            agent_message = final_text
+            final_text = ""
+
             artifacts_created = []
             if current_turn_tool_calls:
-                tool_text = "\n\n*⚒️ Tools Used:*\n"
+                tool_text = "*⚒️ Tools Used:*\n"
                 for t in current_turn_tool_calls:
                     t_name = t.get('name') or t.get('function', {}).get('name') or 'tool'
                     args = t.get('args') or t.get('function', {}).get('arguments') or {}
@@ -142,19 +145,22 @@ class CliResponse:
                         
                     tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
                 
-                final_text = (final_text + tool_text) if final_text else tool_text.strip()
+                final_text = tool_text.strip()
 
             # Merge artifacts globally captured from telemetry (which covers subagents!)
             captured_artifacts = getattr(self.agent, "_artifacts_this_turn", [])
             for art in captured_artifacts:
                 if not any(a["file"] == art["file"] for a in artifacts_created):
                     artifacts_created.append(art)
-                    
+
+            if agent_message:
+                final_text = (final_text + "\n\n" + agent_message) if final_text else agent_message
+
             # Process syncing and generating the Discord notification
             if artifacts_created:
                 port = getattr(self.agent.config, "dashboard_port", 8180)
                 dash_url = f"http://127.0.0.1:{port}"
-                art_text = "\n\n**📄 Artifacts Requiring Review:**\n"
+                art_text = "**📄 Artifacts Requiring Review:**\n"
                 
                 channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.conversation_id}")
                 os.makedirs(channel_brain_dir, exist_ok=True)
@@ -176,7 +182,7 @@ class CliResponse:
                     art_text += f"- **{name}**: {art['summary']}\n"
                     
                 art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
-                final_text = (final_text + art_text) if final_text else art_text.strip()
+                final_text = (final_text + "\n\n" + art_text) if final_text else art_text.strip()
                 
             # Clear telemetry capture for next turn
             self.agent._artifacts_this_turn = []

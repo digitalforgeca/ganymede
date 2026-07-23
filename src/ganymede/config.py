@@ -24,7 +24,7 @@ class SyncedPlatformsDict(dict):
 @dataclass
 class AgentConfig:
     name: str = "Agent"
-    model: str = 'gemini-pro-agent'
+    model: str = '"Gemini 3.1 Pro (High)"'
     workspace: str = "~/dev"
     capabilities: dict[str, bool] = field(default_factory=lambda: {
         "read_tools": True,

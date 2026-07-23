@@ -24,9 +24,9 @@ class DiscordFormatter(Formatter):
                 # Inside a code block — pass through untouched
                 result.append(part)
             else:
-                # Convert <details><summary>Title</summary> into Discord collapsible headers
-                clean = re.sub(r'<details>\s*<summary>(.*?)</summary>', r'# \1\n', part, flags=re.IGNORECASE | re.DOTALL)
-                clean = re.sub(r'</details>', '\n', clean, flags=re.IGNORECASE)
+                # Convert <details><summary>Title</summary> into Discord collapsible headers (H3)
+                clean = re.sub(r'<details>\s*<summary>(.*?)</summary>', r'### \1\n', part, flags=re.IGNORECASE | re.DOTALL)
+                clean = re.sub(r'</details>', '\n### \u200B\n', clean, flags=re.IGNORECASE)
                 
                 # Outside code blocks: strip remaining HTML-style tags
                 # but preserve Discord syntax: <@id>, <#id>, <:name:id>, <a:name:id>
