@@ -242,6 +242,9 @@ class ManagedAgent:
         if not os.path.exists(sdk_brain_dir):
             os.symlink(brain_dir, sdk_brain_dir)
             
+        workspace_dir = os.path.expanduser(getattr(self.config.agent, 'workspace', '~/.ganymede/workspace'))
+        os.makedirs(workspace_dir, exist_ok=True)
+            
         if is_new_conversation:
             args.extend(["--new-project", project_name])
         else:
