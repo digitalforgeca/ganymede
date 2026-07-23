@@ -882,9 +882,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!editor || !btnSave || !btnReload) return;
 
+        async function loadModels() {
+            try {
+                const res = await fetch('/api/models');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.models && data.models.length > 0) {
+                        const globalSel = document.getElementById('global-model-select');
+                        const chatSel = document.getElementById('chat-model-select');
+                        
+                        const buildOptions = (sel, addDefault) => {
+                            if (!sel) return;
+                            const currentVal = sel.value;
+                            sel.innerHTML = '';
+                            if (addDefault) {
+                                const opt = document.createElement('option');
+                                opt.value = "";
+                                opt.textContent = "Default (Global Config)";
+                                sel.appendChild(opt);
+                            }
+                            data.models.forEach(m => {
+                                const opt = document.createElement('option');
+                                opt.value = m;
+                                opt.textContent = m;
+                                sel.appendChild(opt);
+                            });
+                            // Restore previous value if possible
+                            if (currentVal) sel.value = currentVal;
+                        };
+                        
+                        buildOptions(globalSel, false);
+                        buildOptions(chatSel, true);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load models list", e);
+            }
+        }
+
         async function loadConfig() {
             try {
                 editor.value = "Loading config...";
+                await loadModels(); // Load models first so the dropdown has options
                 const res = await fetch('/api/config');
                 if (!res.ok) throw new Error("Failed to load config");
                 const data = await res.json();
@@ -892,7 +931,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 editor.value = JSON.stringify(data, null, 2);
                 
                 if (data.agent) {
-                    if (globalModelSelect) globalModelSelect.value = data.agent.model || "";
+                    if (globalModelSelect) {
+                        // Ensure the model exists in the dropdown, if not add it
+                        if (data.agent.model && !Array.from(globalModelSelect.options).find(o => o.value === data.agent.model)) {
+                            const opt = document.createElement('option');
+                            opt.value = data.agent.model;
+                            opt.textContent = data.agent.model + " (Unknown)";
+                            globalModelSelect.appendChild(opt);
+                        }
+                        globalModelSelect.value = data.agent.model || "";
+                    }
                     if (globalSystemInstructions) globalSystemInstructions.value = data.bot?.identity || "";
                     const globalBotName = document.getElementById('global-bot-name');
                     if (globalBotName) globalBotName.value = data.agent.name || "Agent";

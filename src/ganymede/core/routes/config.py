@@ -22,6 +22,35 @@ async def handle_config_get(request: Request):
             data = yaml.safe_load(f) or {}
             return data
     return {}
+
+_cached_models = None
+
+@router.get('/api/models')
+async def handle_models_get(request: Request):
+    global _cached_models
+    if _cached_models is not None:
+        return _cached_models
+        
+    try:
+        import subprocess
+        out = subprocess.check_output(["agy", "models"], text=True, timeout=15)
+        
+        models = []
+        for line in out.splitlines():
+            line = line.strip()
+            if line.startswith("-"):
+                line = line[1:].strip()
+            if line and not line.startswith("Available") and not line.startswith("=="):
+                models.append(line)
+                
+        if not models:
+            models = ["Gemini 3.1 Pro (High)", "Gemini Flash", "gemini-1.5-pro-002", "gemini-1.5-flash-002"]
+            
+        _cached_models = {"models": models}
+        return _cached_models
+    except Exception as e:
+        logger.error("Failed to list models", error=str(e))
+        return {"models": ["Gemini 3.1 Pro (High)", "Gemini Flash", "gemini-1.5-pro-002", "gemini-1.5-flash-002"]}
     
 
 @router.post('/api/config')
