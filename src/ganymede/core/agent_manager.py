@@ -264,7 +264,7 @@ class ManagedAgent:
         model_txt = os.path.join(sdk_brain_dir, "model.txt")
         if os.path.exists(model_txt):
             with open(model_txt, "r") as f:
-                resolved_model = f.read().strip()
+                resolved_model = f.read().strip().strip("\"'")
             if not resolved_model:
                 resolved_model = self.config.agent.model
         else:
@@ -294,15 +294,18 @@ class ManagedAgent:
         if getattr(self, "ipc_port", None):
             subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
-        cmd = " ".join(f'"{a}"' if " " in a else a for a in args)
+        import shlex
+        cmd = shlex.join(args)
         
         logger.info("Spawning decoupled agy in tmux", command=cmd, session=session_name, model=resolved_model, context=self.context_key)
         
         subprocess.run(["tmux", "new-session", "-d", "-s", session_name, "-c", workspace_dir, cmd], env=subprocess_env, check=True)
         
         # Fetch the PID of the pane to map to chalice
-        res = subprocess.run(["tmux", "display-message", "-p", "-t", session_name, "#{pane_pid}"], capture_output=True, text=True, check=True)
+        res = subprocess.run(["tmux", "display-message", "-p", "-t", session_name, "#{pane_pid}"], capture_output=True, text=True, check=False)
         pane_pid = res.stdout.strip()
+        if not pane_pid:
+            raise RuntimeError(f"Failed to start agy: tmux session {session_name} exited immediately. Command: {cmd}")
         self.pane_pid = int(pane_pid)
         self.tmux_session_name = session_name
         
