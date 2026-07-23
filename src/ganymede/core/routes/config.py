@@ -111,7 +111,7 @@ async def handle_rules_get(request: Request):
     if not os.path.exists(rules_dir):
         os.makedirs(rules_dir, exist_ok=True)
         
-    filename = request.query.get("filename")
+    filename = request.query_params.get("filename")
     if filename:
         file_path = os.path.join(rules_dir, filename)
         if not os.path.exists(file_path):
