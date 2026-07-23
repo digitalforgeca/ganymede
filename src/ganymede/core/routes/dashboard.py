@@ -11,13 +11,6 @@ from ganymede.core import ContextKey
 logger = structlog.get_logger()
 router = APIRouter()
 
-@router.get('/')
-async def handle_index(request: Request):
-    server = request.app.state.server
-    index_path = os.path.join(server.web_dir, 'index.html')
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return JSONResponse(content="Dashboard initializing...", status_code=404)
 
 @router.get('/api/status')
 async def handle_status(request: Request):
