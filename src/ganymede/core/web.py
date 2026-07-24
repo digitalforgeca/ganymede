@@ -32,7 +32,7 @@ class DashboardServer:
         self.app.include_router(dashboard.router, dependencies=[Depends(auth.require_auth)])
         self.app.include_router(chats.router, dependencies=[Depends(auth.require_auth)])
         self.app.include_router(config_routes.router, dependencies=[Depends(auth.require_auth)])
-        self.app.include_router(telemetry.router, dependencies=[Depends(auth.require_auth)])
+        self.app.include_router(telemetry.router)
         self.app.include_router(ipc.router)
         
         # Internal IPC API for SSE Tools
