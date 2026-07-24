@@ -249,6 +249,24 @@ async def handle_bots_get(request: Request):
             if not bots and "bot" in data:
                 # Fallback mapping for single bot gateway configurations
                 bots = {"primary": data["bot"]}
+                
+    # Augment with live info if available
+    live_bot_name = None
+    if getattr(server, "providers", None):
+        for p in server.providers:
+            adapter = getattr(p, "adapter", None)
+            if adapter and hasattr(adapter, "user") and adapter.user:
+                try:
+                    live_bot_name = adapter.user.name
+                except Exception:
+                    pass
+                
+    for bot_id, bot_data in bots.items():
+        if "name" not in bot_data:
+            bot_data["name"] = live_bot_name if live_bot_name else bot_id.capitalize()
+        if "model" not in bot_data:
+            bot_data["model"] = getattr(server.config.agent, "model", "Default")
+            
     return {"bots": bots}
 
 @router.post('/api/bots/{bot_id}')
