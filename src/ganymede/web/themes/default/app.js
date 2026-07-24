@@ -1324,7 +1324,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // Load conversations
             const convRes = await fetch('/api/chats');
             if (convRes.ok) {
-                const chatsData = await convRes.json();
+                const data = await convRes.json();
+                const chatsData = data.chats || [];
                 const list = document.getElementById('bot-conversations-list');
                 list.innerHTML = '';
                 
@@ -1333,6 +1334,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     chatsData.forEach(conv => {
                         const tr = document.createElement('tr');
+                        tr.dataset.platform = conv.platform || '';
+                        tr.dataset.channel = conv.channel_id || '';
+                        tr.dataset.thread = conv.thread_id || '';
+                        tr.dataset.project = conv.project_name || '';
+                        tr.dataset.actualConvId = conv.actual_conv_id || '';
                         
                         let dateStr = 'Unknown';
                         if (conv.last_active) {
@@ -1408,8 +1414,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const query = e.target.value.toLowerCase();
         const rows = document.querySelectorAll('#bot-conversations-list tr');
         rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            if (text.includes(query)) {
+            if (row.children.length === 1 && row.children[0].colSpan > 1) return; // Skip "No conversations" row
+            
+            const platform = row.dataset.platform || '';
+            const channel = row.dataset.channel || '';
+            const thread = row.dataset.thread || '';
+            const project = row.dataset.project || '';
+            const actualConvId = row.dataset.actualConvId || '';
+            
+            const searchStr = `${platform} ${channel} ${thread} ${project} ${actualConvId}`.toLowerCase();
+            
+            if (searchStr.includes(query) || row.textContent.toLowerCase().includes(query)) {
                 row.style.display = '';
             } else {
                 row.style.display = 'none';
