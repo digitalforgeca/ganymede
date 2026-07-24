@@ -1309,6 +1309,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (configRes.ok) {
                 const configData = await configRes.json();
                 document.getElementById('bot-detail-name').textContent = configData.agent?.name || botId || 'Ganymede';
+                
+                // Change icon back from spinner to robot
+                const iconSpan = document.getElementById('bot-detail-name').parentElement.previousElementSibling;
+                if (iconSpan) {
+                    iconSpan.innerHTML = '<i class="ph ph-robot fa-2x"></i>';
+                }
+                
                 document.getElementById('bot-setting-name').value = configData.agent?.name || '';
                 document.getElementById('bot-setting-model').value = configData.agent?.model || '';
                 document.getElementById('bot-system-prompt').value = configData.bot?.identity || '';
