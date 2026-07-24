@@ -1,4 +1,17 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // Intercept fetch to handle 401s globally
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+        const response = await originalFetch(...args);
+        if (response.status === 401) {
+            const loginOverlay = document.getElementById('login-overlay');
+            if (loginOverlay) {
+                loginOverlay.style.setProperty('display', 'flex', 'important');
+            }
+        }
+        return response;
+    };
+    
     // DOM Elements
     const statusText = document.getElementById("status-text");
     const pulse = document.querySelector(".pulse");
@@ -1252,25 +1265,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 for (const [botId, botData] of Object.entries(bots)) {
                     const platformType = botData.provider?.type || 'discord';
                     
+                    const avatarHtml = botData.avatar_url 
+                        ? `<img class="is-rounded" src="${botData.avatar_url}" referrerpolicy="no-referrer" style="background: #f5f5f5; object-fit: cover; width: 100%; height: 100%;">`
+                        : `<span class="icon is-large has-text-info" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"><i class="ph ph-robot" style="font-size: 4rem;"></i></span>`;
+
                     const html = `
                     <div class="column is-4">
-                        <div class="card is-clickable metric" onclick="window.location.hash='#view-bot-detail?id=' + encodeURIComponent('${botId}')">
-                            <div class="card-content">
-                                <div class="media">
-                                    <div class="media-left">
-                                        <figure class="image is-48x48">
-                                            <span class="icon is-large has-text-info"><i class="ph ph-robot" style="font-size: 2rem;"></i></span>
-                                        </figure>
-                                    </div>
-                                    <div class="media-content">
-                                        <p class="title is-4">${botData.name || botId}</p>
-                                        <p class="subtitle is-6">@${botId}</p>
-                                    </div>
+                        <div class="card is-clickable" onclick="window.location.hash='#view-bot-detail?id=' + encodeURIComponent('${botId}')" style="height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                            <div class="card-content has-text-centered is-flex is-flex-direction-column" style="height: 100%;">
+                                <div class="mb-3">
+                                    <figure class="image is-96x96 is-inline-block" style="border-radius: 50%; overflow: hidden; border: 2px solid #eee;">
+                                        ${avatarHtml}
+                                    </figure>
                                 </div>
-                                <div class="content">
-                                    <div class="tags">
-                                        <span class="tag is-info is-light">Provider: ${platformType}</span>
-                                        <span class="tag is-primary is-light">Model: ${botData.model || 'Default'}</span>
+                                <p class="title is-4 cinzel mb-1">${botData.name || botId}</p>
+                                <p class="subtitle is-6 has-text-grey">@${botId}</p>
+                                
+                                <div class="mt-auto pt-4" style="border-top: 1px solid #eee; width: 100%;">
+                                    <div class="is-flex is-justify-content-space-between mb-2">
+                                        <span class="has-text-grey is-size-7">Platform</span>
+                                        <span class="has-text-info has-text-weight-bold is-size-7" style="text-transform: capitalize;">${platformType}</span>
+                                    </div>
+                                    <div class="is-flex is-justify-content-space-between">
+                                        <span class="has-text-grey is-size-7">Model</span>
+                                        <span class="has-text-primary has-text-weight-bold is-size-7">${botData.model || 'Default'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1291,6 +1309,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (configRes.ok) {
                 const configData = await configRes.json();
                 document.getElementById('bot-detail-name').textContent = configData.agent?.name || botId || 'Ganymede';
+                document.getElementById('bot-setting-name').value = configData.agent?.name || '';
+                document.getElementById('bot-setting-model').value = configData.agent?.model || '';
                 document.getElementById('bot-system-prompt').value = configData.bot?.identity || '';
             }
             
@@ -1333,6 +1353,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('btn-save-bot-prompt').addEventListener('click', async () => {
         const prompt = document.getElementById('bot-system-prompt').value;
+        const name = document.getElementById('bot-setting-name').value;
+        const model = document.getElementById('bot-setting-model').value;
         const btn = document.getElementById('btn-save-bot-prompt');
         btn.classList.add('is-loading');
         
@@ -1347,6 +1369,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!data.bot) data.bot = {};
             data.bot.identity = prompt;
             
+            if (!data.agent) data.agent = {};
+            if (name) data.agent.name = name;
+            if (model) data.agent.model = model;
+            
             const res = await fetch('/api/config', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -1360,12 +1386,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 setTimeout(() => {
                     btn.classList.remove('is-success');
                     btn.classList.add('is-info');
-                    btn.textContent = 'Save Prompt';
+                    btn.textContent = 'Save Configuration';
                 }, 2000);
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to save prompt');
+            alert('Failed to save configuration');
             btn.classList.remove('is-loading');
         }
     });
