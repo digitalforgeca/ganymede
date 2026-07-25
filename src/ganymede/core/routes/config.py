@@ -252,18 +252,23 @@ async def handle_bots_get(request: Request):
                 
     # Augment with live info if available
     live_bot_name = None
+    live_avatar_url = None
     if getattr(server, "providers", None):
         for p in server.providers:
             adapter = getattr(p, "adapter", None)
             if adapter and hasattr(adapter, "user") and adapter.user:
                 try:
                     live_bot_name = adapter.user.name
+                    if getattr(adapter.user, "display_avatar", None):
+                        live_avatar_url = adapter.user.display_avatar.url
                 except Exception:
                     pass
                 
     for bot_id, bot_data in bots.items():
         if "name" not in bot_data:
             bot_data["name"] = live_bot_name if live_bot_name else bot_id.capitalize()
+        if "avatar_url" not in bot_data and live_avatar_url:
+            bot_data["avatar_url"] = live_avatar_url
         if "model" not in bot_data:
             bot_data["model"] = getattr(server.config.agent, "model", "Default")
             
