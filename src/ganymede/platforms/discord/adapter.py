@@ -299,8 +299,20 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
             await thread.send(content)
         return {"id": str(thread.id), "status": "created"}
 
-    def get_system_instructions(self) -> str | None:
-        return """
+    async def inject_system_instructions(self, current_prompt: str, context: ContextKey = None) -> str:
+        if context is None or context.platform != "discord":
+            return current_prompt
+
+        # Multi-bot guard: only the adapter that owns this channel should respond
+        try:
+            channel = await self._resolve_channel(context)
+            if channel and hasattr(channel, 'guild') and self.discord_config.allowed_guilds:
+                if str(channel.guild.id) not in self.discord_config.allowed_guilds:
+                    return current_prompt
+        except Exception:
+            pass
+
+        additions = """
 You can communicate using Discord tools:
 - `read_channel_history`: Reads recent messages from a channel.
 - `post_to_channel`: Sends a new text message.
@@ -308,6 +320,24 @@ You can communicate using Discord tools:
 - `get_channel_info`: Retrieves channel metadata.
 For the full set of capabilities, refer to the extended tools list.
 """
+        # Inject dynamic channel context
+        try:
+            channel = await self._resolve_channel(context)
+            if channel:
+                channel_name = getattr(channel, 'name', 'unknown')
+                channel_id = context.channel_id
+                additions += f"\nInvocation context: Discord channel #{channel_name} (ID: {channel_id})\n"
+
+                # Get topic — for threads, fall back to the parent channel's topic
+                topic = getattr(channel, 'topic', None)
+                if not topic and hasattr(channel, 'parent') and channel.parent:
+                    topic = getattr(channel.parent, 'topic', None)
+                if topic:
+                    additions += f"Channel Description: {topic}\n"
+        except Exception as e:
+            logger.warning("Failed to inject channel info into system prompt", error=str(e))
+
+        return f"{current_prompt}\n\n{additions.strip()}"
 
 def time_ns() -> int:
     import time

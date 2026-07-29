@@ -62,6 +62,10 @@ class DiscordPlatformProvider(BasePlatformProvider):
         self.router.register_on_message = self.adapter.register_on_message
         self.adapter.register_on_message(self.router.handle_message)
         
+        from ganymede.core.hooks import hooks
+        hooks.register("on_agent_system_prompt", self.adapter.inject_system_instructions)
+        
+
         await self.scheduler.start()
         await self.adapter.start()
 

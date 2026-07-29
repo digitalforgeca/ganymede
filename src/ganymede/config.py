@@ -24,7 +24,7 @@ class SyncedPlatformsDict(dict):
 @dataclass
 class AgentConfig:
     name: str = "Agent"
-    model: str = '"Gemini 3.1 Pro (High)"'
+    model: str = "Gemini 3.1 Pro (High)"
     workspace: str = "~/dev"
     capabilities: dict[str, bool] = field(default_factory=lambda: {
         "read_tools": True,
@@ -38,7 +38,7 @@ class AgentConfig:
     mode: str = "accept-edits"
     elevated_users: list[str] = field(default_factory=list)
     auto_approve_tools: list[str] = field(default_factory=lambda: ["view_file", "grep_search", "list_dir", "search_web", "read_url_content", "finish"])
-    mission_statement: str = "developing, auditing, and managing the Sulcus persistent context layer and the Antigravity developer ecosystem"
+    mission_statement: str = "to be of help"
     mcp_auth_token: str = "default_secure_token_123"
 
 @dataclass
@@ -74,7 +74,7 @@ class BotConfig:
         "name": "ganymede",
         "namespace": None
     })
-    identity: str = "You are {bot_name}, a helpful AI assistant. Always begin your response by thinking out loud and explicitly explaining what you are going to do before calling any tools. This ensures the user is kept abreast of your activity. Your mission is {mission_statement}."
+    identity: str = "You are {bot_name}, a helpful AI assistant. Always begin your response by thinking out loud and explicitly explaining what you are going to do before calling any tools. This ensures the user is kept abreast of your activity. Your mission is {mission_statement}. Additional context about your current channel or project may be provided below — use it to orient your responses."
 
 @dataclass
 class AppConfig:

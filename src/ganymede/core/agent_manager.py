@@ -4,7 +4,6 @@ import os
 import json
 import re
 import uuid
-import pty
 import structlog
 from typing import Any
 from google.antigravity.types import Text
@@ -13,6 +12,35 @@ from ganymede.config import AppConfig
 from ganymede.core.quota import QuotaTracker
 
 logger = structlog.get_logger()
+
+async def async_run(*args, capture_output=False, text=True, check=False, env=None, input=None):
+    proc = await asyncio.create_subprocess_exec(
+        *args,
+        stdout=asyncio.subprocess.PIPE if capture_output else None,
+        stderr=asyncio.subprocess.PIPE if capture_output else None,
+        stdin=asyncio.subprocess.PIPE if input is not None else None,
+        env=env
+    )
+    if input is not None:
+        stdout, stderr = await proc.communicate(input=input.encode() if text else input)
+    else:
+        stdout, stderr = await proc.communicate()
+    
+    if text and stdout is not None:
+        stdout = stdout.decode('utf-8')
+    if text and stderr is not None:
+        stderr = stderr.decode('utf-8')
+        
+    if check and proc.returncode != 0:
+        raise RuntimeError(f"Command {' '.join(args)} failed with return code {proc.returncode}")
+        
+    class _Res:
+        def __init__(self, rc, out, err):
+            self.returncode = rc
+            self.stdout = out
+            self.stderr = err
+            
+    return _Res(proc.returncode, stdout, stderr)
 
 # Regex to strip ANSI/VT escape sequences that bubbletea emits through the PTY.
 # We need the PTY so bubbletea can open /dev/tty (otherwise it fatally crashes),
@@ -55,27 +83,82 @@ class CliResponse:
         yield Text(text=self.response_text, step_index=0)
 
     async def _read_chunks(self):
-        # Clear the event before we wait
-        self.agent.turn_completed_event.clear()
-        self.agent.aborted = False
+        attempts = 0
+        max_attempts = 2
+        chalice_error = None
         
-        try:
-            # Wait for Chalice to fire the Stop hook signaling generation is done
-            await asyncio.wait_for(self.agent.turn_completed_event.wait(), timeout=600)
-        except asyncio.TimeoutError:
-            logger.error("Timeout waiting for agent to finish turn", conversation_id=self.agent.conversation_id)
-            yield Text(text="[Error: Agent timed out while generating response]", step_index=0)
-            return
+        while attempts < max_attempts:
+            attempts += 1
+            
+            # Clear the event before we wait
+            self.agent.turn_completed_event.clear()
+            self.agent.aborted = False
+            
+            try:
+                # Wait for Chalice to fire the Stop hook signaling generation is done.
+                # Check for activity exactly as requested: 5 minute wait, then 1 minute grace period if silent.
+                activity_timeout = 300  # 5 minutes
+                grace_period = 60       # 1 minute
+                hard_ceiling = 7200     # 2 hours hard cap
+                start_wait = time.time()
+                
+                while True:
+                    now = time.time()
+                    if now - start_wait > hard_ceiling:
+                        logger.error("Agent hit hard ceiling timeout", conversation_id=self.agent.conversation_id)
+                        yield Text(text="[Error: Agent hit hard 2-hour maximum execution limit]", step_index=0)
+                        return
 
-        # Check if we were woken by an abort (/stop) rather than clean completion
-        if self.agent.aborted:
-            logger.info("Agent turn aborted by /stop", conversation_id=self.agent.conversation_id)
-            return
+                    try:
+                        # Sleep for the primary check interval (5 minutes)
+                        await asyncio.wait_for(self.agent.turn_completed_event.wait(), timeout=activity_timeout)
+                        break  # Turn completed successfully
+                    except asyncio.TimeoutError:
+                        now = time.time()
+                        
+                        # Has the agent emitted telemetry in the last 5 minutes?
+                        if now - self.agent.last_active <= activity_timeout:
+                            # Yes! It's active. The loop continues and waits another 5 minutes.
+                            continue
+                            
+                        # No telemetry in 5 minutes. Enter the grace period.
+                        logger.warning("Agent appears inactive, entering 1-minute grace period", conversation_id=self.agent.conversation_id)
+                        
+                        try:
+                            # Give it 1 more minute
+                            await asyncio.wait_for(self.agent.turn_completed_event.wait(), timeout=grace_period)
+                            break  # Turn completed during grace period
+                        except asyncio.TimeoutError:
+                            now = time.time()
+                            # Check one last time before calling it
+                            if now - self.agent.last_active <= (activity_timeout + grace_period):
+                                # It came back alive during the grace period!
+                                continue
+                                
+                            logger.error("Agent failed grace period and timed out", conversation_id=self.agent.conversation_id)
+                            yield Text(text="[Error: Agent timed out (no activity detected for 6 minutes)]", step_index=0)
+                            return
+            except Exception as e:
+                logger.error("Error waiting for agent turn completion", error=str(e), conversation_id=self.agent.conversation_id)
+                yield Text(text="[Error: Internal wait error]", step_index=0)
+                return
 
-        # Check if the Stop hook carried an error (e.g., API rate limit / quota exhaustion).
-        # Surface it immediately so the user sees what went wrong.
-        chalice_error = self.agent._chalice_error
-        self.agent._chalice_error = None  # Consume the error
+            # Check if we were woken by an abort (/stop) rather than clean completion
+            if self.agent.aborted:
+                logger.info("Agent turn aborted by /stop", conversation_id=self.agent.conversation_id)
+                return
+
+            # Check if the Stop hook carried an error (e.g., API rate limit / quota exhaustion).
+            # Surface it immediately so the user sees what went wrong.
+            chalice_error = self.agent._chalice_error
+            self.agent._chalice_error = None  # Consume the error
+            
+            if chalice_error and "429" in str(chalice_error) and ("RESOURCE_EXHAUSTED" in str(chalice_error) or "quota" in str(chalice_error).lower()) and attempts < max_attempts:
+                fallback_model = "gemini-3.1-pro-high"
+                yield await self._handle_429_fallback(fallback_model)
+                continue
+            
+            break
 
         # Turn is complete. Read the clean output from the transcript path
         # provided by the Chalice Stop hook payload (stored on the agent).
@@ -89,6 +172,84 @@ class CliResponse:
             yield Text(text=f"⚠️ {error_msg}", step_index=0)
             return
             
+        final_text, artifacts_created = self._parse_transcript(transcript_path)
+
+        # Process syncing and generating the Discord notification
+        if artifacts_created:
+            port = getattr(self.agent.config, "dashboard_port", 8180)
+            dash_url = f"http://127.0.0.1:{port}"
+            art_text = "**📄 Artifacts Requiring Review:**\n"
+            
+            channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.conversation_id}")
+            os.makedirs(channel_brain_dir, exist_ok=True)
+            
+            import shutil
+            for art in artifacts_created:
+                target_file = art["file"]
+                name = os.path.basename(target_file)
+                
+                # Sync artifact from isolated subagent directory back to channel's root brain directory
+                if os.path.exists(target_file):
+                    dest_file = os.path.join(channel_brain_dir, name)
+                    if target_file != dest_file:
+                        try:
+                            shutil.copy2(target_file, dest_file)
+                        except Exception as e:
+                            logger.error("Failed to sync subagent artifact", error=str(e))
+                            
+                art_text += f"- **{name}**: {art['summary']}\n"
+                
+            art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
+            final_text = (final_text + "\n\n" + art_text) if final_text else art_text.strip()
+            
+        # Clear telemetry capture for next turn
+        self.agent._artifacts_this_turn = []
+        
+        self.artifacts_count = len(artifacts_created)
+        self.tasks_count = getattr(self.agent, "_chalice_tasks_count", 0)
+        self.subagents_count = getattr(self.agent, "_chalice_subagents_count", 0)
+            
+        # If the transcript had no model response but we got an API error, surface it
+        if not final_text and chalice_error:
+            final_text = f"⚠️ {chalice_error}"
+        
+        self.response_text = final_text
+        yield Text(text=final_text, step_index=0)
+        
+        self.usage_metadata.total_token_count = (len(self.prompt) + len(final_text)) // 4
+
+    async def _handle_429_fallback(self, fallback_model: str) -> Text:
+        """Handles 429 quota exhaustion by injecting fallback model override and restarting agent."""
+        app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+        sdk_brain_dir = os.path.join(app_data, "brain", self.agent.sdk_conversation_id)
+        os.makedirs(sdk_brain_dir, exist_ok=True)
+        model_txt_path = os.path.join(sdk_brain_dir, "model.txt")
+        
+        current_model = None
+        if os.path.exists(model_txt_path):
+            with open(model_txt_path, "r") as f:
+                current_model = f.read().strip().strip("\"'")
+                
+        if current_model != fallback_model:
+            logger.warning(f"Detected 429 quota exhaustion. Falling back to {fallback_model}.", conversation_id=self.agent.conversation_id)
+            
+            with open(model_txt_path, "w") as f:
+                f.write(fallback_model)
+                
+            await self.agent.terminate()
+            await self.agent.ensure_running()
+            
+            import uuid
+            buf_name = f"buf-{uuid.uuid4().hex[:8]}"
+            await async_run("tmux", "load-buffer", "-b", buf_name, "-", input=self.prompt + '\r')
+            await async_run("tmux", "paste-buffer", "-r", "-b", buf_name, "-t", f"ganymede-{self.agent.sdk_conversation_id}")
+            await async_run("tmux", "delete-buffer", "-b", buf_name)
+            
+            return Text(text=f"⚠️ *Model quota exhausted! Falling back to `{fallback_model}` and retrying your request...*\n", step_index=0)
+        return Text(text="⚠️ *Model quota exhausted, but already using fallback model.*", step_index=0)
+
+    def _parse_transcript(self, transcript_path: str) -> tuple[str, list]:
+        """Parses the agent JSONL transcript to extract final text and tool calls."""
         final_text = ""
         current_turn_tool_calls = []
         try:
@@ -99,16 +260,18 @@ class CliResponse:
             start_idx = 0
             for i in range(len(lines)-1, -1, -1):
                 try:
+                    import json
                     data = json.loads(lines[i])
                     if data.get("type") == "USER_INPUT":
                         start_idx = i
                         break
-                except json.JSONDecodeError:
+                except Exception:
                     continue
                     
             # Collect all tool calls and the last non-empty final_text
             for i in range(start_idx, len(lines)):
                 try:
+                    import json
                     data = json.loads(lines[i])
                     if data.get("type") in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
                         content = data.get("content", "")
@@ -116,93 +279,54 @@ class CliResponse:
                             final_text = content
                         if data.get("tool_calls"):
                             current_turn_tool_calls.extend(data.get("tool_calls"))
-                except json.JSONDecodeError:
+                except Exception:
                     continue
-                            
-            agent_message = final_text
-            final_text = ""
-
-            artifacts_created = []
-            if current_turn_tool_calls:
-                tool_text = "*⚒️ Tools Used:*\n"
-                for t in current_turn_tool_calls:
-                    t_name = t.get('name') or t.get('function', {}).get('name') or 'tool'
-                    args = t.get('args') or t.get('function', {}).get('arguments') or {}
-                    try:
-                        args_obj = json.loads(args) if isinstance(args, str) else args
-                        args_formatted = json.dumps(args_obj, indent=2)
-                        
-                        # Detect artifacts
-                        if t_name in ("write_to_file", "replace_file_content", "multi_replace_file_content"):
-                            metadata = args_obj.get("ArtifactMetadata", {})
-                            if metadata and (metadata.get("UserFacing") or metadata.get("RequestFeedback")):
-                                target_file = args_obj.get("TargetFile", "Unknown File")
-                                summary = metadata.get("Summary", "")
-                                if not any(a["file"] == target_file for a in artifacts_created):
-                                    artifacts_created.append({"file": target_file, "summary": summary})
-                    except Exception:
-                        args_formatted = str(args)
-                        
-                    tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
-                
-                final_text = tool_text.strip()
-
-            # Merge artifacts globally captured from telemetry (which covers subagents!)
-            captured_artifacts = getattr(self.agent, "_artifacts_this_turn", [])
-            for art in captured_artifacts:
-                if not any(a["file"] == art["file"] for a in artifacts_created):
-                    artifacts_created.append(art)
-
-            if agent_message:
-                final_text = (final_text + "\n\n" + agent_message) if final_text else agent_message
-
-            # Process syncing and generating the Discord notification
-            if artifacts_created:
-                port = getattr(self.agent.config, "dashboard_port", 8180)
-                dash_url = f"http://127.0.0.1:{port}"
-                art_text = "**📄 Artifacts Requiring Review:**\n"
-                
-                channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.conversation_id}")
-                os.makedirs(channel_brain_dir, exist_ok=True)
-                
-                import shutil
-                for art in artifacts_created:
-                    target_file = art["file"]
-                    name = os.path.basename(target_file)
-                    
-                    # Sync artifact from isolated subagent directory back to channel's root brain directory
-                    if os.path.exists(target_file):
-                        dest_file = os.path.join(channel_brain_dir, name)
-                        if target_file != dest_file:
-                            try:
-                                shutil.copy2(target_file, dest_file)
-                            except Exception as e:
-                                logger.error("Failed to sync subagent artifact", error=str(e))
-                                
-                    art_text += f"- **{name}**: {art['summary']}\n"
-                    
-                art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
-                final_text = (final_text + "\n\n" + art_text) if final_text else art_text.strip()
-                
-            # Clear telemetry capture for next turn
-            self.agent._artifacts_this_turn = []
-            
-            self.artifacts_count = len(artifacts_created)
-            self.tasks_count = getattr(self.agent, "_chalice_tasks_count", 0)
-            self.subagents_count = getattr(self.agent, "_chalice_subagents_count", 0)
-                
-            # If the transcript had no model response but we got an API error, surface it
-            if not final_text and chalice_error:
-                final_text = f"⚠️ {chalice_error}"
-            
-            self.response_text = final_text
-            yield Text(text=final_text, step_index=0)
-            
-            self.usage_metadata.total_token_count = (len(self.prompt) + len(final_text)) // 4
         except Exception as e:
-            logger.error("Failed to read transcript for output", error=str(e),
-                         transcript_path=transcript_path)
-            yield Text(text="[Error: Failed to parse agent transcript]", step_index=0)
+            logger.error("Failed to parse agent transcript", error=str(e), path=transcript_path)
+
+        # Build message with tool calls formatting
+        agent_message = final_text
+        artifacts_created = []
+        
+        if current_turn_tool_calls:
+            tool_text = ""
+            for t in current_turn_tool_calls:
+                t_name = t.get("name", "tool")
+                args = t.get("args", {})
+                args_formatted = ""
+                try:
+                    import json
+                    if isinstance(args, str):
+                        args_obj = json.loads(args)
+                        args_formatted = json.dumps(args_obj, indent=2)
+                    else:
+                        args_obj = args
+                        args_formatted = json.dumps(args, indent=2)
+                        
+                    if t_name in ("write_to_file", "replace_file_content", "multi_replace_file_content"):
+                        metadata = args_obj.get("ArtifactMetadata", {})
+                        if metadata and (metadata.get("UserFacing") or metadata.get("RequestFeedback")):
+                            target_file = args_obj.get("TargetFile", "Unknown File")
+                            summary = metadata.get("Summary", "")
+                            if not any(a["file"] == target_file for a in artifacts_created):
+                                artifacts_created.append({"file": target_file, "summary": summary})
+                except Exception:
+                    args_formatted = str(args)
+                    
+                tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
+            
+            final_text = tool_text.strip()
+
+        # Merge artifacts globally captured from telemetry (which covers subagents!)
+        captured_artifacts = getattr(self.agent, "_artifacts_this_turn", [])
+        for art in captured_artifacts:
+            if not any(a["file"] == art["file"] for a in artifacts_created):
+                artifacts_created.append(art)
+
+        if agent_message:
+            final_text = (final_text + "\n\n" + agent_message) if final_text else agent_message
+                
+        return final_text, artifacts_created
 
     @property
     def chunks(self):
@@ -237,7 +361,7 @@ class ManagedAgent:
         db_path = os.path.join(db_dir, f"{self.sdk_conversation_id}.db")
         is_new_conversation = not os.path.exists(db_path)
 
-        args = ["agy", "--continue", self.sdk_conversation_id]
+        args = ["agy", "--conversation", self.sdk_conversation_id]
         
         project_name = self.context_key.project_name
             
@@ -276,10 +400,9 @@ class ManagedAgent:
             args.append("--dangerously-skip-permissions")
             
         session_name = f"ganymede-{self.sdk_conversation_id}"
-        import subprocess
         
         try:
-            res = subprocess.run(["tmux", "has-session", "-t", session_name], capture_output=True)
+            res = await async_run("tmux", "has-session", "-t", session_name, capture_output=True)
             if res.returncode == 0:
                 logger.info("Found existing decoupled agy session, reattaching", session=session_name)
                 return
@@ -299,10 +422,10 @@ class ManagedAgent:
         
         logger.info("Spawning decoupled agy in tmux", command=cmd, session=session_name, model=resolved_model, context=self.context_key)
         
-        subprocess.run(["tmux", "new-session", "-d", "-s", session_name, "-c", workspace_dir, cmd], env=subprocess_env, check=True)
+        await async_run("tmux", "new-session", "-d", "-s", session_name, "-c", workspace_dir, cmd, env=subprocess_env, check=True)
         
         # Fetch the PID of the pane to map to chalice
-        res = subprocess.run(["tmux", "display-message", "-p", "-t", session_name, "#{pane_pid}"], capture_output=True, text=True, check=False)
+        res = await async_run("tmux", "display-message", "-p", "-t", session_name, "#{pane_pid}", capture_output=True, text=True, check=False)
         pane_pid = res.stdout.strip()
         if not pane_pid:
             raise RuntimeError(f"Failed to start agy: tmux session {session_name} exited immediately. Command: {cmd}")
@@ -317,7 +440,7 @@ class ManagedAgent:
         
         # Wait for agy to boot up and display its interactive prompt before injecting input
         for _ in range(40):  # Wait up to 20 seconds
-            res = subprocess.run(["tmux", "capture-pane", "-p", "-t", session_name], capture_output=True, text=True)
+            res = await async_run("tmux", "capture-pane", "-p", "-t", session_name, capture_output=True, text=True)
             if ">" in res.stdout or "Error" in res.stdout:
                 await asyncio.sleep(0.5) # Give it just a moment to settle
                 break
@@ -331,9 +454,8 @@ class ManagedAgent:
             
             # Intercept /models
             if prompt_stripped == "/models":
-                import subprocess
                 try:
-                    result = subprocess.run(["agy", "models"], capture_output=True, text=True, check=True)
+                    result = await async_run("agy", "models", capture_output=True, text=True, check=True)
                     out = _ANSI_ESCAPE.sub('', result.stdout).strip()
                     return CliResponse(self, prompt, direct_text=f"```\n{out}\n```")
                 except Exception as e:
@@ -372,23 +494,21 @@ class ManagedAgent:
                 user_name = "user"
                 if self.manager:
                     user_name = self.manager.get_active_author_name(self.context_key) or "user"
-                    if self.manager.adapter and hasattr(self.manager.adapter, "get_system_instructions"):
-                        platform_inst = self.manager.adapter.get_system_instructions()
-                        if platform_inst:
-                            sys_inst = f"{sys_inst}\n\n{platform_inst.strip()}"
                 sys_inst = sys_inst.replace("{user_name}", user_name)
+                
+                # Allow plugins to inject context dynamically
+                from ganymede.core.hooks import hooks
+                sys_inst = await hooks.modify("on_agent_system_prompt", sys_inst, context=self.context_key)
                 
                 final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
             # Write prompt as simulated keystrokes to tmux session.
-            import subprocess
             import uuid
             buf_name = f"buf-{uuid.uuid4().hex[:8]}"
-            proc = subprocess.Popen(["tmux", "load-buffer", "-b", buf_name, "-"], stdin=subprocess.PIPE)
-            proc.communicate((final_prompt + '\r').encode('utf-8'))
+            await async_run("tmux", "load-buffer", "-b", buf_name, "-", input=final_prompt + '\r')
             
-            subprocess.run(["tmux", "paste-buffer", "-r", "-b", buf_name, "-t", f"ganymede-{self.sdk_conversation_id}"])
-            subprocess.run(["tmux", "delete-buffer", "-b", buf_name])
+            await async_run("tmux", "paste-buffer", "-r", "-b", buf_name, "-t", f"ganymede-{self.sdk_conversation_id}")
+            await async_run("tmux", "delete-buffer", "-b", buf_name)
             
             return CliResponse(self, prompt)
 
@@ -400,9 +520,8 @@ class ManagedAgent:
 
         if getattr(self, "tmux_session_name", None):
             logger.info("Terminating decoupled tmux session", session=self.tmux_session_name)
-            import subprocess
             try:
-                subprocess.run(["tmux", "kill-session", "-t", self.tmux_session_name], capture_output=True)
+                await async_run("tmux", "kill-session", "-t", self.tmux_session_name, capture_output=True)
             except Exception as e:
                 logger.error("Error terminating tmux session", error=str(e))
             finally:

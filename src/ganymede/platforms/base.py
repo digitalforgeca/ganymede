@@ -2,7 +2,6 @@ from typing import Protocol, Callable, Awaitable, Any, runtime_checkable
 from ganymede.core import ContextKey
 from ganymede.core.models import PlatformMessage
 
-import importlib
 
 # Static imports for PyInstaller analysis to ensure bundling in single-file binary
 try:
@@ -55,9 +54,6 @@ class PlatformAdapter(Protocol):
         """Generate a unique, stable conversation identifier for the given context key."""
         ...
 
-    def get_system_instructions(self) -> str | None:
-        """Return platform-specific system instructions to append to the bot identity."""
-        return None
 
     # --- Standard Capability Methods for SSE Tools ---
 
