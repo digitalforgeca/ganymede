@@ -2,19 +2,16 @@ import asyncio
 import os
 import unittest
 from unittest.mock import AsyncMock, MagicMock
-import json
 import time
-import discord
 from discord import app_commands
 
-from ganymede.config import AppConfig, AgentConfig
+from ganymede.config import AppConfig
 from ganymede.core import ContextKey
 from ganymede.core.db import Database
 from ganymede.core.quota import QuotaTracker
 from ganymede.core.agent_manager import AgentManager
-from ganymede.core.router import Router
 from ganymede.platforms.discord.safety import DiscordApprovalHook
-from google.antigravity.types import ToolCall, HookResult
+from google.antigravity.types import ToolCall
 
 class TestGanymedeCore(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

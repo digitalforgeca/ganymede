@@ -3,7 +3,7 @@ import sys
 import json
 import importlib
 import structlog
-from typing import Optional, List, Dict, Any, Type
+from typing import Optional, Dict, Type
 
 logger = structlog.get_logger()
 

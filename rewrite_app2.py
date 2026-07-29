@@ -1,4 +1,3 @@
-import os
 
 app_tsx_content = """import React, { useEffect, useState, useRef } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';

@@ -17,7 +17,6 @@ if __name__ == "__main__":
         asyncio.run(mock_agy())
     else:
         from ganymede.core.agent_manager import CliResponse
-        from unittest.mock import AsyncMock
         import pty
         
         async def main():

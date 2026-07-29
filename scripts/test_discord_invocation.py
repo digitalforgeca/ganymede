@@ -69,7 +69,7 @@ async def run_test():
                             if "BANANA" in row[0].upper():
                                 print(f"\n✅ Success! Found expected response from bot in database: {row[0]}")
                                 sys.exit(0)
-                    except Exception as e:
+                    except Exception:
                         pass
                     print(".", end="", flush=True)
                 

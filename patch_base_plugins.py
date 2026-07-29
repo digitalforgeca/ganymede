@@ -1,4 +1,3 @@
-import re
 with open('/Users/mcdoolz/dev/ganymede/src/ganymede/platforms/base.py', 'r') as f:
     content = f.read()
 

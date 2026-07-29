@@ -1,4 +1,3 @@
-import re
 with open('/Users/mcdoolz/dev/ganymede/src/ganymede/web/themes/default/index.html', 'r') as f:
     content = f.read()
 

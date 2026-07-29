@@ -1,12 +1,8 @@
 import os
-import asyncio
 import structlog
-import json
 import yaml
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from ganymede.config import AppConfig
-from ganymede.core import ContextKey
 
 logger = structlog.get_logger()
 
@@ -15,7 +11,6 @@ router = APIRouter()
 @router.get('/api/config')
 async def handle_config_get(request: Request):
     server = request.app.state.server
-    import yaml
     config_path = os.path.expanduser("~/.ganymede/config.yaml")
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
@@ -71,7 +66,6 @@ async def handle_models_get(request: Request):
 @router.post('/api/config')
 async def handle_config_post(request: Request):
     server = request.app.state.server
-    import yaml
     data = await request.json()
         
     # Update in-memory config for immediate application
@@ -239,7 +233,6 @@ async def handle_providers_get(request: Request):
 @router.get('/api/bots')
 async def handle_bots_get(request: Request):
     server = request.app.state.server
-    import yaml
     config_path = os.path.expanduser("~/.ganymede/config.yaml")
     bots = {}
     if os.path.exists(config_path):
@@ -277,7 +270,6 @@ async def handle_bots_get(request: Request):
 @router.post('/api/bots/{bot_id}')
 async def handle_bot_post(request: Request):
     server = request.app.state.server
-    import yaml
     bot_id = request.path_params.get('bot_id')
     bot_data = await request.json()
     
@@ -303,7 +295,6 @@ async def handle_bot_post(request: Request):
 @router.delete('/api/bots/{bot_id}')
 async def handle_bot_delete(request: Request):
     server = request.app.state.server
-    import yaml
     bot_id = request.path_params.get('bot_id')
     
     config_path = os.path.expanduser("~/.ganymede/config.yaml")

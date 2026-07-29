@@ -1,4 +1,3 @@
-import re
 
 with open('/Users/mcdoolz/dev/ganymede/src/ganymede/web/index.html', 'r') as f:
     content = f.read()

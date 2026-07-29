@@ -1,4 +1,3 @@
-import os
 
 with open('src/ganymede/web/themes/default/index.html', 'w') as f:
     f.write("""<!doctype html>

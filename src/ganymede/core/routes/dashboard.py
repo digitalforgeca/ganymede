@@ -1,12 +1,7 @@
 import os
-import asyncio
 import structlog
 import json
-import yaml
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse, FileResponse
-from ganymede.config import AppConfig
-from ganymede.core import ContextKey
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -90,7 +85,6 @@ async def handle_status(request: Request):
 @router.get('/api/user')
 async def handle_user_info(request: Request):
     import base64
-    import json
     creds_path = os.path.expanduser("~/.gemini/oauth_creds.json")
     user_info = {"name": "Operator", "avatar_url": None}
     if os.path.exists(creds_path):

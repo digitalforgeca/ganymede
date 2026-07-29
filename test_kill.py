@@ -1,4 +1,4 @@
-import sys, os
+import os
 from ganymede.config import AppConfig
 from ganymede.cli import stop_daemon
 

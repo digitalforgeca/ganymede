@@ -1,4 +1,8 @@
-import pty, os, time, subprocess, uuid
+import pty
+import os
+import time
+import subprocess
+import uuid
 cid = str(uuid.uuid4())
 print(f"CID: {cid}")
 master, slave = pty.openpty()

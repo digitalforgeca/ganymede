@@ -3,7 +3,7 @@ import base64
 import hmac
 import hashlib
 import time
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi_sso.sso.google import GoogleSSO
 from starlette.requests import Request, HTTPConnection

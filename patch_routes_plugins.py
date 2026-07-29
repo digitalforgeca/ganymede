@@ -1,5 +1,3 @@
-import re
-import os
 
 with open('/Users/mcdoolz/dev/ganymede/src/ganymede/core/routes/config.py', 'r') as f:
     content = f.read()
