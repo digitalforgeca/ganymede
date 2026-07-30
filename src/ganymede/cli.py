@@ -125,10 +125,10 @@ async def run(config: AppConfig):
     db = Database(config)
     await db.init()
     
-    from ganymede.core.plugin_manager import PluginManager
+    from ganymede.core.platform_manager import PlatformManager
     import copy
     
-    plugin_manager = PluginManager()
+    platform_manager = PlatformManager()
 
     # Factory function to create a Router and its subsystems for a config copy
     def router_factory(inst_config: AppConfig) -> Router:
@@ -159,7 +159,7 @@ async def run(config: AppConfig):
                 bot_config_copy.bot.provider = bot_cfg["provider"]
                 
             platform_name = bot_cfg.get("provider", {}).get("type", "discord").lower()
-            provider_class = plugin_manager.get_provider_class(platform_name)
+            provider_class = platform_manager.get_provider_class(platform_name)
             
             router = router_factory(bot_config_copy)
             
@@ -180,11 +180,11 @@ async def run(config: AppConfig):
     has_web = any(p.__class__.__name__ == "WebProvider" for p in providers)
     if not has_web:
         try:
-            web_provider_class = plugin_manager.get_provider_class("web")
+            web_provider_class = platform_manager.get_provider_class("web")
             web_provider = web_provider_class(config, router_factory(config), db, bot_id="web-default")
             providers.append(web_provider)
         except ValueError:
-            logger.warning("Web provider plugin not found, dashboard bots will be unavailable.")
+            logger.warning("Web provider platform not found, dashboard bots will be unavailable.")
     
     # Auto-register Ganymede SSE MCP server globally for agy CLI clients
     import json

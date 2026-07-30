@@ -7,27 +7,27 @@ from typing import Optional, Dict, Type
 
 logger = structlog.get_logger()
 
-class PluginManager:
+class PlatformManager:
     """
-    Scans for and manages Ganymede plugins dynamically using manifests (plugin.json or provider.json).
-    This decouples the core engine from hardcoded plugin knowledge.
+    Scans for and manages Ganymede platforms dynamically using manifests (platform.json or provider.json).
+    This decouples the core engine from hardcoded platform knowledge.
     """
     
     def __init__(self):
-        self.plugin_dirs = [
+        self.platform_dirs = [
             os.path.join(os.path.dirname(os.path.dirname(__file__)), "platforms"), # Built-in platforms
-            os.path.expanduser("~/.ganymede/plugins")                              # User plugins
+            os.path.expanduser("~/.ganymede/platforms")                            # User platforms
         ]
         self._providers: Dict[str, Type] = {}
-        self.scan_plugins()
+        self.scan_platforms()
 
-    def scan_plugins(self):
-        """Scan directories for plugin manifests and register them."""
-        for p_dir in self.plugin_dirs:
+    def scan_platforms(self):
+        """Scan directories for platform manifests and register them."""
+        for p_dir in self.platform_dirs:
             if not os.path.exists(p_dir):
                 continue
             
-            # Ensure the plugin directory is in sys.path
+            # Ensure the platform directory is in sys.path
             if p_dir not in sys.path:
                 sys.path.insert(0, p_dir)
 
@@ -37,9 +37,9 @@ class PluginManager:
                     self._check_manifest(full_path, entry)
 
     def _check_manifest(self, directory: str, fallback_name: str):
-        """Check for plugin.json or provider.json in a directory."""
+        """Check for platform.json or provider.json in a directory."""
         manifest_path = None
-        for name in ("plugin.json", "provider.json"):
+        for name in ("platform.json", "provider.json", "plugin.json"): # keep plugin.json for backwards compat
             candidate = os.path.join(directory, name)
             if os.path.exists(candidate):
                 manifest_path = candidate
@@ -59,7 +59,7 @@ class PluginManager:
                     self._register_provider(plugin_name, module_name, class_name)
                     
             except Exception as e:
-                logger.error("Failed to load plugin manifest", path=manifest_path, error=str(e))
+                logger.error("Failed to load platform manifest", path=manifest_path, error=str(e))
         else:
             # Fallback for internal built-in platforms without manifests
             if "platforms" in directory:
@@ -96,5 +96,5 @@ class PluginManager:
         if platform_name in self._providers:
             return self._providers[platform_name]
             
-        raise ValueError(f"Platform provider module for '{platform_name}' not found. Are you missing a plugin manifest?")
+        raise ValueError(f"Platform provider module for '{platform_name}' not found. Are you missing a platform manifest?")
 
