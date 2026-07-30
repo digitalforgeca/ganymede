@@ -68,27 +68,41 @@ async def handle_config_post(request: Request):
     server = request.app.state.server
     data = await request.json()
         
-    # Update in-memory config for immediate application
+    # Clean up empty strings sent by UI to prevent overriding defaults with blanks
+    if "bot" in data and isinstance(data["bot"], dict):
+        if "identity" in data["bot"] and data["bot"]["identity"] == "":
+            del data["bot"]["identity"]
+            server.config.bot.identity = type(server.config.bot).identity
+        elif "identity" in data["bot"]:
+            server.config.bot.identity = data["bot"]["identity"]
+            
+    if "agent" in data and isinstance(data["agent"], dict):
+        if not hasattr(server.config, "agent"):
+            class AgentConfig:
+                pass
+            server.config.agent = AgentConfig()
+            
+        for key in ["model", "name", "mission_statement"]:
+            if key in data["agent"]:
+                if data["agent"][key] == "":
+                    del data["agent"][key]
+                    setattr(server.config.agent, key, getattr(type(server.config.agent), key, ""))
+                else:
+                    setattr(server.config.agent, key, data["agent"][key])
+                    
+    # Clean up empty parent dicts if they are now empty
+    if "bot" in data and not data["bot"]:
+        del data["bot"]
+    if "agent" in data and not data["agent"]:
+        del data["agent"]
+        
+    # Update other in-memory config
     if "log_level" in data:
         server.config.log_level = data["log_level"]
     if "platform" in data:
         server.config.platform = data["platform"]
     if "theme" in data:
         server.config.theme = data["theme"]
-    if "agent" in data:
-        if not hasattr(server.config, "agent"):
-            class AgentConfig:
-                pass
-            server.config.agent = AgentConfig()
-        if "model" in data["agent"]:
-            server.config.agent.model = data["agent"]["model"]
-        if "name" in data["agent"]:
-            server.config.agent.name = data["agent"]["name"]
-        if "mission_statement" in data["agent"]:
-            server.config.agent.mission_statement = data["agent"]["mission_statement"]
-    if "bot" in data:
-        if "identity" in data["bot"]:
-            server.config.bot.identity = data["bot"]["identity"]
             
     config_path = os.path.expanduser("~/.ganymede/config.yaml")
     try:
