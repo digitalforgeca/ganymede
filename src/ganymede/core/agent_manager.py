@@ -161,8 +161,10 @@ class CliResponse:
             break
 
         # Turn is complete. Read the clean output from the transcript path
-        # provided by the Chalice Stop hook payload (stored on the agent).
         transcript_path = self.agent._chalice_transcript_path
+        if not transcript_path:
+            transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.sdk_conversation_id}/.system_generated/logs/transcript.jsonl")
+            
         if not transcript_path or not os.path.exists(transcript_path):
             error_msg = chalice_error or "No transcript available from agent"
             logger.error("No transcript path from Chalice telemetry",
@@ -313,7 +315,25 @@ class CliResponse:
                 except Exception:
                     args_formatted = str(args)
                     
-                tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
+                if "ask_question" in t_name:
+                    questions = args_obj.get("questions", [])
+                    for i, q in enumerate(questions):
+                        q_text = q.get("question", "")
+                        opts = q.get("options", [])
+                        tool_text += f"**❓ {q_text}**\n"
+                        for j, opt in enumerate(opts):
+                            tool_text += f"{j+1}. {opt}\n"
+                        tool_text += "\n*(Please reply with your choice)*\n\n"
+                elif "ask_permission" in t_name:
+                    action = args_obj.get("Action", "")
+                    target = args_obj.get("Target", "")
+                    reason = args_obj.get("Reason", "")
+                    tool_text += f"**🔒 Permission Requested: {action}**\n"
+                    tool_text += f"- **Target:** `{target}`\n"
+                    tool_text += f"- **Reason:** {reason}\n"
+                    tool_text += "\n*(Please reply to approve or deny)*\n\n"
+                else:
+                    tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
             
             final_text = tool_text.strip()
 
@@ -604,7 +624,17 @@ class AgentManager:
             if agent.conversation_id == ganymede_conv_id:
                 agent.last_active = time.time()
                 
-        if payload.get("fullyIdle"):
+        tool_call = payload.get("toolCall", {})
+        if isinstance(tool_call, str):
+            tool_call = {}
+            
+        is_interactive_tool = False
+        if not payload.get("error") and payload.get("hookName") == "PreToolUse":
+            tool_name = tool_call.get("name", "")
+            if tool_name in ("default_api:ask_question", "default_api:ask_permission", "ask_question", "ask_permission"):
+                is_interactive_tool = True
+
+        if payload.get("fullyIdle") or is_interactive_tool:
             for agent in self._agents.values():
                 if agent.conversation_id == ganymede_conv_id:
                     # Store transcript path from Chalice so CliResponse can read it
