@@ -313,12 +313,14 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
             pass
 
         additions = """
-You can communicate using Discord tools:
-- `read_channel_history`: Reads recent messages from a channel.
-- `post_to_channel`: Sends a new text message.
+You are currently communicating with the user via a Discord bridge.
+**CRITICAL**: You DO NOT need to use any special tools to reply to the user in this channel. Any standard text response you generate will be automatically streamed back to them.
+
+Optional extended capabilities (if Discord MCP tools are available):
+- `read_channel_history`: Reads older messages or context from a channel.
+- `post_to_channel`: Sends a message to a *different* channel.
 - `create_thread`: Creates a new thread under a message.
 - `get_channel_info`: Retrieves channel metadata.
-For the full set of capabilities, refer to the extended tools list.
 """
         # Inject dynamic channel context
         try:
