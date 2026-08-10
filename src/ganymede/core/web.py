@@ -100,7 +100,10 @@ class DashboardServer:
     async def start_mcp_server(self):
         try:
             from ganymede.mcp_server import app as mcp_app
-            starlette_app = mcp_app.sse_app("/mcp")
+            if hasattr(mcp_app, "sse_app"):
+                starlette_app = mcp_app.sse_app("/mcp")
+            else:
+                starlette_app = mcp_app.http_app(path="/mcp", transport="sse")
             
             # Simple ASGI middleware for Auth
             token = getattr(self.config.agent, "mcp_auth_token", "default_secure_token_123")
