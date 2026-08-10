@@ -69,6 +69,7 @@ def setup_logging(level_name: str, log_file: str = "ganymede_live.log"):
                     return False
                 if record.name == "discord.client" and "Cannot connect to host" in str(exc_value):
                     record.exc_info = None
+                    record.args = ()
                     record.msg = f"Network disconnected. Waiting to reconnect... ({exc_value})"
                     record.levelname = "WARNING"
                     record.levelno = logging.WARNING
