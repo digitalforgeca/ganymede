@@ -59,7 +59,31 @@ def setup_logging(level_name: str, log_file: str = "ganymede_live.log"):
     if numeric_level > logging.DEBUG:
         logging.getLogger("discord").setLevel(logging.WARNING)
         logging.getLogger("apscheduler").setLevel(logging.WARNING)
+        
+    class UglyErrorFilter(logging.Filter):
+        def filter(self, record):
+            if record.exc_info:
+                exc_type, exc_value, _ = record.exc_info
+                import asyncio
+                if issubclass(exc_type, asyncio.CancelledError):
+                    return False
+                if record.name == "discord.client" and "Cannot connect to host" in str(exc_value):
+                    record.exc_info = None
+                    record.msg = f"Network disconnected. Waiting to reconnect... ({exc_value})"
+                    record.levelname = "WARNING"
+                    record.levelno = logging.WARNING
+            return True
 
+    for handler in root_logger.handlers:
+        handler.addFilter(UglyErrorFilter())
+        
+    # Also attach to specific framework loggers that might have their own handlers
+    for logger_name in ["discord", "discord.client", "discord.gateway", "uvicorn", "uvicorn.error"]:
+        framework_logger = logging.getLogger(logger_name)
+        for handler in framework_logger.handlers:
+            handler.addFilter(UglyErrorFilter())
+        # If they propagate to root, root's handler will filter them too.
+        
 def acquire_instance_lock(data_dir: str):
     global _lock_file
     lock_path = os.path.join(data_dir, "ganymede.lock")

@@ -123,7 +123,7 @@ class DashboardServer:
                     
             wrapped_app = MCPAuthMiddleware(starlette_app)
             
-            cfg = uvicorn.Config(wrapped_app, host="0.0.0.0", port=8081, log_level="warning")
+            cfg = uvicorn.Config(wrapped_app, host="0.0.0.0", port=8081, log_level="warning", log_config=None)
             self.mcp_uvicorn_server = uvicorn.Server(cfg)
             await self.mcp_uvicorn_server.serve()
         except Exception as e:
@@ -132,7 +132,7 @@ class DashboardServer:
     async def start(self):
         port = getattr(self.config.agent, "dashboard_port", 8180)
         
-        cfg = uvicorn.Config(self.app, host="0.0.0.0", port=port, log_level="warning")
+        cfg = uvicorn.Config(self.app, host="0.0.0.0", port=port, log_level="warning", log_config=None)
         self.uvicorn_server = uvicorn.Server(cfg)
         
         # Start dashboard server
