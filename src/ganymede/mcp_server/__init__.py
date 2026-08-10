@@ -1,6 +1,9 @@
 import sys
 import logging
-from mcp.server.fastmcp import FastMCP
+try:
+    from fastmcp import FastMCP
+except ImportError:
+    from mcp.server.fastmcp import FastMCP
 
 # Configure logger to output only to stderr to avoid stdout JSON-RPC corruption
 logging.basicConfig(

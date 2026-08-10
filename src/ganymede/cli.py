@@ -119,7 +119,8 @@ async def dummy_schedule_callback(cron, prompt, channel_id):
 
 async def run(config: AppConfig):
     setup_logging(config.log_level)
-    logger.info("Initializing ganymede bridge", log_level=config.log_level)
+    from ganymede import __version__, __git_hash__
+    logger.info(f"Initializing ganymede bridge v{__version__} (build: {__git_hash__})", log_level=config.log_level)
     
     # Initialize Database
     db = Database(config)

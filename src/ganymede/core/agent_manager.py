@@ -336,6 +336,8 @@ class CliResponse:
                     tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
             
             final_text = tool_text.strip()
+        else:
+            final_text = ""
 
         # Merge artifacts globally captured from telemetry (which covers subagents!)
         captured_artifacts = getattr(self.agent, "_artifacts_this_turn", [])

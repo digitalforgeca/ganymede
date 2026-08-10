@@ -7,6 +7,12 @@ class Ganymede < Formula
   depends_on "python@3.11"
 
   def install
+    # Inject the git hash into the module's __init__.py before installation
+    git_hash = `git rev-parse --short HEAD`.chomp
+    inreplace "src/ganymede/__init__.py", 
+              /__git_hash__ = .*/, 
+              "__git_hash__ = \"#{git_hash}\""
+
     # Create a virtual environment inside the Homebrew libexec directory
     system "python3.11", "-m", "venv", libexec
 
