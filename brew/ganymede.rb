@@ -29,6 +29,9 @@ class Ganymede < Formula
     bin.install_symlink libexec/"bin/ganymede"
   end
 
+  # Skip cleaning libexec to avoid dylib linkage errors with Python wheels (like watchfiles)
+  skip_clean "libexec"
+
   def caveats
     <<~EOS
       Ganymede has been installed successfully.
