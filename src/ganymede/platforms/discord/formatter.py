@@ -67,32 +67,54 @@ class DiscordFormatter(Formatter):
 
         # Simple line-by-line chunking keeping code fences balanced
         for line in content.splitlines(keepends=True):
-            line_len = len(line)
-            
             # Detect code fence
             if line.strip().startswith("```"):
                 in_code_block = not in_code_block
                 if in_code_block:
                     code_block_lang = line.strip().replace("```", "")
 
-            # If adding this line exceeds the limit, push the current chunk
-            if current_length + line_len + (4 if in_code_block else 0) > limit:
-                if in_code_block:
-                    # Close the code block in the current chunk
-                    current_chunk.append("```\n")
+            while line:
+                line_len = len(line)
+                space_left = limit - current_length - (4 if in_code_block else 0)
+
+                # If the line fits completely, just add it
+                if line_len <= space_left:
+                    current_chunk.append(line)
+                    current_length += line_len
+                    break
+
+                # If the chunk already has real content, push it to make room
+                has_content = len(current_chunk) > (1 if in_code_block else 0)
+                if has_content:
+                    if in_code_block:
+                        current_chunk.append("```\n")
+                    chunks.append("".join(current_chunk))
+                    
+                    current_chunk = []
+                    current_length = 0
+                    if in_code_block:
+                        prefix = f"```{code_block_lang}\n"
+                        current_chunk.append(prefix)
+                        current_length = len(prefix)
+                    continue
+
+                # If we're here, the chunk has NO real content but the line STILL doesn't fit!
+                # This means it's a massive single line > limit chars. We must forcibly split it.
+                take_chars = max(1, space_left)
+                part = line[:take_chars]
+                line = line[take_chars:]
                 
+                current_chunk.append(part)
+                if in_code_block:
+                    current_chunk.append("```\n")
                 chunks.append("".join(current_chunk))
                 
-                # Reset for next chunk
                 current_chunk = []
                 current_length = 0
                 if in_code_block:
-                    # Reopen the code block in the new chunk
-                    current_chunk.append(f"```{code_block_lang}\n")
-                    current_length += len(current_chunk[-1])
-            
-            current_chunk.append(line)
-            current_length += line_len
+                    prefix = f"```{code_block_lang}\n"
+                    current_chunk.append(prefix)
+                    current_length = len(prefix)
 
         if current_chunk:
             chunks.append("".join(current_chunk))
