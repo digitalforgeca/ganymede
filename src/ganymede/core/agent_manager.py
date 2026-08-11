@@ -96,9 +96,9 @@ class CliResponse:
             
             try:
                 # Wait for Chalice to fire the Stop hook signaling generation is done.
-                # Check for activity exactly as requested: 5 minute wait, then 1 minute grace period if silent.
-                activity_timeout = 300  # 5 minutes
-                grace_period = 60       # 1 minute
+                # Check for activity exactly as requested: 15 minute wait, then 2 minute grace period if silent.
+                activity_timeout = 900  # 15 minutes
+                grace_period = 120      # 2 minutes
                 hard_ceiling = 7200     # 2 hours hard cap
                 start_wait = time.time()
                 
@@ -121,11 +121,11 @@ class CliResponse:
                             # Yes! It's active. The loop continues and waits another 5 minutes.
                             continue
                             
-                        # No telemetry in 5 minutes. Enter the grace period.
-                        logger.warning("Agent appears inactive, entering 1-minute grace period", conversation_id=self.agent.conversation_id)
+                        # No telemetry in 15 minutes. Enter the grace period.
+                        logger.warning("Agent appears inactive, entering 2-minute grace period", conversation_id=self.agent.conversation_id)
                         
                         try:
-                            # Give it 1 more minute
+                            # Give it 2 more minutes
                             await asyncio.wait_for(self.agent.turn_completed_event.wait(), timeout=grace_period)
                             break  # Turn completed during grace period
                         except asyncio.TimeoutError:
@@ -136,7 +136,7 @@ class CliResponse:
                                 continue
                                 
                             logger.error("Agent failed grace period and timed out", conversation_id=self.agent.conversation_id)
-                            yield Text(text="[Error: Agent timed out (no activity detected for 6 minutes)]", step_index=0)
+                            yield Text(text="[Error: Agent timed out (no activity detected for 17 minutes)]", step_index=0)
                             return
             except Exception as e:
                 logger.error("Error waiting for agent turn completion", error=str(e), conversation_id=self.agent.conversation_id)
