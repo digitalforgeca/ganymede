@@ -208,6 +208,7 @@ class CliResponse:
         self.agent._artifacts_this_turn = []
         
         self.artifacts_count = len(artifacts_created)
+        self.artifact_files = [os.path.join(channel_brain_dir, os.path.basename(a["file"])) for a in artifacts_created]
         self.tasks_count = getattr(self.agent, "_chalice_tasks_count", 0)
         self.subagents_count = getattr(self.agent, "_chalice_subagents_count", 0)
             
@@ -315,25 +316,13 @@ class CliResponse:
                 except Exception:
                     args_formatted = str(args)
                     
-                if "ask_question" in t_name:
-                    questions = args_obj.get("questions", [])
-                    for i, q in enumerate(questions):
-                        q_text = q.get("question", "")
-                        opts = q.get("options", [])
-                        tool_text += f"**❓ {q_text}**\n"
-                        for j, opt in enumerate(opts):
-                            tool_text += f"{j+1}. {opt}\n"
-                        tool_text += "\n*(Please reply with your choice)*\n\n"
-                elif "ask_permission" in t_name:
-                    action = args_obj.get("Action", "")
-                    target = args_obj.get("Target", "")
-                    reason = args_obj.get("Reason", "")
-                    tool_text += f"**🔒 Permission Requested: {action}**\n"
-                    tool_text += f"- **Target:** `{target}`\n"
-                    tool_text += f"- **Reason:** {reason}\n"
-                    tool_text += "\n*(Please reply to approve or deny)*\n\n"
-                else:
-                    tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
+                if "ask_question" in t_name or "ask_permission" in t_name:
+                    if not hasattr(self, "interactive_tools"):
+                        self.interactive_tools = []
+                    self.interactive_tools.append({"name": t_name, "args": args_obj})
+                    continue
+
+                tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
             
             final_text = tool_text.strip()
         else:
@@ -463,7 +452,7 @@ class ManagedAgent:
         
         # Wait for agy to boot up and display its interactive prompt before injecting input
         for _ in range(40):  # Wait up to 20 seconds
-            res = await async_run("tmux", "capture-pane", "-p", "-t", session_name, capture_output=True, text=True)
+            res = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", session_name, capture_output=True, text=True)
             if ">" in res.stdout or "Error" in res.stdout:
                 await asyncio.sleep(0.5) # Give it just a moment to settle
                 break
@@ -523,7 +512,13 @@ class ManagedAgent:
                 from ganymede.core.hooks import hooks
                 sys_inst = await hooks.modify("on_agent_system_prompt", sys_inst, context=self.context_key)
                 
-                final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
+                if prompt.startswith("/"):
+                    parts = prompt.split(" ", 1)
+                    cmd = parts[0]
+                    rest = parts[1] if len(parts) > 1 else ""
+                    final_prompt = f"{cmd} System Instructions:\n{sys_inst}\n\nUser Request:\n{rest}"
+                else:
+                    final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
             # Write prompt as simulated keystrokes to tmux session.
             import uuid

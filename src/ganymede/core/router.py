@@ -19,6 +19,7 @@ class Router:
         self.adapter = None
         self._locks: dict[ContextKey, asyncio.Lock] = {}
         self._autonomous_msgs: dict[str, dict] = {}
+        self._goal_contexts: set[ContextKey] = set()
 
     async def global_telemetry_listener(self, data: dict) -> None:
         """Global listener that permanently streams subagent and background goal telemetry into the channel."""
@@ -41,7 +42,7 @@ class Router:
             else:
                 event = "PreToolUse"
 
-        if event not in ("PreToolUse", "PostToolUse"):
+        if event not in ("PreToolUse", "PostToolUse", "Stop"):
             return
 
         import re
@@ -62,7 +63,8 @@ class Router:
         is_subagent = (conv_uuid != expected_sdk_root)
         
         lock = self._locks.get(context)
-        is_autonomous_main = not is_subagent and (not lock or not lock.locked())
+        is_goal = context in self._goal_contexts
+        is_autonomous_main = not is_subagent and (not lock or not lock.locked() or is_goal)
         
         if not is_subagent and not is_autonomous_main:
             # Ephemeral streaming handles the active main agent turn
@@ -74,12 +76,14 @@ class Router:
         
         if event == "PreToolUse":
             status = f"⚙️ *{tool_action or f'Calling `{tool}`...'}* — `{tool}`"
-        else:
+        elif event == "PostToolUse":
             err = payload.get("error", "")
             if err:
                 status = f"❌ *`{tool}` failed:* `{err[:200]}`"
             else:
                 status = f"✅ *{tool_action or f'`{tool}` completed.'}*"
+        elif event == "Stop":
+            status = f"🏁 *Finished*"
                 
         prefix = "🧬 **Subagent** | " if is_subagent else "🎯 **Goal** | "
         line = prefix + status
@@ -91,12 +95,16 @@ class Router:
         if len(state["lines"]) > 15:
             state["lines"] = state["lines"][-15:]
             
-        text = "\n\n".join(state["lines"])
+        display_lines = list(state["lines"])
+        if event != "Stop":
+            display_lines.append(prefix + "💭 *Thinking...*")
+            
+        text = "\n\n".join(display_lines)
         
         if self.adapter:
             if not state["msg_id"]:
                 try:
-                    state["msg_id"] = await self.adapter.send_streaming_start(context, initial_text=text, persist_header=f"🚀 **Autonomous Session Attached**")
+                    state["msg_id"] = await self.adapter.send_streaming_start(context, initial_text=text, persist_header=f"🚀 **Autonomous Session attached...**")
                 except Exception:
                     pass
             else:
@@ -129,10 +137,17 @@ class Router:
             logger.debug("Message ignored by activation rules", context=message.context)
             return
 
-        # Step 2: Acquire per-context lock to avoid parallel chat races on same agent
-        lock = self._locks.setdefault(message.context, asyncio.Lock())
-        
-        async with lock:
+        # Step 2: Acquire per-context lock        # Serialize messages for this context
+        context = message.context
+        if context not in self._locks:
+            self._locks[context] = asyncio.Lock()
+            
+        if message.content.startswith("/goal "):
+            self._goal_contexts.add(context)
+        elif not message.content.startswith("/plan ") and not message.content.startswith("/grill"):
+            self._goal_contexts.discard(context)
+
+        async with self._locks[context]:
             if self.agent_manager and self.agent_manager.quota_tracker:
                 await self.agent_manager.quota_tracker.throttle(message.context)
             logger.info("Processing message in context", context=message.context, user=message.author_name)
@@ -425,12 +440,14 @@ class Router:
             dashboard_instance.telemetry_listeners.append(on_telemetry)
 
         is_running = True
+        is_goal = context in self._goal_contexts
+        
         async def thinking_loop():
             nonlocal status_text
             dots = 1
             while is_running:
                 await asyncio.sleep(2.0)
-                if "⚙️" not in status_text and "✅" not in status_text:
+                if not is_goal and "⚙️" not in status_text and "✅" not in status_text:
                     status_text = f"\n\n💭 *Thinking{'.' * dots}*"
                     dots = (dots % 3) + 1
                     try:
