@@ -19,7 +19,6 @@ class Router:
         self.adapter = None
         self._locks: dict[ContextKey, asyncio.Lock] = {}
         self._autonomous_msgs: dict[str, dict] = {}
-        self._goal_contexts: set[ContextKey] = set()
         self._main_agent_ids: dict[str, str] = {}
 
     async def global_telemetry_listener(self, data: dict) -> None:
@@ -68,8 +67,7 @@ class Router:
         is_subagent = (conv_uuid != main_id)
         
         lock = self._locks.get(context)
-        is_goal = context in self._goal_contexts
-        is_autonomous_main = not is_subagent and (not lock or not lock.locked() or is_goal)
+        is_autonomous_main = not is_subagent and (not lock or not lock.locked())
         
         if not is_subagent and not is_autonomous_main:
             # Ephemeral streaming handles the active main agent turn
@@ -90,7 +88,7 @@ class Router:
         elif event == "Stop":
             status = f"🏁 *Finished*"
                 
-        prefix = "🧬 **Subagent** | " if is_subagent else "🎯 **Goal** | "
+        prefix = "🧬 **Subagent** | " if is_subagent else "🤖 **Background** | "
         
         # Add Discord relative timestamp: <t:TIMESTAMP:T> renders as 12:34 PM
         ts = f"<t:{int(time.time())}:T>"
@@ -151,11 +149,6 @@ class Router:
         context = message.context
         if context not in self._locks:
             self._locks[context] = asyncio.Lock()
-            
-        if message.content.startswith("/goal "):
-            self._goal_contexts.add(context)
-        elif not message.content.startswith("/plan ") and not message.content.startswith("/grill"):
-            self._goal_contexts.discard(context)
 
         async with self._locks[context]:
             if self.agent_manager and self.agent_manager.quota_tracker:
@@ -456,14 +449,13 @@ class Router:
             dashboard_instance.telemetry_listeners.append(on_telemetry)
 
         is_running = True
-        is_goal = context in self._goal_contexts
         
         async def thinking_loop():
             nonlocal status_text
             dots = 1
             while is_running:
                 await asyncio.sleep(2.0)
-                if not is_goal and "⚙️" not in status_text and "✅" not in status_text:
+                if "⚙️" not in status_text and "✅" not in status_text:
                     status_text = f"\n\n💭 *Thinking{'.' * dots}*"
                     dots = (dots % 3) + 1
                     try:
