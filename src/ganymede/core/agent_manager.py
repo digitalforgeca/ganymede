@@ -394,7 +394,8 @@ class ManagedAgent:
         if not os.path.exists(sdk_brain_dir):
             os.symlink(brain_dir, sdk_brain_dir)
             
-        workspace_dir = os.path.expanduser(getattr(self.config.agent, 'workspace', '~/.ganymede/workspace'))
+        base_workspace = os.path.expanduser(getattr(self.config.agent, 'workspace', '~/.ganymede/workspace'))
+        workspace_dir = os.path.join(base_workspace, project_name)
         os.makedirs(workspace_dir, exist_ok=True)
             
         if is_new_conversation:
@@ -636,7 +637,11 @@ class AgentManager:
             if tool_name in ("default_api:ask_question", "default_api:ask_permission", "ask_question", "ask_permission"):
                 is_interactive_tool = True
 
-        if payload.get("fullyIdle") or is_interactive_tool:
+        state = payload.get("state", "")
+        # Wake up the stream if fully idle (waiting for input), waiting for messages (e.g. background tasks), or using interactive tools
+        is_turn_complete = payload.get("fullyIdle") or state == "waiting_for_messages" or is_interactive_tool
+
+        if is_turn_complete:
             for agent in self._agents.values():
                 if agent.conversation_id == ganymede_conv_id:
                     # Store transcript path from Chalice so CliResponse can read it

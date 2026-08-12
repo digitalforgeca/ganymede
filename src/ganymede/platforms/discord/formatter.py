@@ -67,20 +67,23 @@ class DiscordFormatter(Formatter):
 
         # Simple line-by-line chunking keeping code fences balanced
         for line in content.splitlines(keepends=True):
-            # Detect code fence
-            if line.strip().startswith("```"):
-                in_code_block = not in_code_block
-                if in_code_block:
-                    code_block_lang = line.strip().replace("```", "")
+            is_fence = line.strip().startswith("```")
+            fence_lang = line.strip().replace("```", "") if is_fence else ""
 
             while line:
                 line_len = len(line)
-                space_left = limit - current_length - (4 if in_code_block else 0)
+                will_open_block = is_fence and not in_code_block
+                reserve_chars = 4 if (in_code_block or will_open_block) else 0
+                space_left = limit - current_length - reserve_chars
 
                 # If the line fits completely, just add it
                 if line_len <= space_left:
                     current_chunk.append(line)
                     current_length += line_len
+                    if is_fence:
+                        in_code_block = not in_code_block
+                        if in_code_block:
+                            code_block_lang = fence_lang
                     break
 
                 # If the chunk already has real content, push it to make room

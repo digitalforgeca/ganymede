@@ -125,11 +125,22 @@ class DiscordStreamer:
         
         try:
             for i, chunk in enumerate(chunks):
+                balanced_chunk = self._balance_code_fences(chunk)
+                
                 if i < len(self.messages):
-                    await asyncio.wait_for(self.messages[i].edit(content=chunk), timeout=10.0)
+                    await asyncio.wait_for(self.messages[i].edit(content=balanced_chunk), timeout=10.0)
                 else:
-                    new_msg = await asyncio.wait_for(self.channel.send(self._balance_code_fences(chunk)), timeout=10.0)
+                    new_msg = await asyncio.wait_for(self.channel.send(balanced_chunk), timeout=10.0)
                     self.messages.append(new_msg)
+            
+            # Delete any extra messages that are no longer needed
+            while len(self.messages) > len(chunks):
+                extra_msg = self.messages.pop()
+                try:
+                    await asyncio.wait_for(extra_msg.delete(), timeout=5.0)
+                except Exception as e:
+                    logger.warning("Failed to delete orphaned message", error=str(e))
+                    
             self.last_edit_time = time.time()
         except asyncio.TimeoutError:
             logger.warning("Timeout while updating message on Discord")
