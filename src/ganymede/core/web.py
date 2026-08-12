@@ -98,6 +98,13 @@ class DashboardServer:
     def set_platform_status(self, platform: str, is_connected: bool) -> None:
         self.platform_states[platform] = is_connected
 
+    def _get_provider_adapter(self, platform: str):
+        for provider in getattr(self, "providers", []):
+            provider_platform = getattr(provider.bot_config, "provider", {}).get("type", "discord").lower()
+            if provider_platform == platform.lower():
+                return getattr(provider, "adapter", None)
+        return None
+
     async def start_mcp_server(self):
         try:
             from ganymede.mcp_server import app as mcp_app
