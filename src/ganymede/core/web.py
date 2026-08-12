@@ -100,7 +100,7 @@ class DashboardServer:
 
     def _get_provider_adapter(self, platform: str):
         for provider in getattr(self, "providers", []):
-            provider_platform = getattr(provider.bot_config, "provider", {}).get("type", "discord").lower()
+            provider_platform = getattr(provider.config, "platform", "discord").lower()
             if provider_platform == platform.lower():
                 return getattr(provider, "adapter", None)
         return None
