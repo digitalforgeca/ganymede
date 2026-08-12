@@ -18,6 +18,92 @@ class Router:
         self.db = db
         self.adapter = None
         self._locks: dict[ContextKey, asyncio.Lock] = {}
+        self._autonomous_msgs: dict[str, dict] = {}
+
+    async def global_telemetry_listener(self, data: dict) -> None:
+        """Global listener that permanently streams subagent and background goal telemetry into the channel."""
+        ganymede_conv_id = data.get("ganymede_conv_id")
+        if not ganymede_conv_id:
+            return
+            
+        event = data.get("event")
+        payload = data.get("payload", {})
+        if isinstance(payload, str):
+            payload = {}
+            
+        tool_call = payload.get("toolCall", {}) if isinstance(payload, dict) else {}
+        if isinstance(tool_call, str):
+            tool_call = {}
+
+        if event == "Agent Lifecycle Hook" and tool_call:
+            if "error" in payload:
+                event = "PostToolUse"
+            else:
+                event = "PreToolUse"
+
+        if event not in ("PreToolUse", "PostToolUse"):
+            return
+
+        import re
+        from ganymede.core import ContextKey
+        match = re.search(r"_(\d{17,20})$", ganymede_conv_id)
+        if not match:
+            return
+            
+        channel_id = match.group(1)
+        context = ContextKey("discord", channel_id, None)
+        
+        conv_uuid = payload.get("conversationId")
+        if not conv_uuid:
+            return
+            
+        import uuid
+        expected_sdk_root = str(uuid.uuid5(uuid.NAMESPACE_DNS, ganymede_conv_id))
+        is_subagent = (conv_uuid != expected_sdk_root)
+        
+        lock = self._locks.get(context)
+        is_autonomous_main = not is_subagent and (not lock or not lock.locked())
+        
+        if not is_subagent and not is_autonomous_main:
+            # Ephemeral streaming handles the active main agent turn
+            return
+            
+        tool = tool_call.get("name", "tool")
+        args = tool_call.get("args", {})
+        tool_action = args.get("toolAction", "")
+        
+        if event == "PreToolUse":
+            status = f"⚙️ *{tool_action or f'Calling `{tool}`...'}* — `{tool}`"
+        else:
+            err = payload.get("error", "")
+            if err:
+                status = f"❌ *`{tool}` failed:* `{err[:200]}`"
+            else:
+                status = f"✅ *{tool_action or f'`{tool}` completed.'}*"
+                
+        prefix = "🧬 **Subagent** | " if is_subagent else "🎯 **Goal** | "
+        line = prefix + status
+        
+        state = self._autonomous_msgs.setdefault(conv_uuid, {"msg_id": None, "lines": []})
+        state["lines"].append(line)
+        
+        # Keep last 15 lines to avoid hitting 2000 char limits
+        if len(state["lines"]) > 15:
+            state["lines"] = state["lines"][-15:]
+            
+        text = "\n\n".join(state["lines"])
+        
+        if self.adapter:
+            if not state["msg_id"]:
+                try:
+                    state["msg_id"] = await self.adapter.send_streaming_start(context, initial_text=text, persist_header=f"🚀 **Autonomous Session Attached**")
+                except Exception:
+                    pass
+            else:
+                try:
+                    await self.adapter.edit_streaming(context, state["msg_id"], text)
+                except Exception:
+                    pass
 
     def set_adapter(self, adapter):
         self.adapter = adapter
@@ -416,7 +502,10 @@ class Router:
 
             # Final edit to clear the last status line so it does not pollute the history
             if status_text:
-                await self.adapter.edit_streaming(context, msg_id, response_text)
+                if not response_text:
+                    await self.adapter.edit_streaming(context, msg_id, status_text)
+                else:
+                    await self.adapter.edit_streaming(context, msg_id, response_text)
 
         finally:
             is_running = False

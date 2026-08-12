@@ -232,7 +232,8 @@ async def run(config: AppConfig):
                         "url": sse_url,
                         "headers": {
                             "Authorization": f"Bearer {token}"
-                        }
+                        },
+                        "eagerTools": ["post_to_channel", "add_folder_to_project", "download_attachment"]
                     }
                 }
             }, f, indent=2)
@@ -286,6 +287,12 @@ async def run(config: AppConfig):
     dashboard = DashboardServer(config, db)
     dashboard.providers = providers
     dashboard.web_invoke_callback = providers[-1].adapter.handle_invoke
+    
+    # Register global router telemetry listeners to ensure autonomous and subagent persistence
+    for provider in providers:
+        if hasattr(provider, "router") and hasattr(provider.router, "global_telemetry_listener"):
+            dashboard.telemetry_listeners.append(provider.router.global_telemetry_listener)
+            
     await dashboard.start()
     
     # Start platform provider services concurrently
