@@ -89,6 +89,10 @@ class PlatformAdapter(Protocol):
         """Create a new thread in a channel."""
         ...
 
+    async def download_attachment(self, url: str, absolute_path: str) -> dict[str, Any]:
+        """Download an attachment from a platform-specific URL."""
+        ...
+
 
 class BasePlatformProvider:
     """Base class for platform provider integrations, encapsulating transport, IPC, and scheduler lifecycles."""

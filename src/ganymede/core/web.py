@@ -42,6 +42,7 @@ class DashboardServer:
         self.app.add_api_route('/api/message/react', ipc.handle_ipc_request(self, 'react_message', ["channel_id", "message_id", "emoji"]), methods=["POST"])
         self.app.add_api_route('/api/message/get', ipc.handle_ipc_request(self, 'get_message', ["channel_id", "message_id"]), methods=["POST"])
         self.app.add_api_route('/api/thread/create', ipc.handle_ipc_request(self, 'create_thread', ["channel_id", "name", "content"]), methods=["POST"])
+        self.app.add_api_route('/api/attachment/download', ipc.handle_ipc_request(self, 'download_attachment', ["url", "absolute_path"]), methods=["POST"])
         
         # Track connected frontend clients
         self.dashboard_clients = set()

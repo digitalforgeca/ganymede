@@ -1,4 +1,5 @@
 import os
+import json
 import aiohttp
 from ganymede.mcp_server import app
 from ganymede.config import get_default_data_dir
@@ -60,7 +61,10 @@ async def read_channel_history(channel_id: str, limit: int = 50, platform: str =
         
         output = []
         for msg in messages:
-            output.append(f"[{msg['created_at']}] {msg['author']} ({msg['author_id']}): {msg['content']}")
+            msg_str = f"[{msg['created_at']}] {msg['author']} ({msg['author_id']}): {msg['content']}"
+            if msg.get('attachments'):
+                msg_str += f"\n  Attachments: {', '.join(msg['attachments'])}"
+            output.append(msg_str)
         return "\n".join(output)
     except Exception as e:
         return f"Error: {str(e)}"
@@ -83,7 +87,10 @@ async def read_thread_messages(thread_id: str, limit: int = 50, platform: str = 
         
         output = []
         for msg in messages:
-            output.append(f"[{msg['created_at']}] {msg['author']} ({msg['author_id']}): {msg['content']}")
+            msg_str = f"[{msg['created_at']}] {msg['author']} ({msg['author_id']}): {msg['content']}"
+            if msg.get('attachments'):
+                msg_str += f"\n  Attachments: {', '.join(msg['attachments'])}"
+            output.append(msg_str)
         return "\n".join(output)
     except Exception as e:
         return f"Error: {str(e)}"
@@ -226,6 +233,72 @@ async def get_message_by_id(channel_id: str, message_id: str, platform: str = "d
     """
     try:
         msg = await _post_ipc("/api/message/get", {"channel_id": channel_id, "message_id": message_id, "platform": platform})
-        return f"[{msg['created_at']}] {msg['author']} ({msg['author_id']}): {msg['content']}"
+        msg_str = f"[{msg['created_at']}] {msg['author']} ({msg['author_id']}): {msg['content']}"
+        if msg.get('attachments'):
+            msg_str += f"\n  Attachments: {', '.join(msg['attachments'])}"
+        return msg_str
     except Exception as e:
         return f"Error: {str(e)}"
+
+@app.tool()
+async def add_folder_to_project(channel_id: str, absolute_path: str, platform: str = "discord") -> str:
+    """Add a local directory path to the current project's workspace.
+    
+    Args:
+        channel_id: The target channel ID (used to resolve the active project).
+        absolute_path: The absolute path of the local folder to add to the project.
+        platform: The platform provider to route to (default 'discord').
+    """
+    try:
+        if not os.path.isabs(absolute_path):
+            return "Error: Path must be absolute."
+        if not os.path.exists(absolute_path):
+            return f"Error: The path '{absolute_path}' does not exist on the host system."
+            
+        project_name = f"{platform}-{channel_id}"
+        projects_file = os.path.expanduser("~/.gemini/projects.json")
+        
+        data = {"projects": {}}
+        if os.path.exists(projects_file):
+            try:
+                with open(projects_file, "r") as f:
+                    data = json.load(f)
+            except Exception:
+                pass
+                
+        if "projects" not in data:
+            data["projects"] = {}
+            
+        data["projects"][absolute_path] = project_name
+        
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(projects_file), exist_ok=True)
+        
+        with open(projects_file, "w") as f:
+            json.dump(data, f, indent=2)
+            
+        return f"Successfully added '{absolute_path}' to project '{project_name}'."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+@app.tool()
+async def download_attachment(url: str, absolute_path: str, platform: str = "discord") -> str:
+    """Download a file from a URL (e.g. an attachment) to a local absolute path.
+    
+    Args:
+        url: The direct URL of the file to download.
+        absolute_path: The local absolute path where the file should be saved.
+        platform: The platform provider to route to (default 'discord').
+    """
+    try:
+        if not os.path.isabs(absolute_path):
+            return "Error: absolute_path must be an absolute path."
+            
+        result = await _post_ipc("/api/attachment/download", {
+            "url": url,
+            "absolute_path": absolute_path,
+            "platform": platform
+        })
+        return f"Successfully downloaded attachment to {absolute_path}"
+    except Exception as e:
+        return f"Error downloading attachment: {str(e)}"

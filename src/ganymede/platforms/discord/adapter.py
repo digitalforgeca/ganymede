@@ -1,6 +1,11 @@
 import discord
 from discord import app_commands
 import structlog
+import aiohttp
+import os
+import asyncio
+import re
+import time
 from typing import Callable, Awaitable, Any
 from ganymede.core import ContextKey
 from ganymede.core.models import PlatformMessage
@@ -63,13 +68,37 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         else:
             await channel.send(content)
 
+    async def _handle_interaction(self, text: str, interaction: discord.Interaction) -> None:
+        if self._on_message_callback:
+            # Reconstruct the context from the interaction message
+            channel_id = str(interaction.channel_id)
+            thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
+            if thread_id and thread_id == channel_id:
+                thread_id = None
+                
+            context = ContextKey("discord", channel_id, thread_id)
+            msg = PlatformMessage(
+                context=context,
+                author_id=str(interaction.user.id),
+                author_name=interaction.user.name,
+                content=text,
+                tokens=0
+            )
+            await self._on_message_callback(msg)
+
     async def send_streaming_start(self, context: ContextKey, initial_text: str | None = None, persist_header: str | None = None) -> str:
         channel = await self._resolve_channel(context)
         if not channel:
             raise RuntimeError(f"Could not resolve channel {context.channel_id}")
 
         edit_interval = getattr(self.discord_config, "stream_edit_interval", 1.5)
-        streamer = DiscordStreamer(channel, initial_text=initial_text, persist_header=persist_header, edit_interval=edit_interval)
+        streamer = DiscordStreamer(
+            channel, 
+            initial_text=initial_text, 
+            persist_header=persist_header, 
+            edit_interval=edit_interval,
+            interaction_callback=self._handle_interaction
+        )
         await streamer.start()
         
         # Generate temporary unique transaction key to identify this streamer
@@ -106,7 +135,6 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         # Derive from self.user.name if available, else use config.name
         bot_name = self.user.name if self.user else getattr(self.discord_config, "name", "ganymede")
         # Sanitize and lowercase
-        import re
         s = bot_name.lower().strip()
         s = re.sub(r"[^a-z0-9_.-]", "", s.replace(" ", "_").replace("-", "_"))
         return s
@@ -162,7 +190,6 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         
         # Prevent accidental native CLI invocations typed as plain text chat (even mid-string)
         # We escape the commands with backticks so agy treats them as plain text
-        import re
         pattern = r"(?<!`)(/goal|/plan|/schedule|/grill-me|/teamwork-preview|/learn|/clear)(?!`)"
         content_to_send = re.sub(pattern, r"`\1`", message.content)
         
@@ -224,7 +251,8 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
                 "author": msg.author.name,
                 "author_id": str(msg.author.id),
                 "content": msg.content,
-                "created_at": msg.created_at.isoformat()
+                "created_at": msg.created_at.isoformat(),
+                "attachments": [att.url for att in msg.attachments]
             })
         return history
 
@@ -285,11 +313,12 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
             "author": msg.author.name,
             "author_id": str(msg.author.id),
             "content": msg.content,
-            "created_at": msg.created_at.isoformat()
+            "created_at": msg.created_at.isoformat(),
+            "attachments": [att.url for att in msg.attachments]
         }
 
     async def create_thread(self, channel_id: str, name: str, content: str | None = None) -> dict[str, Any]:
-        channel = await self._resolve_channel(ContextKey("discord", channel_id))
+        channel = await self._resolve_channel(context=ContextKey("discord", channel_id))
         if not channel:
             raise ValueError("Channel not found")
         if not isinstance(channel, discord.TextChannel):
@@ -298,6 +327,28 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         if content:
             await thread.send(content)
         return {"id": str(thread.id), "status": "created"}
+
+    async def download_attachment(self, url: str, absolute_path: str) -> dict[str, Any]:
+        try:
+            os.makedirs(os.path.dirname(absolute_path), exist_ok=True)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        raise ValueError(f"HTTP {response.status} failed to download {url}")
+                    
+                    def _write_chunk(f, chunk):
+                        f.write(chunk)
+                        
+                    with open(absolute_path, 'wb') as f:
+                        while True:
+                            chunk = await response.content.read(8192)
+                            if not chunk:
+                                break
+                            await asyncio.to_thread(_write_chunk, f, chunk)
+            return {"status": "success", "path": absolute_path}
+        except Exception as e:
+            logger.error("Failed to download attachment", url=url, error=str(e))
+            raise
 
     async def inject_system_instructions(self, current_prompt: str, context: ContextKey = None) -> str:
         if context is None or context.platform != "discord":
@@ -316,8 +367,14 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
 You are currently communicating with the user via a Discord bridge.
 **CRITICAL**: You DO NOT need to use any special tools to reply to the user in this channel. Any standard text response you generate will be automatically streamed back to them.
 
+**Media & File Attachments**:
+- **To send a file**: Simply include a markdown file link to the local absolute path of the file anywhere in your response (e.g., `[image.png](file:///absolute/path/to/image.png)`). The provider will automatically intercept the link and upload the file natively as an attachment.
+- **To receive a file**: When users send you files, they will appear as URLs in your prompt or when you read past messages. You MUST use the `download_attachment` tool to securely download these into your workspace before trying to read them.
+
 Optional extended capabilities (if Discord MCP tools are available):
-- `read_channel_history`: Reads older messages or context from a channel.
+- `read_channel_history`: Reads older messages or context from a channel (now includes attachment URLs).
+- `get_message_by_id`: Retrieves a specific message by ID (now includes attachment URLs).
+- `download_attachment`: Securely downloads an attachment URL to a local absolute path.
 - `post_to_channel`: Sends a message to a *different* channel.
 - `create_thread`: Creates a new thread under a message.
 - `get_channel_info`: Retrieves channel metadata.
@@ -342,5 +399,4 @@ Optional extended capabilities (if Discord MCP tools are available):
         return f"{current_prompt}\n\n{additions.strip()}"
 
 def time_ns() -> int:
-    import time
     return int(time.time() * 1000000000)

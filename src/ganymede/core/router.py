@@ -71,7 +71,26 @@ class Router:
                         msg_id = await self.adapter.send_streaming_start(message.context)
                         start_time = time.time()
                         try:
-                            response = await managed_agent.chat(message.content)
+                            prompt_content = message.content
+                            if message.reply_to and self.adapter and hasattr(self.adapter, "get_message"):
+                                try:
+                                    ref_msg = await self.adapter.get_message(message.context.channel_id, message.reply_to)
+                                    # Summarize content if it's very long
+                                    ref_content = ref_msg.get('content', '')
+                                    if len(ref_content) > 500:
+                                        ref_content = ref_content[:500] + "... [truncated]"
+                                    if ref_msg.get('attachments'):
+                                        ref_content += f"\n[Attachments: {', '.join(ref_msg['attachments'])}]"
+                                    prompt_content = f"[In reply to message ID {message.reply_to} from {ref_msg.get('author')}:\n> {ref_content}]\n\n{prompt_content}"
+                                except Exception as e:
+                                    logger.warning("Failed to fetch reply_to context", error=str(e))
+                            
+                            if message.attachments:
+                                prompt_content += "\n\n[USER PROVIDED ATTACHMENTS]\nThe user has provided the following attachment URLs. You can use the `download_attachment` tool to download these to your workspace for review:\n"
+                                for att in message.attachments:
+                                    prompt_content += f"- {att}\n"
+                            
+                            response = await managed_agent.chat(prompt_content)
                             response_text = await self._stream_response_chunks(message.context, msg_id, response, start_time)
                             
                             duration = round(time.time() - start_time, 2)
@@ -81,13 +100,17 @@ class Router:
                             if self.agent_manager.quota_tracker:
                                 await self.agent_manager.quota_tracker.record_usage(message.context, tokens_count)
                             
+                            artifact_files = self._extract_artifact_files(response, response_text)
+                            
                             metadata = {
                                 "tokens": tokens_count, 
                                 "duration": duration,
                                 "model": self.agent_manager.config.agent.model,
                                 "artifacts": getattr(response, "artifacts_count", 0),
+                                "artifact_files": artifact_files,
                                 "tasks": getattr(response, "tasks_count", 0),
-                                "subagents": getattr(response, "subagents_count", 0)
+                                "subagents": getattr(response, "subagents_count", 0),
+                                "interactive_tools": getattr(response, "interactive_tools", [])
                             }
                             await self.adapter.send_streaming_end(message.context, msg_id, metadata)
                             
@@ -178,14 +201,17 @@ class Router:
                             
                             if self.agent_manager.quota_tracker:
                                 await self.agent_manager.quota_tracker.record_usage(context, tokens_count)
+                            artifact_files = self._extract_artifact_files(response, response_text)
                             
                             metadata = {
                                 "tokens": tokens_count, 
                                 "duration": duration,
                                 "model": self.agent_manager.config.agent.model,
                                 "artifacts": getattr(response, "artifacts_count", 0),
+                                "artifact_files": artifact_files,
                                 "tasks": getattr(response, "tasks_count", 0),
-                                "subagents": getattr(response, "subagents_count", 0)
+                                "subagents": getattr(response, "subagents_count", 0),
+                                "interactive_tools": getattr(response, "interactive_tools", [])
                             }
                             await self.adapter.send_streaming_end(context, msg_id, metadata)
                             
@@ -400,3 +426,14 @@ class Router:
                 dashboard_instance.telemetry_listeners.remove(on_telemetry)
 
         return response_text
+
+    def _extract_artifact_files(self, response: Any, response_text: str) -> list[str]:
+        import re
+        import os
+        artifact_files = list(getattr(response, "artifact_files", []))
+        file_links = re.findall(r'\[.*?\]\(file://(.*?)\)|`?file://(.*?)`?', response_text)
+        for match in file_links:
+            path = match[0] or match[1]
+            if path and path not in artifact_files and os.path.isabs(path):
+                artifact_files.append(path)
+        return artifact_files

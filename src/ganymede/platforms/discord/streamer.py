@@ -1,15 +1,18 @@
 import asyncio
 import time
+import os
 import discord
 import structlog
 from ganymede.platforms.discord.formatter import DiscordFormatter
+from typing import Callable, Awaitable
 
 logger = structlog.get_logger()
 
 class DiscordStreamer:
     """Manages rate-limited token streaming and message updates on Discord."""
-    def __init__(self, channel: discord.abc.Messageable, initial_text: str | None = None, persist_header: str | None = None, edit_interval: float = 1.5):
+    def __init__(self, channel: discord.abc.Messageable, initial_text: str | None = None, persist_header: str | None = None, edit_interval: float = 1.5, interaction_callback: Callable[[str, discord.Interaction], Awaitable[None]] | None = None):
         self.channel = channel
+        self.interaction_callback = interaction_callback
         self.formatter = DiscordFormatter()
         self.messages: list[discord.Message] = []
         self.buffer = ""
@@ -123,14 +126,41 @@ class DiscordStreamer:
         if not chunks:
             chunks = ["..."]
         
+        view = None
+        if final and metadata and metadata.get("interactive_tools") and self.interaction_callback:
+            try:
+                from ganymede.platforms.discord.interactive import InteractiveToolView
+                view = InteractiveToolView(metadata["interactive_tools"], self.interaction_callback)
+            except Exception as e:
+                logger.error("Failed to create InteractiveToolView", error=str(e))
+
+        files_to_attach = []
+        if final and metadata and metadata.get("artifact_files"):
+            # Discord free tier attachment limit is 10MB
+            MAX_SIZE = 10 * 1024 * 1024
+            for filepath in metadata["artifact_files"]:
+                if os.path.exists(filepath):
+                    if os.path.getsize(filepath) <= MAX_SIZE:
+                        files_to_attach.append(discord.File(filepath))
+                    else:
+                        logger.warning("Artifact too large to attach to Discord", file=filepath, size=os.path.getsize(filepath))
+
         try:
             for i, chunk in enumerate(chunks):
                 balanced_chunk = self._balance_code_fences(chunk)
+                is_last_chunk = (i == len(chunks) - 1)
+                kwargs = {"content": balanced_chunk}
+                if is_last_chunk and view:
+                    kwargs["view"] = view
                 
                 if i < len(self.messages):
-                    await asyncio.wait_for(self.messages[i].edit(content=balanced_chunk), timeout=10.0)
+                    if is_last_chunk and files_to_attach:
+                        kwargs["attachments"] = files_to_attach
+                    await asyncio.wait_for(self.messages[i].edit(**kwargs), timeout=10.0)
                 else:
-                    new_msg = await asyncio.wait_for(self.channel.send(balanced_chunk), timeout=10.0)
+                    if is_last_chunk and files_to_attach:
+                        kwargs["files"] = files_to_attach
+                    new_msg = await asyncio.wait_for(self.channel.send(**kwargs), timeout=10.0)
                     self.messages.append(new_msg)
             
             # Delete any extra messages that are no longer needed
