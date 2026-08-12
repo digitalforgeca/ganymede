@@ -20,6 +20,7 @@ class Router:
         self._locks: dict[ContextKey, asyncio.Lock] = {}
         self._autonomous_msgs: dict[str, dict] = {}
         self._goal_contexts: set[ContextKey] = set()
+        self._main_agent_ids: dict[str, str] = {}
 
     async def global_telemetry_listener(self, data: dict) -> None:
         """Global listener that permanently streams subagent and background goal telemetry into the channel."""
@@ -58,9 +59,13 @@ class Router:
         if not conv_uuid:
             return
             
-        import uuid
-        expected_sdk_root = str(uuid.uuid5(uuid.NAMESPACE_DNS, ganymede_conv_id))
-        is_subagent = (conv_uuid != expected_sdk_root)
+        main_id = self._main_agent_ids.get(ganymede_conv_id)
+        if not main_id:
+            # The very first telemetry event establishes the main agent's conversationId
+            self._main_agent_ids[ganymede_conv_id] = conv_uuid
+            main_id = conv_uuid
+            
+        is_subagent = (conv_uuid != main_id)
         
         lock = self._locks.get(context)
         is_goal = context in self._goal_contexts
@@ -86,7 +91,10 @@ class Router:
             status = f"🏁 *Finished*"
                 
         prefix = "🧬 **Subagent** | " if is_subagent else "🎯 **Goal** | "
-        line = prefix + status
+        
+        # Add Discord relative timestamp: <t:TIMESTAMP:T> renders as 12:34 PM
+        ts = f"<t:{int(time.time())}:T>"
+        line = f"{prefix}`{ts}` {status}"
         
         state = self._autonomous_msgs.setdefault(conv_uuid, {"msg_id": None, "lines": []})
         state["lines"].append(line)
@@ -97,7 +105,9 @@ class Router:
             
         display_lines = list(state["lines"])
         if event != "Stop":
-            display_lines.append(prefix + "💭 *Thinking...*")
+            # Add dynamic timestamp to thinking indicator as well
+            ts_thinking = f"<t:{int(time.time())}:T>"
+            display_lines.append(f"{prefix}`{ts_thinking}` 💭 *Thinking...*")
             
         text = "\n\n".join(display_lines)
         
@@ -381,15 +391,21 @@ class Router:
         async def on_telemetry(data: dict):
             nonlocal status_text
             
-            # Match on ganymede_conv_id (our internal ID), not agy's child conversation ID
             ganymede_conv_id = data.get("ganymede_conv_id")
             if not ganymede_conv_id or ganymede_conv_id != agent_conv_id:
                 return
-            
-            event = data.get("event")
+                
             payload = data.get("payload", {})
             if isinstance(payload, str):
                 payload = {}
+                
+            conv_uuid = payload.get("conversationId")
+            main_id = self._main_agent_ids.get(ganymede_conv_id)
+            # If main_id is known, and this event belongs to a different conversationId, it's a subagent!
+            if main_id and conv_uuid != main_id:
+                return
+                
+            event = data.get("event")
                 
             tool_call = payload.get("toolCall", {}) if isinstance(payload, dict) else {}
             if isinstance(tool_call, str):
