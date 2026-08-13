@@ -1,0 +1,39 @@
+{
+  "medea-telemetry": {
+    "enabled": true,
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python3 ~/.gemini/config/plugins/medea/scripts/broadcast.py"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.gemini/config/plugins/medea/scripts/broadcast.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.gemini/config/plugins/medea/scripts/broadcast.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python3 ~/.gemini/config/plugins/medea/scripts/broadcast.py"
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "medea",
+  "description": "Telemetry and metrics broadcaster for the Medea gateway",
+  "version": "1.0.0"
+}
