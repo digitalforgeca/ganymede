@@ -727,6 +727,28 @@ def validate_environment():
     else:
         log_print("[VALIDATION]  ✓ Chalice plugin is installed and ready.")
         
+    # Ensure import_manifest.json knows about the hooks
+    manifest_path = os.path.expanduser("~/.gemini/config/import_manifest.json")
+    if os.path.exists(manifest_path):
+        try:
+            import json
+            with open(manifest_path, "r") as f:
+                manifest = json.load(f)
+            
+            updated = False
+            for plugin in manifest.get("imports", []):
+                if plugin.get("name") == "chalice":
+                    if not plugin.get("components") or "hooks" not in plugin["components"]:
+                        plugin["components"] = ["hooks"]
+                        updated = True
+            
+            if updated:
+                with open(manifest_path, "w") as f:
+                    json.dump(manifest, f, indent=2)
+                log_print("[VALIDATION]  - Patched Antigravity manifest for Chalice hooks")
+        except Exception as e:
+            log_print(f"[VALIDATION]  - Failed to patch manifest: {e}", is_err=True)
+            
     log_print("[VALIDATION] Chain validation complete. Proceeding to boot gateway...")
 
 if __name__ == "__main__":
