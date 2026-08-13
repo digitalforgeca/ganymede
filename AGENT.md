@@ -40,3 +40,9 @@ Releases are handled automatically by the scripts in `scripts/`:
 *   **Subprocesses**: Avoid using terminal subshells (e.g. `cat` or `sed`) to manage Python configurations; prioritize programmatic AST or regex replacements within python scripts.
 *   **Context Mapping**: Always map remote threads as distinct conversations under the same parent project ID (`ContextKey.project_name` must NOT contain `thread_id`). Do not create new projects per thread to prevent isolated data siloing.
 *   **CRITICAL OPERATIONAL RULE**: Always validate, never assume. Do not ever assume. Always validate. Always legwork the solve, parameters, CLI flags, and configurations. Never assume a parameter or path exists without running the `help` menu, using `grep`, or reading the file first.
+
+## 7. Agent Subprocess & Telemetry Pipeline
+Ganymede invokes the Antigravity CLI (`agy`) as a subprocess within persistent `tmux` sessions.
+*   **Prompt Injection**: Input is injected into `agy` using `tmux paste-buffer -p`. The `-p` flag enables **Bracketed Paste Mode**, safely bypassing `prompt_toolkit` interactive features (like autocomplete menus) that can otherwise swallow the `Enter` submission key.
+*   **Telemetry Pipeline (`chalice`)**: Ganymede relies entirely on the `chalice` telemetry plugin to read the agent's real-time state and completion events. The plugin configuration (`plugin.json`) is strictly validated for non-zero byte size before boot to prevent silent telemetry failures.
+*   **Discord Attachment Streaming**: Ganymede automatically intercepts `file://` markdown links in the agent's response to upload them as native Discord attachments. The streamer explicitly filters out directories (`os.path.isfile()`) to prevent underlying `[Errno 21] Is a directory` exceptions during `discord.py` read operations.
