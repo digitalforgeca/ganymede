@@ -123,45 +123,45 @@ class CliResponse:
                 start_wait = time.time()
                 
                 while True:
+                    try:
+                        # Sleep for a shorter interval (5 seconds) so we can periodically check tmux health
+                        chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=5.0)
+                        if chunk is None:
+                            break  # Turn completed successfully
+                        yield chunk
+                        continue # Re-enter loop without checking timeouts yet
+                    except asyncio.TimeoutError:
+                        pass
+                        
+                    # Periodically verify the tmux session is still alive
+                    if getattr(self.agent, "tmux_session_name", None):
+                        out, err, code = await async_run("tmux", "has-session", "-t", self.agent.tmux_session_name, capture_output=True)
+                        if code != 0:
+                            logger.error("Tmux session died unexpectedly during turn", conversation_id=self.agent.conversation_id)
+                            chalice_error = getattr(self.agent, "_chalice_error", None)
+                            # If we caught an error before it died, break and let normal error processing handle it
+                            if chalice_error:
+                                break
+                            yield Text(text="⚠️ *The agent process terminated unexpectedly (e.g. quota limit reached or crash).* Check logs.", step_index=0)
+                            return
+
                     now = time.time()
+                    
                     if now - start_wait > hard_ceiling:
                         logger.error("Agent hit hard ceiling timeout", conversation_id=self.agent.conversation_id)
                         yield Text(text="[Error: Agent hit hard 2-hour maximum execution limit]", step_index=0)
                         return
-
-                    try:
-                        # Sleep for the primary check interval (15 minutes)
-                        chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=activity_timeout)
-                        if chunk is None:
-                            break  # Turn completed successfully
-                        yield chunk
-                    except asyncio.TimeoutError:
-                        now = time.time()
                         
-                        # Has the agent emitted telemetry in the last 15 minutes?
-                        if now - self.agent.last_active <= activity_timeout:
-                            # Yes! It's active. The loop continues and waits another 15 minutes.
-                            continue
-                            
-                        # No telemetry in 15 minutes. Enter the grace period.
-                        logger.warning("Agent appears inactive, entering 2-minute grace period", conversation_id=self.agent.conversation_id)
-                        
-                        try:
-                            # Give it 2 more minutes
-                            chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=grace_period)
-                            if chunk is None:
-                                break  # Turn completed during grace period
-                            yield chunk
-                        except asyncio.TimeoutError:
-                            now = time.time()
-                            # Check one last time before calling it
-                            if now - self.agent.last_active <= (activity_timeout + grace_period):
-                                # It came back alive during the grace period!
-                                continue
-                                
+                    # Has the agent emitted telemetry in the last 15 minutes?
+                    if now - self.agent.last_active > activity_timeout:
+                        if now - self.agent.last_active > (activity_timeout + grace_period):
                             logger.error("Agent failed grace period and timed out", conversation_id=self.agent.conversation_id)
                             yield Text(text="[Error: Agent timed out (no activity detected for 17 minutes)]", step_index=0)
                             return
+                        else:
+                            if not hasattr(self, "_warned_grace_period"):
+                                logger.warning("Agent appears inactive, entering 2-minute grace period", conversation_id=self.agent.conversation_id)
+                                self._warned_grace_period = True
             except Exception as e:
                 logger.error("Error waiting for agent turn completion", error=str(e), conversation_id=self.agent.conversation_id)
                 yield Text(text="[Error: Internal wait error]", step_index=0)
