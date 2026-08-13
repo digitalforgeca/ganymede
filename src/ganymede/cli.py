@@ -698,7 +698,16 @@ def validate_environment():
         # Let's upgrade them from symlink to an actual copy
         os.unlink(plugin_path_target)
     
-    if not os.path.exists(plugin_path_json):
+    broadcast_script = os.path.join(plugin_path_target, "scripts", "broadcast.py")
+    needs_install = not os.path.exists(plugin_path_json)
+    
+    # Also force reinstall if broadcast.py is missing or empty (corrupted install)
+    if not needs_install:
+        if not os.path.exists(broadcast_script) or os.path.getsize(broadcast_script) == 0:
+            log_print("[VALIDATION]  ⚠ Chalice plugin exists but broadcast.py is missing or empty. Re-installing...")
+            needs_install = True
+    
+    if needs_install:
         # Auto-install it via copy!
         # Find the plugin source whether running from git tree or Homebrew libexec
         possible_paths = [
