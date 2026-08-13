@@ -60,6 +60,21 @@ class MockUsage:
     def __init__(self):
         self.total_token_count = 0
 
+class Thought:
+    def __init__(self, text: str):
+        self.text = text
+
+class ToolCall:
+    def __init__(self, name: str, args: dict):
+        self.name = name
+        self.args = args
+
+class ToolResult:
+    def __init__(self, name: str, result: Any = None, error: str = None):
+        self.name = name
+        self.result = result
+        self.error = error
+
 
 class CliResponse:
     """Wrapper around agy subprocess to be compatible with Router chunks interface.
@@ -110,15 +125,17 @@ class CliResponse:
                         return
 
                     try:
-                        # Sleep for the primary check interval (5 minutes)
-                        await asyncio.wait_for(self.agent.turn_completed_event.wait(), timeout=activity_timeout)
-                        break  # Turn completed successfully
+                        # Sleep for the primary check interval (15 minutes)
+                        chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=activity_timeout)
+                        if chunk is None:
+                            break  # Turn completed successfully
+                        yield chunk
                     except asyncio.TimeoutError:
                         now = time.time()
                         
-                        # Has the agent emitted telemetry in the last 5 minutes?
+                        # Has the agent emitted telemetry in the last 15 minutes?
                         if now - self.agent.last_active <= activity_timeout:
-                            # Yes! It's active. The loop continues and waits another 5 minutes.
+                            # Yes! It's active. The loop continues and waits another 15 minutes.
                             continue
                             
                         # No telemetry in 15 minutes. Enter the grace period.
@@ -126,8 +143,10 @@ class CliResponse:
                         
                         try:
                             # Give it 2 more minutes
-                            await asyncio.wait_for(self.agent.turn_completed_event.wait(), timeout=grace_period)
-                            break  # Turn completed during grace period
+                            chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=grace_period)
+                            if chunk is None:
+                                break  # Turn completed during grace period
+                            yield chunk
                         except asyncio.TimeoutError:
                             now = time.time()
                             # Check one last time before calling it
@@ -297,6 +316,7 @@ class CliResponse:
                 t_name = t.get("name", "tool")
                 args = t.get("args", {})
                 args_formatted = ""
+                args_obj = {}
                 try:
                     import json
                     if isinstance(args, str):
@@ -362,6 +382,7 @@ class ManagedAgent:
         self.ipc_port = ipc_port
         self.sdk_conversation_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.conversation_id))
         self.turn_completed_event = asyncio.Event()
+        self.chunk_queue = asyncio.Queue()
         self.aborted = False
         self._chalice_transcript_path = None  # Set by handle_telemetry when Stop fires
         self._chalice_error = None  # Set by handle_telemetry if Stop fires with an error
@@ -417,6 +438,12 @@ class ManagedAgent:
             res = await async_run("tmux", "has-session", "-t", session_name, capture_output=True)
             if res.returncode == 0:
                 logger.info("Found existing decoupled agy session, reattaching", session=session_name)
+                # Fetch the PID of the pane to map to chalice
+                res_pid = await async_run("tmux", "display-message", "-p", "-t", session_name, "#{pane_pid}", capture_output=True, text=True, check=False)
+                pane_pid = res_pid.stdout.strip()
+                if pane_pid:
+                    self.pane_pid = int(pane_pid)
+                    self.tmux_session_name = session_name
                 return
         except Exception:
             pass
@@ -608,7 +635,9 @@ class AgentManager:
         The Chalice payload also provides transcriptPath pointing to the child
         conversation's JSONL file — CliResponse reads the response from there.
         """
-        if data.get("event") != "Agent Lifecycle Hook":
+        valid_events = ("Agent Lifecycle Hook", "PreToolUse", "PostToolUse", "Stop", "AgentLifecycle", "PreInvocation")
+        logger.info("Incoming telemetry", event=data.get("event"), hookName=data.get("payload", {}).get("hookName"))
+        if data.get("event") not in valid_events:
             return
             
         payload = data.get("payload", {})
@@ -661,14 +690,36 @@ class AgentManager:
                                 reason=payload.get("terminationReason"),
                                 error=error_text or None)
                     agent.turn_completed_event.set()
+                    agent.chunk_queue.put_nowait(None)
                     return
                     
         # Catch live tool calls globally (captures subagent artifacts)
+        hook_name = payload.get("hookName")
+        
         for agent in self._agents.values():
             if agent.conversation_id == ganymede_conv_id:
                 if not hasattr(agent, "_artifacts_this_turn"):
                     agent._artifacts_this_turn = []
                 tool_call = payload.get("toolCall")
+                
+                # Yield intermediate chunks to the queue for realtime Discord streaming
+                if hook_name == "PreToolUse":
+                    if isinstance(tool_call, dict):
+                        t_name = tool_call.get("name", "")
+                        t_args = tool_call.get("args", {})
+                        if isinstance(t_args, str):
+                            try:
+                                t_args = json.loads(t_args)
+                            except Exception:
+                                t_args = {}
+                        agent.chunk_queue.put_nowait(ToolCall(t_name, t_args))
+                elif hook_name == "PostToolUse":
+                    if isinstance(tool_call, dict):
+                        t_name = tool_call.get("name", "")
+                        t_err = payload.get("error")
+                        t_res = payload.get("result")
+                        agent.chunk_queue.put_nowait(ToolResult(t_name, t_res, t_err))
+                
                 if isinstance(tool_call, dict):
                     t_name = tool_call.get("name", "")
                     if t_name in ("write_to_file", "replace_file_content", "multi_replace_file_content"):
