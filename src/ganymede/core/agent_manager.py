@@ -644,8 +644,8 @@ class ManagedAgent:
             session_target = f"ganymede-{self.sdk_conversation_id}"
             await async_run("tmux", "paste-buffer", "-r", "-b", buf_name, "-t", session_target)
             await async_run("tmux", "delete-buffer", "-b", buf_name)
-            # Submit the pasted prompt. Multiline prompt_toolkit requires Escape+Enter to submit.
-            await async_run("tmux", "send-keys", "-t", session_target, "Escape", "Enter")
+            # Submit the pasted prompt. A raw Enter (C-m) submits in prompt_toolkit.
+            await async_run("tmux", "send-keys", "-t", session_target, "Enter")
             
             return CliResponse(self, prompt)
 
@@ -659,8 +659,7 @@ class ManagedAgent:
             logger.info("Gracefully closing decoupled tmux session", session=self.tmux_session_name)
             try:
                 # Send the /exit command to the CLI to gracefully shut down plugins, server, and telemetry
-                # Multiline prompt_toolkit requires Escape+Enter to submit
-                await async_run("tmux", "send-keys", "-t", self.tmux_session_name, "/exit", "Escape", "Enter")
+                await async_run("tmux", "send-keys", "-t", self.tmux_session_name, "/exit", "Enter")
                 
                 # Wait up to 5 seconds for it to exit gracefully
                 for _ in range(10):
