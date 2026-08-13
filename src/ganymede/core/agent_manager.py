@@ -135,8 +135,8 @@ class CliResponse:
                         
                     # Periodically verify the tmux session is still alive
                     if getattr(self.agent, "tmux_session_name", None):
-                        out, err, code = await async_run("tmux", "has-session", "-t", self.agent.tmux_session_name, capture_output=True)
-                        if code != 0:
+                        res = await async_run("tmux", "has-session", "-t", self.agent.tmux_session_name, capture_output=True)
+                        if res.returncode != 0:
                             logger.error("Tmux session died unexpectedly during turn", conversation_id=self.agent.conversation_id)
                             chalice_error = getattr(self.agent, "_chalice_error", None)
                             # If we caught an error before it died, break and let normal error processing handle it
