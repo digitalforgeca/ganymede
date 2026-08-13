@@ -467,12 +467,125 @@ def print_status(config):
     print("")
     return True
 
+def manage_sessions(config, action: str, targets: list[str] = None):
+    """List, kill, or kill-all ganymede-managed tmux sessions."""
+    import subprocess
+    
+    pid_map_dir = os.path.expanduser("~/.ganymede/data/pid_map")
+    
+    def _get_ganymede_sessions() -> list[dict]:
+        try:
+            out = subprocess.check_output(["tmux", "ls", "-F", "#{session_name}"], text=True, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            return []
+        except FileNotFoundError:
+            return []
+        
+        sessions = []
+        for name in out.strip().splitlines():
+            if not name.startswith("ganymede-"):
+                continue
+            info = {"name": name, "uuid": name.replace("ganymede-", "")}
+            
+            # Get pane PID and current command
+            try:
+                pane_info = subprocess.check_output(
+                    ["tmux", "display-message", "-p", "-t", name, "#{pane_pid} #{pane_current_command}"],
+                    text=True, stderr=subprocess.DEVNULL
+                ).strip()
+                parts = pane_info.split(" ", 1)
+                info["pane_pid"] = parts[0]
+                info["command"] = parts[1] if len(parts) > 1 else "unknown"
+            except Exception:
+                info["pane_pid"] = "?"
+                info["command"] = "?"
+            
+            # Resolve conversation ID from PID map
+            map_file = os.path.join(pid_map_dir, info["pane_pid"])
+            if os.path.exists(map_file):
+                try:
+                    with open(map_file) as f:
+                        info["conv_id"] = f.read().strip()
+                except Exception:
+                    info["conv_id"] = None
+            else:
+                info["conv_id"] = None
+            
+            sessions.append(info)
+        return sessions
+    
+    def _kill_session(session: dict):
+        name = session["name"]
+        try:
+            subprocess.run(["tmux", "kill-session", "-t", name], check=True, capture_output=True)
+            print(f"  ✅ Killed session: {name}")
+        except Exception as e:
+            print(f"  ❌ Failed to kill {name}: {e}")
+        
+        # Clean up PID map
+        if session.get("pane_pid") and session["pane_pid"] != "?":
+            map_file = os.path.join(pid_map_dir, session["pane_pid"])
+            try:
+                os.remove(map_file)
+            except FileNotFoundError:
+                pass
+    
+    sessions = _get_ganymede_sessions()
+    
+    if action == "list":
+        if not sessions:
+            print("No active Ganymede sessions.")
+            return
+        print(f"Active Ganymede Sessions ({len(sessions)})")
+        print("=" * 60)
+        for s in sessions:
+            conv_label = s['conv_id'] or '(no PID map)'
+            print(f"  {s['name']}")
+            print(f"    PID: {s['pane_pid']}  Command: {s['command']}")
+            print(f"    Conv: {conv_label}")
+        print()
+        
+    elif action == "kill":
+        if not targets:
+            print("Error: Specify session names or UUIDs to kill.")
+            print("  Usage: ganymede sessions kill <name-or-uuid> [...]")
+            print("  Use 'ganymede sessions list' to see active sessions.")
+            sys.exit(1)
+        
+        matched = []
+        for target in targets:
+            for s in sessions:
+                if target in (s["name"], s["uuid"], s.get("conv_id", "")):
+                    matched.append(s)
+                    break
+            else:
+                print(f"  ⚠️  No session found matching: {target}")
+        
+        if matched:
+            for s in matched:
+                _kill_session(s)
+            print(f"\nKilled {len(matched)} session(s).")
+            
+    elif action == "kill-all":
+        if not sessions:
+            print("No active Ganymede sessions to kill.")
+            return
+        print(f"Killing all {len(sessions)} Ganymede session(s)...")
+        for s in sessions:
+            _kill_session(s)
+        print(f"\nDone. All sessions terminated.")
+    else:
+        print(f"Error: Unknown sessions action '{action}'.")
+        print("  Available actions: list, kill, kill-all")
+        sys.exit(1)
+
 def main():
     # Load .env file if present
     load_dotenv()
     
     parser = argparse.ArgumentParser(prog="ganymede")
-    parser.add_argument("command", nargs="?", default="start", help="Action to perform: start (default), stop, restart, status, mcp")
+    parser.add_argument("command", nargs="?", default="start", help="Action to perform: start (default), stop, restart, status, sessions, mcp")
+    parser.add_argument("subargs", nargs="*", help="Sub-arguments for commands like 'sessions kill <name>'")
     parser.add_argument("--config", default=None, help="Path to YAML configuration file")
     parser.add_argument("--workspace", default=None, help="Target workspace path for the agent")
     parser.add_argument("--log-level", default=None, help="Logging level")
@@ -486,6 +599,12 @@ def main():
         return
         
     config = load_config(args)
+    
+    if args.command == "sessions":
+        action = args.subargs[0] if args.subargs else "list"
+        targets = args.subargs[1:] if len(args.subargs) > 1 else []
+        manage_sessions(config, action, targets)
+        sys.exit(0)
     
     if args.command == "stop":
         if stop_daemon(config):
