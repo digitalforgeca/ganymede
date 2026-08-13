@@ -546,37 +546,42 @@ def manage_sessions(config, action: str, targets: list[str] = None):
         print()
         
     elif action == "kill":
-        if not targets:
-            print("Error: Specify session names or UUIDs to kill.")
-            print("  Usage: ganymede sessions kill <name-or-uuid> [...]")
-            print("  Use 'ganymede sessions list' to see active sessions.")
-            sys.exit(1)
-        
-        matched = []
-        for target in targets:
-            for s in sessions:
-                if target in (s["name"], s["uuid"], s.get("conv_id", "")):
-                    matched.append(s)
-                    break
-            else:
-                print(f"  ⚠️  No session found matching: {target}")
-        
-        if matched:
-            for s in matched:
-                _kill_session(s)
-            print(f"\nKilled {len(matched)} session(s).")
-            
-    elif action == "kill-all":
         if not sessions:
             print("No active Ganymede sessions to kill.")
             return
-        print(f"Killing all {len(sessions)} Ganymede session(s)...")
-        for s in sessions:
-            _kill_session(s)
-        print(f"\nDone. All sessions terminated.")
+        
+        kill_all = not targets or any(t in ("*", "all") for t in targets)
+        
+        if kill_all:
+            if not targets:
+                # No args — confirm with user
+                print(f"This will kill all {len(sessions)} Ganymede session(s).")
+                confirm = input("Are you sure? [y/N] ").strip().lower()
+                if confirm not in ("y", "yes"):
+                    print("Aborted.")
+                    return
+            
+            print(f"Killing all {len(sessions)} Ganymede session(s)...")
+            for s in sessions:
+                _kill_session(s)
+            print(f"\nDone. All sessions terminated.")
+        else:
+            matched = []
+            for target in targets:
+                for s in sessions:
+                    if target in (s["name"], s["uuid"], s.get("conv_id", "")):
+                        matched.append(s)
+                        break
+                else:
+                    print(f"  ⚠️  No session found matching: {target}")
+            
+            if matched:
+                for s in matched:
+                    _kill_session(s)
+                print(f"\nKilled {len(matched)} session(s).")
     else:
         print(f"Error: Unknown sessions action '{action}'.")
-        print("  Available actions: list, kill, kill-all")
+        print("  Available actions: list, kill")
         sys.exit(1)
 
 def main():
