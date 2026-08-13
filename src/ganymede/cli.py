@@ -721,10 +721,21 @@ def validate_environment():
             log_print("[VALIDATION]  - Chalice plugin not found or needs upgrade in ~/.gemini. Auto-installing...")
             os.makedirs(os.path.dirname(plugin_path_target), exist_ok=True)
             try:
-                import shutil
+                import shutil, json
                 if os.path.exists(plugin_path_target):
                     shutil.rmtree(plugin_path_target)
                 shutil.copytree(source_chalice_path, plugin_path_target)
+                
+                # Rewrite hooks.json to use absolute paths since agy does not expand ~
+                target_hooks = os.path.join(plugin_path_target, "hooks.json")
+                if os.path.exists(target_hooks):
+                    with open(target_hooks, "r") as f:
+                        hooks_data = f.read()
+                    home_dir = os.path.expanduser("~")
+                    hooks_data = hooks_data.replace("~/.gemini", f"{home_dir}/.gemini")
+                    with open(target_hooks, "w") as f:
+                        f.write(hooks_data)
+                        
                 log_print(f"[VALIDATION]  ✓ Successfully copied Chalice plugin to {plugin_path_target}")
             except Exception as e:
                 log_print(f"Fatal: Could not copy Chalice plugin: {e}", is_err=True)
