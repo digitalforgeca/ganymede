@@ -505,15 +505,15 @@ class Router:
                         if is_safe:
                             status_text = f"\n\n⚙️ *Calling tool `{chunk.name}`...*"
                         else:
-                            status_text = f"\n\n⚙️ *Calling tool `{chunk.name}`...* 🔒 *Awaiting administrator approval...*"
+                            status_text = f"\n\n⚙️ *Calling tool `{chunk.name}`...*"
                     elif verbosity == "verbose":
                         args_str = json.dumps(chunk.args)
                         if is_safe:
                             status_text = f"\n\n⚙️ *Calling tool `{chunk.name}` with args: `{args_str[:200]}`...*"
                         else:
-                            status_text = f"\n\n⚙️ *Calling tool `{chunk.name}` with args: `{args_str[:200]}`...* 🔒 *Awaiting administrator approval...*"
+                            status_text = f"\n\n⚙️ *Calling tool `{chunk.name}` with args: `{args_str[:200]}`...*"
                     elif verbosity == "minimal" and not is_safe:
-                        status_text = f"\n\n⚙️ *Calling unsafe tool `{chunk.name}`...* 🔒 *Awaiting administrator approval...*"
+                        status_text = f"\n\n⚙️ *Calling unsafe tool `{chunk.name}`...*"
                     else:
                         status_text = ""
                     
