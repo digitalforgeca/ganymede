@@ -90,16 +90,6 @@ def main():
             if port and port.isdigit():
                 return int(port)
 
-            rpc_port_path = os.path.expanduser("~/.ganymede/data/rpc_port.txt")
-            if os.path.exists(rpc_port_path):
-                try:
-                    with open(rpc_port_path, "r") as f:
-                        val = f.read().strip()
-                        if val.isdigit():
-                            return int(val)
-                except Exception:
-                    pass
-
             config_path = os.path.expanduser("~/.ganymede/config.yaml")
             if os.path.exists(config_path):
                 try:
@@ -111,6 +101,7 @@ def main():
                                     return int(val)
                 except Exception:
                     pass
+
             return 8180
 
         port = _get_dashboard_port()

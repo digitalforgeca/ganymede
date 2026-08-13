@@ -484,6 +484,7 @@ class ManagedAgent:
         subprocess_env["NO_COLOR"] = "1"
         subprocess_env["PYTHONUNBUFFERED"] = "1"
         subprocess_env["TERM"] = "dumb"
+        subprocess_env["GANYMEDE_PORT"] = str(getattr(self.config.agent, "dashboard_port", 8180))
         if getattr(self, "ipc_port", None):
             subprocess_env["GANYMEDE_IPC_PORT"] = str(self.ipc_port)
 
