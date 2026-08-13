@@ -437,6 +437,22 @@ class ManagedAgent:
         else:
             resolved_model = self.config.agent.model
 
+        # Reverse map human-readable names to agy slugs
+        reverse_map = {
+            "Gemini 3.1 Pro (High)": "gemini-3.1-pro-high",
+            "Gemini 3.1 Pro (Low)": "gemini-3.1-pro-low",
+            "Gemini Flash": "gemini-pro-agent",
+            "Gemini 3.5 Flash (High)": "gemini-3.5-flash-high",
+            "Gemini 3.5 Flash (Medium)": "gemini-3.5-flash-medium",
+            "Gemini 3.5 Flash (Low)": "gemini-3.5-flash-low",
+            "Gemini 3.6 Flash (High)": "gemini-3.6-flash-high",
+            "Gemini 3.6 Flash (Medium)": "gemini-3.6-flash-medium",
+            "Gemini 3.6 Flash (Low)": "gemini-3.6-flash-low",
+            "Claude 3.5 Sonnet (4-6)": "claude-sonnet-4-6",
+            "Claude Opus (Thinking)": "claude-opus-4-6-thinking",
+        }
+        resolved_model = reverse_map.get(resolved_model, resolved_model)
+
         args.extend(["--model", resolved_model])
             
         if getattr(self.config.agent, "skip_permissions", True):
