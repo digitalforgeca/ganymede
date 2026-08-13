@@ -146,7 +146,7 @@ class DiscordStreamer:
                 # Discord free tier attachment limit is 10MB
                 MAX_SIZE = 10 * 1024 * 1024
                 for filepath in metadata["artifact_files"]:
-                    if os.path.exists(filepath):
+                    if os.path.isfile(filepath):
                         if os.path.getsize(filepath) <= MAX_SIZE:
                             files_to_attach.append(discord.File(filepath))
                         else:

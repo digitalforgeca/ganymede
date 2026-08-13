@@ -568,6 +568,6 @@ class Router:
         file_links = re.findall(r'\[.*?\]\(file://(.*?)\)|`?file://(.*?)`?', response_text)
         for match in file_links:
             path = match[0] or match[1]
-            if path and path not in artifact_files and os.path.isabs(path):
+            if path and path not in artifact_files and os.path.isabs(path) and os.path.isfile(path):
                 artifact_files.append(path)
         return artifact_files
