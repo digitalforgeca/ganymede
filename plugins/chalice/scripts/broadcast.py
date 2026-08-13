@@ -17,8 +17,8 @@ def _resolve_ganymede_conv_id():
     try:
         pid_chain = []
         current = os.getpid()
-        # Walk up to 5 levels (broadcast → shell → agy → ganymede → init)
-        for _ in range(5):
+        # Walk up to 20 levels (broadcast → shell → agy → ganymede → init)
+        for _ in range(20):
             current = _get_ppid(current)
             if current <= 1:
                 break
@@ -35,7 +35,10 @@ def _get_ppid(pid):
     """Get parent PID of a given PID (macOS compatible)."""
     try:
         import subprocess
-        out = subprocess.check_output(["ps", "-o", "ppid=", "-p", str(pid)], text=True).strip()
+        try:
+            out = subprocess.check_output(["/bin/ps", "-o", "ppid=", "-p", str(pid)], text=True).strip()
+        except FileNotFoundError:
+            out = subprocess.check_output(["ps", "-o", "ppid=", "-p", str(pid)], text=True).strip()
         return int(out)
     except Exception:
         return 0
@@ -64,6 +67,16 @@ def main():
                 port = os.environ.get("GANYMEDE_PORT")
                 if port and port.isdigit():
                     return int(port)
+                
+                rpc_port_path = os.path.expanduser("~/.ganymede/data/rpc_port.txt")
+                if os.path.exists(rpc_port_path):
+                    try:
+                        with open(rpc_port_path, "r") as f:
+                            val = f.read().strip()
+                            if val.isdigit():
+                                return int(val)
+                    except Exception:
+                        pass
                 
                 config_path = os.path.expanduser("~/.ganymede/config.yaml")
                 if os.path.exists(config_path):

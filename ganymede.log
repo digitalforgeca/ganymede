@@ -32663,3 +32663,192 @@ Traceback (most recent call last):
     await getter
 asyncio.exceptions.CancelledError
 
+2026-08-12 04:46:00 [VALIDATION] Commencing Ganymede environment validation...
+2026-08-12 04:46:00 [VALIDATION] Checking for Antigravity (agy) CLI...
+2026-08-12 04:46:00 [VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+2026-08-12 04:46:00 [VALIDATION] Checking for Chalice telemetry plugin...
+2026-08-12 04:46:00 [VALIDATION]  ✓ Chalice plugin is installed and ready.
+2026-08-12 04:46:00 [VALIDATION] Chain validation complete. Proceeding to boot gateway...
+2026-08-12 04:46:00 [INFO] ganymede.cli: 2026-08-12 11:46:00 [info     ] Initializing ganymede bridge v0.1.41 (build: 104ac52) [ganymede.cli] log_level=INFO
+2026-08-12 04:46:00 [INFO] ganymede.core.db: 2026-08-12 11:46:00 [info     ] Database initialized successfully [ganymede.core.db] path=/Users/mcdoolz/.ganymede/data/ganymede.db
+2026-08-12 04:46:00 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-08-12 04:46:00 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-08-12 04:46:00 [INFO] ganymede.cli: 2026-08-12 11:46:00 [info     ] Registered Ganymede SSE MCP server globally [ganymede.cli] url=http://127.0.0.1:8180/mcp
+2026-08-12 04:46:00 [INFO] ganymede.core.web: 2026-08-12 11:46:00 [info     ] Dashboard started on port 8180 [ganymede.core.web] url=http://localhost:8180
+2026-08-12 04:46:01 [INFO] ganymede.platforms.web.provider: 2026-08-12 11:46:01 [info     ] Starting WebProvider           [ganymede.platforms.web.provider] platform=web
+2026-08-12 04:46:01 [INFO] ganymede.platforms.web.provider: 2026-08-12 11:46:01 [info     ] WebAdapter started             [ganymede.platforms.web.provider]
+2026-08-12 04:46:01 [INFO] ganymede.platforms.web.provider: 2026-08-12 11:46:01 [info     ] Registered web invoke callback with dashboard instance [ganymede.platforms.web.provider]
+2026-08-12 04:46:01 [INFO] ganymede.core.scheduler: 2026-08-12 11:46:01 [info     ] APScheduler started in background. [ganymede.core.scheduler]
+2026-08-12 04:46:01 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 11:46:01 [info     ] Connecting to Discord...       [ganymede.platforms.discord.adapter]
+2026-08-12 04:46:04 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 11:46:04 [info     ] Bot is ready and connected     [ganymede.platforms.discord.adapter] id=1480323231847158131 user=Icarus#5182
+2026-08-12 04:46:04 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 11:46:04 [info     ] Slash command tree synced successfully. [ganymede.platforms.discord.adapter]
+2026-08-12 04:46:09 [INFO] ganymede.core.router: 2026-08-12 11:46:09 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) user=dooley_21554
+2026-08-12 04:46:09 [INFO] ganymede.core.agent_manager: 2026-08-12 11:46:09 [info     ] Registered Chalice telemetry listener with dashboard [ganymede.core.agent_manager]
+2026-08-12 04:46:10 [INFO] ganymede.core.agent_manager: 2026-08-12 11:46:10 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-3ab4d87b-ebdf-52a3-9ed4-6cf03f796a4f
+2026-08-12 04:46:10 [INFO] ganymede.core.quota: 2026-08-12 11:46:10 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) daily_limit=1450 daily_turns=1
+2026-08-12 04:46:41 [INFO] ganymede.core.agent_manager: 2026-08-12 11:46:41 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=9dc9297b-6355-4a34-9d8d-115ceaccd570 error=None ganymede_conv_id=ganymede_discord_1536899970173505606 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/9dc9297b-6355-4a34-9d8d-115ceaccd570/.system_generated/logs/transcript_full.jsonl
+2026-08-12 04:46:41 [INFO] ganymede.core.quota: 2026-08-12 11:46:41 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) tokens=403
+2026-08-12 04:47:14 [INFO] ganymede.core.router: 2026-08-12 11:47:14 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) user=dooley_21554
+2026-08-12 04:47:15 [INFO] ganymede.core.agent_manager: 2026-08-12 11:47:15 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-f2693acb-0cd0-58b8-bb4e-5cb8a4c8763e
+2026-08-12 04:47:15 [INFO] ganymede.core.quota: 2026-08-12 11:47:15 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) daily_limit=1450 daily_turns=2
+2026-08-12 04:47:28 [INFO] ganymede.core.agent_manager: 2026-08-12 11:47:28 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=9d764b16-483c-471b-9d84-6aa9ed5e0d3e error=None ganymede_conv_id=ganymede_discord_1525376171636822096 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/9d764b16-483c-471b-9d84-6aa9ed5e0d3e/.system_generated/logs/transcript_full.jsonl
+2026-08-12 04:47:28 [INFO] ganymede.core.quota: 2026-08-12 11:47:28 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) tokens=168
+2026-08-12 04:49:23 [INFO] ganymede.core.router: 2026-08-12 11:49:23 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) user=dooley_21554
+2026-08-12 04:49:24 [INFO] ganymede.core.agent_manager: 2026-08-12 11:49:24 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-3ab4d87b-ebdf-52a3-9ed4-6cf03f796a4f
+2026-08-12 04:49:24 [INFO] ganymede.core.quota: 2026-08-12 11:49:24 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) daily_limit=1450 daily_turns=3
+2026-08-12 04:50:19 [INFO] ganymede.core.agent_manager: 2026-08-12 11:50:19 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=9dc9297b-6355-4a34-9d8d-115ceaccd570 error=None ganymede_conv_id=ganymede_discord_1536899970173505606 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/9dc9297b-6355-4a34-9d8d-115ceaccd570/.system_generated/logs/transcript_full.jsonl
+2026-08-12 04:50:19 [INFO] ganymede.core.quota: 2026-08-12 11:50:19 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) tokens=755
+2026-08-12 04:50:37 [INFO] ganymede.core.router: 2026-08-12 11:50:37 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1537050085417025677', thread_id=None) user=dooley_21554
+2026-08-12 04:50:38 [INFO] ganymede.core.agent_manager: 2026-08-12 11:50:38 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-a7241896-edab-5f95-a15c-b65851f0de14
+2026-08-12 04:50:38 [INFO] ganymede.core.quota: 2026-08-12 11:50:38 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1537050085417025677', thread_id=None) daily_limit=1450 daily_turns=4
+2026-08-12 04:50:54 [INFO] ganymede.core.agent_manager: 2026-08-12 11:50:54 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=f0a39ea3-994d-4a9a-a4bd-23c75e713078 error=None ganymede_conv_id=ganymede_discord_1537050085417025677 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/f0a39ea3-994d-4a9a-a4bd-23c75e713078/.system_generated/logs/transcript_full.jsonl
+2026-08-12 04:50:54 [INFO] ganymede.core.quota: 2026-08-12 11:50:54 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1537050085417025677', thread_id=None) tokens=304
+2026-08-12 04:51:17 [INFO] ganymede.core.router: 2026-08-12 11:51:17 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) user=dooley_21554
+2026-08-12 04:51:18 [INFO] ganymede.core.agent_manager: 2026-08-12 11:51:18 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-3ab4d87b-ebdf-52a3-9ed4-6cf03f796a4f
+2026-08-12 04:51:18 [INFO] ganymede.core.quota: 2026-08-12 11:51:18 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) daily_limit=1450 daily_turns=5
+2026-08-12 04:52:46 [INFO] ganymede.core.agent_manager: 2026-08-12 11:52:46 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=9dc9297b-6355-4a34-9d8d-115ceaccd570 error=None ganymede_conv_id=ganymede_discord_1536899970173505606 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/9dc9297b-6355-4a34-9d8d-115ceaccd570/.system_generated/logs/transcript_full.jsonl
+2026-08-12 04:52:47 [INFO] ganymede.core.quota: 2026-08-12 11:52:47 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) tokens=1142
+2026-08-12 04:53:19 [INFO] ganymede.core.router: 2026-08-12 11:53:19 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) user=dooley_21554
+2026-08-12 04:53:20 [INFO] ganymede.core.agent_manager: 2026-08-12 11:53:20 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-3ab4d87b-ebdf-52a3-9ed4-6cf03f796a4f
+2026-08-12 04:53:20 [INFO] ganymede.core.quota: 2026-08-12 11:53:20 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) daily_limit=1450 daily_turns=6
+2026-08-12 04:53:52 [INFO] ganymede.core.agent_manager: 2026-08-12 11:53:52 [info     ] Session destroyed and removed from pool [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None)
+2026-08-12 04:53:52 [INFO] ganymede.core.agent_manager: 2026-08-12 11:53:52 [info     ] Agent turn aborted by /stop    [ganymede.core.agent_manager] conversation_id=ganymede_discord_1536899970173505606
+2026-08-12 04:53:53 [INFO] ganymede.core.quota: 2026-08-12 11:53:53 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) tokens=0
+2026-08-12 04:56:06 [INFO] ganymede.core.router: 2026-08-12 11:56:06 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) user=dooley_21554
+2026-08-12 04:56:06 [INFO] ganymede.core.agent_manager: 2026-08-12 11:56:06 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-3ab4d87b-ebdf-52a3-9ed4-6cf03f796a4f
+2026-08-12 04:56:06 [INFO] ganymede.core.quota: 2026-08-12 11:56:06 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) daily_limit=1450 daily_turns=7
+2026-08-12 05:00:29 [INFO] ganymede.core.router: 2026-08-12 12:00:29 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) user=dooley_21554
+2026-08-12 05:00:30 [INFO] ganymede.core.agent_manager: 2026-08-12 12:00:30 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-f2693acb-0cd0-58b8-bb4e-5cb8a4c8763e
+2026-08-12 05:00:30 [INFO] ganymede.core.quota: 2026-08-12 12:00:30 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) daily_limit=1450 daily_turns=8
+2026-08-12 05:06:11 [INFO] ganymede.cli: 2026-08-12 12:06:11 [info     ] Received shutdown request, cleaning up... [ganymede.cli]
+2026-08-12 05:06:12 [INFO] ganymede.core.web: 2026-08-12 12:06:12 [info     ] Dashboard stopped              [ganymede.core.web]
+2026-08-12 05:06:12 [INFO] ganymede.core.scheduler: 2026-08-12 12:06:12 [info     ] APScheduler stopped.           [ganymede.core.scheduler]
+2026-08-12 05:06:12 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 12:06:12 [info     ] Disconnecting from Discord...  [ganymede.platforms.discord.adapter]
+2026-08-12 05:06:12 [ERROR] uvicorn.error: Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.42/libexec/lib/python3.11/site-packages/starlette/routing.py", line 655, in lifespan
+    await receive()
+  File "/opt/homebrew/Cellar/ganymede/0.1.42/libexec/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+2026-08-12 05:06:13 [VALIDATION] Commencing Ganymede environment validation...
+2026-08-12 05:06:13 [VALIDATION] Checking for Antigravity (agy) CLI...
+2026-08-12 05:06:13 [VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+2026-08-12 05:06:13 [VALIDATION] Checking for Chalice telemetry plugin...
+2026-08-12 05:06:13 [VALIDATION]  ✓ Chalice plugin is installed and ready.
+2026-08-12 05:06:13 [VALIDATION] Chain validation complete. Proceeding to boot gateway...
+2026-08-12 05:06:13 [INFO] ganymede.cli: 2026-08-12 12:06:13 [info     ] Initializing ganymede bridge v0.1.41 (build: b78ff6a) [ganymede.cli] log_level=INFO
+2026-08-12 05:06:13 [INFO] ganymede.core.db: 2026-08-12 12:06:13 [info     ] Database initialized successfully [ganymede.core.db] path=/Users/mcdoolz/.ganymede/data/ganymede.db
+2026-08-12 05:06:13 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-08-12 05:06:13 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-08-12 05:06:13 [INFO] ganymede.cli: 2026-08-12 12:06:13 [info     ] Registered Ganymede SSE MCP server globally [ganymede.cli] url=http://127.0.0.1:8180/mcp
+2026-08-12 05:06:13 [INFO] ganymede.core.web: 2026-08-12 12:06:13 [info     ] Dashboard started on port 8180 [ganymede.core.web] url=http://localhost:8180
+2026-08-12 05:06:13 [INFO] ganymede.platforms.web.provider: 2026-08-12 12:06:13 [info     ] Starting WebProvider           [ganymede.platforms.web.provider] platform=web
+2026-08-12 05:06:13 [INFO] ganymede.platforms.web.provider: 2026-08-12 12:06:13 [info     ] WebAdapter started             [ganymede.platforms.web.provider]
+2026-08-12 05:06:13 [INFO] ganymede.platforms.web.provider: 2026-08-12 12:06:13 [info     ] Registered web invoke callback with dashboard instance [ganymede.platforms.web.provider]
+2026-08-12 05:06:13 [INFO] ganymede.core.scheduler: 2026-08-12 12:06:13 [info     ] APScheduler started in background. [ganymede.core.scheduler]
+2026-08-12 05:06:13 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 12:06:13 [info     ] Connecting to Discord...       [ganymede.platforms.discord.adapter]
+2026-08-12 05:06:17 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 12:06:17 [info     ] Bot is ready and connected     [ganymede.platforms.discord.adapter] id=1480323231847158131 user=Icarus#5182
+2026-08-12 05:06:17 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 12:06:17 [info     ] Slash command tree synced successfully. [ganymede.platforms.discord.adapter]
+2026-08-12 05:10:54 [INFO] ganymede.core.router: 2026-08-12 12:10:54 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) user=dooley_21554
+2026-08-12 05:10:54 [INFO] ganymede.core.agent_manager: 2026-08-12 12:10:54 [info     ] Registered Chalice telemetry listener with dashboard [ganymede.core.agent_manager]
+2026-08-12 05:10:54 [INFO] ganymede.core.agent_manager: 2026-08-12 12:10:54 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-f2693acb-0cd0-58b8-bb4e-5cb8a4c8763e
+2026-08-12 05:10:54 [INFO] ganymede.core.quota: 2026-08-12 12:10:54 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) daily_limit=1450 daily_turns=1
+2026-08-12 05:19:46 [INFO] ganymede.cli: 2026-08-12 12:19:46 [info     ] Received shutdown request, cleaning up... [ganymede.cli]
+2026-08-12 05:19:46 [INFO] ganymede.core.web: 2026-08-12 12:19:46 [info     ] Dashboard stopped              [ganymede.core.web]
+2026-08-12 05:19:46 [INFO] ganymede.core.scheduler: 2026-08-12 12:19:46 [info     ] APScheduler stopped.           [ganymede.core.scheduler]
+2026-08-12 05:19:46 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 12:19:46 [info     ] Disconnecting from Discord...  [ganymede.platforms.discord.adapter]
+2026-08-12 05:19:46 [ERROR] uvicorn.error: Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.42/libexec/lib/python3.11/site-packages/starlette/routing.py", line 655, in lifespan
+    await receive()
+  File "/opt/homebrew/Cellar/ganymede/0.1.42/libexec/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+2026-08-12 05:19:47 [VALIDATION] Commencing Ganymede environment validation...
+2026-08-12 05:19:47 [VALIDATION] Checking for Antigravity (agy) CLI...
+2026-08-12 05:19:47 [VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+2026-08-12 05:19:47 [VALIDATION] Checking for Chalice telemetry plugin...
+2026-08-12 05:19:47 [VALIDATION]  ✓ Chalice plugin is installed and ready.
+2026-08-12 05:19:47 [VALIDATION] Chain validation complete. Proceeding to boot gateway...
+2026-08-12 05:19:47 [INFO] ganymede.cli: 2026-08-12 12:19:47 [info     ] Initializing ganymede bridge v0.1.41 (build: 797e25f) [ganymede.cli] log_level=INFO
+2026-08-12 05:19:47 [INFO] ganymede.core.db: 2026-08-12 12:19:47 [info     ] Database initialized successfully [ganymede.core.db] path=/Users/mcdoolz/.ganymede/data/ganymede.db
+2026-08-12 05:19:48 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-08-12 05:19:48 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-08-12 05:19:48 [INFO] ganymede.cli: 2026-08-12 12:19:48 [info     ] Registered Ganymede SSE MCP server globally [ganymede.cli] url=http://127.0.0.1:8180/mcp
+2026-08-12 05:19:48 [INFO] ganymede.core.web: 2026-08-12 12:19:48 [info     ] Dashboard started on port 8180 [ganymede.core.web] url=http://localhost:8180
+2026-08-12 05:19:48 [INFO] ganymede.platforms.web.provider: 2026-08-12 12:19:48 [info     ] Starting WebProvider           [ganymede.platforms.web.provider] platform=web
+2026-08-12 05:19:48 [INFO] ganymede.platforms.web.provider: 2026-08-12 12:19:48 [info     ] WebAdapter started             [ganymede.platforms.web.provider]
+2026-08-12 05:19:48 [INFO] ganymede.platforms.web.provider: 2026-08-12 12:19:48 [info     ] Registered web invoke callback with dashboard instance [ganymede.platforms.web.provider]
+2026-08-12 05:19:48 [INFO] ganymede.core.scheduler: 2026-08-12 12:19:48 [info     ] APScheduler started in background. [ganymede.core.scheduler]
+2026-08-12 05:19:48 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 12:19:48 [info     ] Connecting to Discord...       [ganymede.platforms.discord.adapter]
+2026-08-12 05:19:52 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 12:19:52 [info     ] Bot is ready and connected     [ganymede.platforms.discord.adapter] id=1480323231847158131 user=Icarus#5182
+2026-08-12 05:19:53 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 12:19:53 [info     ] Slash command tree synced successfully. [ganymede.platforms.discord.adapter]
+2026-08-12 10:22:43 [INFO] ganymede.cli: 2026-08-12 17:22:43 [info     ] Received shutdown request, cleaning up... [ganymede.cli]
+2026-08-12 10:22:43 [INFO] ganymede.core.web: 2026-08-12 17:22:43 [info     ] Dashboard stopped              [ganymede.core.web]
+2026-08-12 10:22:43 [INFO] ganymede.core.scheduler: 2026-08-12 17:22:43 [info     ] APScheduler stopped.           [ganymede.core.scheduler]
+2026-08-12 10:22:43 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 17:22:43 [info     ] Disconnecting from Discord...  [ganymede.platforms.discord.adapter]
+2026-08-12 10:22:43 [ERROR] uvicorn.error: Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.42/libexec/lib/python3.11/site-packages/starlette/routing.py", line 655, in lifespan
+    await receive()
+  File "/opt/homebrew/Cellar/ganymede/0.1.42/libexec/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+2026-08-12 10:55:06 [VALIDATION] Commencing Ganymede environment validation...
+2026-08-12 10:55:06 [VALIDATION] Checking for Antigravity (agy) CLI...
+2026-08-12 10:55:06 [VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+2026-08-12 10:55:06 [VALIDATION] Checking for Chalice telemetry plugin...
+2026-08-12 10:55:06 [VALIDATION]  ✓ Chalice plugin is installed and ready.
+2026-08-12 10:55:06 [VALIDATION] Chain validation complete. Proceeding to boot gateway...
+2026-08-12 10:55:06 [INFO] ganymede.cli: 2026-08-12 17:55:06 [info     ] Initializing ganymede bridge v0.1.41 (build: 009ab6b) [ganymede.cli] log_level=INFO
+2026-08-12 10:55:06 [INFO] ganymede.core.db: 2026-08-12 17:55:06 [info     ] Database initialized successfully [ganymede.core.db] path=/Users/mcdoolz/.ganymede/data/ganymede.db
+2026-08-12 10:55:07 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-08-12 10:55:07 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-08-12 10:55:07 [INFO] ganymede.cli: 2026-08-12 17:55:07 [info     ] Registered Ganymede SSE MCP server globally [ganymede.cli] url=http://127.0.0.1:8180/mcp
+2026-08-12 10:55:07 [INFO] ganymede.core.web: 2026-08-12 17:55:07 [info     ] Dashboard started on port 8180 [ganymede.core.web] url=http://localhost:8180
+2026-08-12 10:55:07 [INFO] ganymede.platforms.web.provider: 2026-08-12 17:55:07 [info     ] Starting WebProvider           [ganymede.platforms.web.provider] platform=web
+2026-08-12 10:55:07 [INFO] ganymede.platforms.web.provider: 2026-08-12 17:55:07 [info     ] WebAdapter started             [ganymede.platforms.web.provider]
+2026-08-12 10:55:07 [INFO] ganymede.platforms.web.provider: 2026-08-12 17:55:07 [info     ] Registered web invoke callback with dashboard instance [ganymede.platforms.web.provider]
+2026-08-12 10:55:07 [INFO] ganymede.core.scheduler: 2026-08-12 17:55:07 [info     ] APScheduler started in background. [ganymede.core.scheduler]
+2026-08-12 10:55:07 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 17:55:07 [info     ] Connecting to Discord...       [ganymede.platforms.discord.adapter]
+2026-08-12 10:55:12 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 17:55:12 [info     ] Bot is ready and connected     [ganymede.platforms.discord.adapter] id=1480323231847158131 user=Icarus#5182
+2026-08-12 10:55:12 [INFO] ganymede.platforms.discord.adapter: 2026-08-12 17:55:12 [info     ] Slash command tree synced successfully. [ganymede.platforms.discord.adapter]
+2026-08-12 11:04:13 [INFO] ganymede.core.router: 2026-08-12 18:04:13 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) user=dooley_21554
+2026-08-12 11:04:13 [INFO] ganymede.core.agent_manager: 2026-08-12 18:04:13 [info     ] Registered Chalice telemetry listener with dashboard [ganymede.core.agent_manager]
+2026-08-12 11:04:13 [INFO] ganymede.core.agent_manager: 2026-08-12 18:04:13 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-3ab4d87b-ebdf-52a3-9ed4-6cf03f796a4f
+2026-08-12 11:04:13 [INFO] ganymede.core.quota: 2026-08-12 18:04:13 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) daily_limit=1450 daily_turns=1
+2026-08-12 11:05:08 [INFO] ganymede.core.agent_manager: 2026-08-12 18:05:08 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=9dc9297b-6355-4a34-9d8d-115ceaccd570 error=None ganymede_conv_id=ganymede_discord_1536899970173505606 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/9dc9297b-6355-4a34-9d8d-115ceaccd570/.system_generated/logs/transcript_full.jsonl
+2026-08-12 11:05:08 [INFO] ganymede.core.quota: 2026-08-12 18:05:08 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) tokens=615
+2026-08-12 11:06:26 [INFO] ganymede.core.router: 2026-08-12 18:06:26 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1514309247595319499', thread_id=None) user=dooley_21554
+2026-08-12 11:06:26 [INFO] ganymede.core.agent_manager: 2026-08-12 18:06:26 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-4b2efc3c-131c-5aca-89e0-7cc8fb9c4351
+2026-08-12 11:06:26 [INFO] ganymede.core.quota: 2026-08-12 18:06:26 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1514309247595319499', thread_id=None) daily_limit=1450 daily_turns=2
+2026-08-12 11:07:41 [INFO] ganymede.core.agent_manager: 2026-08-12 18:07:41 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=3f91a9c0-db96-4d52-b586-a0692348d7d9 error=None ganymede_conv_id=ganymede_discord_1514309247595319499 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/3f91a9c0-db96-4d52-b586-a0692348d7d9/.system_generated/logs/transcript_full.jsonl
+2026-08-12 11:07:42 [INFO] ganymede.core.quota: 2026-08-12 18:07:42 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1514309247595319499', thread_id=None) tokens=1631
+2026-08-12 11:45:07 [INFO] ganymede.core.agent_manager: 2026-08-12 18:45:07 [info     ] Sweeping idle agent session to free memory/PTY [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None)
+2026-08-12 11:45:07 [INFO] ganymede.core.agent_manager: 2026-08-12 18:45:07 [info     ] Session destroyed and removed from pool [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None)
+2026-08-12 11:45:07 [INFO] ganymede.core.agent_manager: 2026-08-12 18:45:07 [info     ] Sweeping idle agent session to free memory/PTY [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1514309247595319499', thread_id=None)
+2026-08-12 11:45:07 [INFO] ganymede.core.agent_manager: 2026-08-12 18:45:07 [info     ] Session destroyed and removed from pool [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1514309247595319499', thread_id=None)
+2026-08-12 12:12:42 [INFO] ganymede.core.router: 2026-08-12 19:12:42 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) user=dooley_21554
+2026-08-12 12:12:43 [INFO] ganymede.core.agent_manager: 2026-08-12 19:12:43 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-f2693acb-0cd0-58b8-bb4e-5cb8a4c8763e
+2026-08-12 12:12:43 [INFO] ganymede.core.quota: 2026-08-12 19:12:43 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) daily_limit=1450 daily_turns=3
+2026-08-12 12:12:56 [INFO] ganymede.core.agent_manager: 2026-08-12 19:12:56 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=9d764b16-483c-471b-9d84-6aa9ed5e0d3e error=None ganymede_conv_id=ganymede_discord_1525376171636822096 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/9d764b16-483c-471b-9d84-6aa9ed5e0d3e/.system_generated/logs/transcript_full.jsonl
+2026-08-12 12:12:56 [INFO] ganymede.core.quota: 2026-08-12 19:12:56 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None) tokens=124
+2026-08-12 12:45:07 [INFO] ganymede.core.agent_manager: 2026-08-12 19:45:07 [info     ] Sweeping idle agent session to free memory/PTY [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None)
+2026-08-12 12:45:07 [INFO] ganymede.core.agent_manager: 2026-08-12 19:45:07 [info     ] Session destroyed and removed from pool [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1525376171636822096', thread_id=None)
+2026-08-12 13:35:29 [INFO] ganymede.core.router: 2026-08-12 20:35:29 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) user=dooley_21554
+2026-08-12 13:35:30 [INFO] ganymede.core.agent_manager: 2026-08-12 20:35:30 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-3ab4d87b-ebdf-52a3-9ed4-6cf03f796a4f
+2026-08-12 13:35:30 [INFO] ganymede.core.quota: 2026-08-12 20:35:30 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) daily_limit=1450 daily_turns=4
+2026-08-12 13:36:29 [INFO] ganymede.core.agent_manager: 2026-08-12 20:36:29 [info     ] Chalice signaled turn complete [ganymede.core.agent_manager] agy_conv_id=9dc9297b-6355-4a34-9d8d-115ceaccd570 error=None ganymede_conv_id=ganymede_discord_1536899970173505606 reason=NO_TOOL_CALL transcript_path=/Users/mcdoolz/.gemini/antigravity-cli/brain/9dc9297b-6355-4a34-9d8d-115ceaccd570/.system_generated/logs/transcript_full.jsonl
+2026-08-12 13:36:30 [INFO] ganymede.core.quota: 2026-08-12 20:36:30 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) tokens=1147
+2026-08-12 14:15:07 [INFO] ganymede.core.agent_manager: 2026-08-12 21:15:07 [info     ] Sweeping idle agent session to free memory/PTY [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None)
+2026-08-12 14:15:07 [INFO] ganymede.core.agent_manager: 2026-08-12 21:15:07 [info     ] Session destroyed and removed from pool [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None)
