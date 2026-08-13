@@ -699,7 +699,10 @@ def validate_environment():
         os.unlink(plugin_path_target)
     
     broadcast_script = os.path.join(plugin_path_target, "scripts", "broadcast.py")
-    needs_install = not os.path.exists(plugin_path_json)
+    if not os.path.exists(plugin_path_json) or os.path.getsize(plugin_path_json) == 0:
+        needs_install = True
+    else:
+        needs_install = False
     
     # Also force reinstall if broadcast.py is missing or empty (corrupted install)
     if not needs_install:
