@@ -360,10 +360,22 @@ def stop_daemon(config):
         return False
 
 def print_status(config):
-    import json, subprocess, sqlite3
+    import json, subprocess, sqlite3, sys
+    from ganymede import __version__, __git_hash__
     
     print("Ganymede Gateway Status")
     print("=======================\n")
+    
+    print("System Information:")
+    print("-------------------")
+    print(f"Ganymede Version : {__version__} (Build: {__git_hash__})")
+    print(f"Python Version   : {sys.version.split(' ')[0]}")
+    try:
+        agy_ver = subprocess.check_output(["agy", "--version"], text=True, stderr=subprocess.DEVNULL).strip()
+        print(f"Antigravity CLI  : {agy_ver}")
+    except Exception:
+        print("Antigravity CLI  : Not found or error")
+    print("")
     
     # 1. Daemon Status
     lock_path = os.path.join(config.data_dir, "ganymede.lock")
