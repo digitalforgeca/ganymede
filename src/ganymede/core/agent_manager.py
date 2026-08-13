@@ -523,10 +523,13 @@ class ManagedAgent:
             # Write prompt as simulated keystrokes to tmux session.
             import uuid
             buf_name = f"buf-{uuid.uuid4().hex[:8]}"
-            await async_run("tmux", "load-buffer", "-b", buf_name, "-", input=final_prompt + '\r')
+            await async_run("tmux", "load-buffer", "-b", buf_name, "-", input=final_prompt)
             
-            await async_run("tmux", "paste-buffer", "-r", "-b", buf_name, "-t", f"ganymede-{self.sdk_conversation_id}")
+            session_target = f"ganymede-{self.sdk_conversation_id}"
+            await async_run("tmux", "paste-buffer", "-r", "-b", buf_name, "-t", session_target)
             await async_run("tmux", "delete-buffer", "-b", buf_name)
+            # Submit the multiline prompt in agy (prompt_toolkit requires Esc, Enter)
+            await async_run("tmux", "send-keys", "-t", session_target, "Escape", "Enter")
             
             return CliResponse(self, prompt)
 
