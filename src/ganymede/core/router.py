@@ -396,7 +396,6 @@ class Router:
             
             ganymede_conv_id = data.get("ganymede_conv_id")
             if not ganymede_conv_id or ganymede_conv_id != agent_conv_id:
-                logger.info("on_telemetry: conv_id mismatch", ganymede_conv_id=ganymede_conv_id, agent_conv_id=agent_conv_id)
                 return
                 
             payload = data.get("payload", {})
@@ -407,7 +406,6 @@ class Router:
             main_id = self._main_agent_ids.get(ganymede_conv_id)
             # If main_id is known, and this event belongs to a different conversationId, it's a subagent!
             if main_id and conv_uuid != main_id:
-                logger.info("on_telemetry: subagent filter", conv_uuid=conv_uuid, main_id=main_id)
                 return
                 
             event = data.get("event")
@@ -439,8 +437,6 @@ class Router:
                         status_text = f"\n\n✅ *`{tool}` completed.*"
             else:
                 return
-            
-            logger.info("on_telemetry: updating Discord", event=event, status_text=status_text[:80])
             
             # Throttle Discord edits to avoid rate limiting
             now = time.time()
