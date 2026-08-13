@@ -487,11 +487,25 @@ class ManagedAgent:
                 with open(settings_path, "r") as f:
                     settings = json.load(f)
                 original_model = settings.get("model")
+                settings_changed = False
+                
+                # Swap model if needed
                 if original_model != resolved_model:
                     settings["model"] = resolved_model
+                    settings_changed = True
+                    logger.info("Swapped agy settings.json model for spawn", from_model=original_model, to_model=resolved_model)
+                
+                # Pre-trust the workspace so agy doesn't show a blocking trust dialog
+                trusted = settings.get("trustedWorkspaces", [])
+                if workspace_dir not in trusted:
+                    trusted.append(workspace_dir)
+                    settings["trustedWorkspaces"] = trusted
+                    settings_changed = True
+                    logger.info("Pre-trusted workspace in settings.json", path=workspace_dir)
+                
+                if settings_changed:
                     with open(settings_path, "w") as f:
                         json.dump(settings, f, indent=4)
-                    logger.info("Swapped agy settings.json model for spawn", from_model=original_model, to_model=resolved_model)
             except (FileNotFoundError, json.JSONDecodeError):
                 original_model = None
             
@@ -511,11 +525,23 @@ class ManagedAgent:
             with open(pid_map_file, "w") as f:
                 f.write(self.conversation_id)
             
-            # Wait for agy to boot up and display its interactive prompt before injecting input
+            # Wait for agy to boot up and display its interactive prompt.
+            # We look for "? for shortcuts" which only appears on the real interactive
+            # prompt, not on the trust dialog (which also contains ">").
+            # If we see "trust" in the pane, auto-accept it with Enter.
             for _ in range(40):  # Wait up to 20 seconds
                 res = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", session_name, capture_output=True, text=True)
-                if ">" in res.stdout or "Error" in res.stdout:
-                    await asyncio.sleep(0.5) # Give it just a moment to settle
+                pane_text = res.stdout
+                
+                # Detect and auto-dismiss the trust prompt
+                if "Do you trust" in pane_text or "I trust this folder" in pane_text:
+                    logger.warning("Trust prompt detected, auto-accepting", session=session_name)
+                    await async_run("tmux", "send-keys", "-t", session_name, "Enter")
+                    await asyncio.sleep(1)
+                    continue
+                
+                if "? for shortcuts" in pane_text or "Error" in pane_text:
+                    await asyncio.sleep(0.5)  # Give it just a moment to settle
                     break
                 await asyncio.sleep(0.5)
             
