@@ -561,17 +561,33 @@ class ManagedAgent:
             return CliResponse(self, prompt)
 
     async def terminate(self) -> None:
-        """Forcefully terminate the active agy CLI subprocess if running."""
+        """Gracefully terminate the active agy CLI subprocess, falling back to force kill."""
         # Signal abort FIRST so the blocked CliResponse generator wakes up immediately
         self.aborted = True
         self.turn_completed_event.set()
 
         if getattr(self, "tmux_session_name", None):
-            logger.info("Terminating decoupled tmux session", session=self.tmux_session_name)
+            logger.info("Gracefully closing decoupled tmux session", session=self.tmux_session_name)
             try:
-                await async_run("tmux", "kill-session", "-t", self.tmux_session_name, capture_output=True)
+                # Send the /exit command to the CLI to gracefully shut down plugins, server, and telemetry
+                await async_run("tmux", "send-keys", "-t", self.tmux_session_name, "/exit", "Enter")
+                
+                # Wait up to 5 seconds for it to exit gracefully
+                for _ in range(10):
+                    await asyncio.sleep(0.5)
+                    out, err, code = await async_run("tmux", "has-session", "-t", self.tmux_session_name, capture_output=True)
+                    if code != 0:
+                        break # Session is dead!
+                else:
+                    logger.warning("Session did not close gracefully in time, force killing", session=self.tmux_session_name)
+                    await async_run("tmux", "kill-session", "-t", self.tmux_session_name, capture_output=True)
             except Exception as e:
                 logger.error("Error terminating tmux session", error=str(e))
+                # Fallback force kill
+                try:
+                    await async_run("tmux", "kill-session", "-t", self.tmux_session_name, capture_output=True)
+                except:
+                    pass
             finally:
                 if getattr(self, "pane_pid", None):
                     pid_map_file = os.path.join(
