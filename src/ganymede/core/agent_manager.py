@@ -627,8 +627,8 @@ class ManagedAgent:
             session_target = f"ganymede-{self.sdk_conversation_id}"
             await async_run("tmux", "paste-buffer", "-r", "-b", buf_name, "-t", session_target)
             await async_run("tmux", "delete-buffer", "-b", buf_name)
-            # Submit the multiline prompt in agy (prompt_toolkit requires Esc, Enter)
-            await async_run("tmux", "send-keys", "-t", session_target, "Escape", "Enter")
+            # Submit the pasted prompt. A raw Enter (C-m) submits in prompt_toolkit.
+            await async_run("tmux", "send-keys", "-t", session_target, "Enter")
             
             return CliResponse(self, prompt)
 
