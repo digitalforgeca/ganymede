@@ -728,7 +728,7 @@ class AgentManager:
                             except Exception:
                                 t_args = {}
                         agent.chunk_queue.put_nowait(ToolCall(t_name, t_args))
-                elif hook_name == "PostToolUse":
+                elif event_type == "PostToolUse":
                     if isinstance(tool_call, dict):
                         t_name = tool_call.get("name", "")
                         t_err = payload.get("error")
