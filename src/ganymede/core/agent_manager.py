@@ -375,6 +375,11 @@ class ManagedAgent:
     IMPORTANT: This class spawns `agy` as a CLI subprocess. It does NOT use the
     Antigravity Python SDK directly. See CliResponse docstring for rationale.
     """
+    
+    # Serializes spawns that swap the model in agy's global settings.json.
+    # Only one spawn can modify settings.json at a time to prevent races.
+    _settings_lock = asyncio.Lock()
+
 
     def __init__(self, context_key: ContextKey, config: AppConfig, conversation_id: str, bot_namespace: str = "ganymede", ipc_port: int | None = None, manager=None):
         self.manager = manager
@@ -471,29 +476,60 @@ class ManagedAgent:
         
         logger.info("Spawning decoupled agy in tmux", command=cmd, session=session_name, model=resolved_model, context=self.context_key)
         
-        await async_run("tmux", "new-session", "-d", "-s", session_name, "-c", workspace_dir, cmd, env=subprocess_env, check=True)
-        
-        # Fetch the PID of the pane to map to chalice
-        res = await async_run("tmux", "display-message", "-p", "-t", session_name, "#{pane_pid}", capture_output=True, text=True, check=False)
-        pane_pid = res.stdout.strip()
-        if not pane_pid:
-            raise RuntimeError(f"Failed to start agy: tmux session {session_name} exited immediately. Command: {cmd}")
-        self.pane_pid = int(pane_pid)
-        self.tmux_session_name = session_name
-        
-        pid_map_dir = os.path.expanduser("~/.ganymede/data/pid_map")
-        os.makedirs(pid_map_dir, exist_ok=True)
-        pid_map_file = os.path.join(pid_map_dir, pane_pid)
-        with open(pid_map_file, "w") as f:
-            f.write(self.conversation_id)
-        
-        # Wait for agy to boot up and display its interactive prompt before injecting input
-        for _ in range(40):  # Wait up to 20 seconds
-            res = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", session_name, capture_output=True, text=True)
-            if ">" in res.stdout or "Error" in res.stdout:
-                await asyncio.sleep(0.5) # Give it just a moment to settle
-                break
-            await asyncio.sleep(0.5)
+        # Temporarily override the model in agy's global settings.json.
+        # agy's --model flag is unreliable: settings.json takes precedence.
+        # We serialize spawns with _settings_lock so concurrent sessions don't
+        # clobber each other, and restore the original model after agy boots.
+        settings_path = os.path.expanduser("~/.gemini/antigravity-cli/settings.json")
+        async with ManagedAgent._settings_lock:
+            original_model = None
+            try:
+                with open(settings_path, "r") as f:
+                    settings = json.load(f)
+                original_model = settings.get("model")
+                if original_model != resolved_model:
+                    settings["model"] = resolved_model
+                    with open(settings_path, "w") as f:
+                        json.dump(settings, f, indent=4)
+                    logger.info("Swapped agy settings.json model for spawn", from_model=original_model, to_model=resolved_model)
+            except (FileNotFoundError, json.JSONDecodeError):
+                original_model = None
+            
+            await async_run("tmux", "new-session", "-d", "-s", session_name, "-c", workspace_dir, cmd, env=subprocess_env, check=True)
+            
+            # Fetch the PID of the pane to map to chalice
+            res = await async_run("tmux", "display-message", "-p", "-t", session_name, "#{pane_pid}", capture_output=True, text=True, check=False)
+            pane_pid = res.stdout.strip()
+            if not pane_pid:
+                raise RuntimeError(f"Failed to start agy: tmux session {session_name} exited immediately. Command: {cmd}")
+            self.pane_pid = int(pane_pid)
+            self.tmux_session_name = session_name
+            
+            pid_map_dir = os.path.expanduser("~/.ganymede/data/pid_map")
+            os.makedirs(pid_map_dir, exist_ok=True)
+            pid_map_file = os.path.join(pid_map_dir, pane_pid)
+            with open(pid_map_file, "w") as f:
+                f.write(self.conversation_id)
+            
+            # Wait for agy to boot up and display its interactive prompt before injecting input
+            for _ in range(40):  # Wait up to 20 seconds
+                res = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", session_name, capture_output=True, text=True)
+                if ">" in res.stdout or "Error" in res.stdout:
+                    await asyncio.sleep(0.5) # Give it just a moment to settle
+                    break
+                await asyncio.sleep(0.5)
+            
+            # Restore the original model so the user's IDE sessions aren't affected
+            if original_model is not None and original_model != resolved_model:
+                try:
+                    with open(settings_path, "r") as f:
+                        settings = json.load(f)
+                    settings["model"] = original_model
+                    with open(settings_path, "w") as f:
+                        json.dump(settings, f, indent=4)
+                except Exception:
+                    pass
+
 
     async def chat(self, prompt: str) -> CliResponse:
         self.last_active = time.time()
