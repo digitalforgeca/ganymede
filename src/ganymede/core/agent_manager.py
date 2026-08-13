@@ -642,10 +642,10 @@ class ManagedAgent:
             await async_run("tmux", "load-buffer", "-b", buf_name, "-", input=final_prompt)
             
             session_target = f"ganymede-{self.sdk_conversation_id}"
-            await async_run("tmux", "paste-buffer", "-r", "-b", buf_name, "-t", session_target)
+            await async_run("tmux", "paste-buffer", "-p", "-r", "-b", buf_name, "-t", session_target)
             await async_run("tmux", "delete-buffer", "-b", buf_name)
-            # Submit the pasted prompt. A raw Enter (C-m) submits in prompt_toolkit.
-            await async_run("tmux", "send-keys", "-t", session_target, "Escape", "Enter")
+            # Send Enter to submit the prompt. Bracketed paste (-p) ensures autocomplete doesn't swallow it.
+            await async_run("tmux", "send-keys", "-t", session_target, "Enter")
             
             return CliResponse(self, prompt)
 
