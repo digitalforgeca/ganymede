@@ -48,7 +48,18 @@ def main():
         try:
             # Antigravity CLI passes context JSON into the hook's stdin
             hook_context = json.load(sys.stdin)
-            hook_type = os.environ.get("AGY_HOOK_EVENT", "Agent Lifecycle Hook")
+            
+            # Infer hook type from payload structure since agy strips most env vars
+            if "toolResult" in hook_context:
+                hook_type = "PostToolUse"
+            elif "toolCall" in hook_context:
+                hook_type = "PreToolUse"
+            elif "terminationReason" in hook_context:
+                hook_type = "Stop"
+            elif "initialNumSteps" in hook_context:
+                hook_type = "PreInvocation"
+            else:
+                hook_type = "Agent Lifecycle Hook"
             
             # Extract basic context ID if present
             conversation_id = hook_context.get("conversationId", "unknown")
