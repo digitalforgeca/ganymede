@@ -747,7 +747,7 @@ class AgentManager:
         for agent in self._agents.values():
             if agent.conversation_id == ganymede_conv_id:
                 agent.last_active = time.time()
-                logger.debug("Telemetry matched managed agent", event=data.get("event"), ganymede_conv_id=ganymede_conv_id)
+                logger.debug("Telemetry matched managed agent", telemetry_event=data.get("event"), ganymede_conv_id=ganymede_conv_id)
                 
         tool_call = payload.get("toolCall", {})
         if isinstance(tool_call, str):
