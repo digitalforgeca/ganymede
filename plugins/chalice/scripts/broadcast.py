@@ -34,6 +34,14 @@ def _resolve_ganymede_conv_id():
 def _get_ppid(pid):
     """Get parent PID of a given PID (macOS compatible)."""
     try:
+        if os.path.exists(f"/proc/{pid}/stat"):
+            with open(f"/proc/{pid}/stat", "r") as f:
+                stat = f.read()
+                rparen = stat.rfind(')')
+                if rparen != -1:
+                    parts = stat[rparen+2:].split()
+                    return int(parts[1])
+        
         import subprocess
         try:
             out = subprocess.check_output(["/bin/ps", "-o", "ppid=", "-p", str(pid)], text=True).strip()
@@ -66,13 +74,21 @@ def main():
             # Extract basic context ID if present
             conversation_id = hook_context.get("conversationId", "unknown")
             
-            # Formulate the telemetry payload
-            # ganymede_conv_id is resolved via PID mapping since agy strips env vars.
+            # Only broadcast if this agy session was spawned by Ganymede.
+            # _resolve_ganymede_conv_id() walks the PPID chain looking for a
+            # PID mapping file created by ManagedAgent.  If none is found,
+            # this is a standalone agy session (IDE, terminal) and we should
+            # not send telemetry to the gateway.
+            ganymede_id = _resolve_ganymede_conv_id()
+            if not ganymede_id:
+                # Not a Ganymede-managed session — exit silently.
+                return
+
             payload = {
                 "event": hook_type,
                 "level": "info",
                 "context": conversation_id,
-                "ganymede_conv_id": _resolve_ganymede_conv_id(),
+                "ganymede_conv_id": ganymede_id,
                 "payload": hook_context
             }
             
@@ -113,7 +129,6 @@ def main():
             urllib.request.urlopen(req, timeout=2.0)
             
         except Exception:
-            # Silently fail if gateway is down so we don't break the agent
             pass
 
 if __name__ == "__main__":

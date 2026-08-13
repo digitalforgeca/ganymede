@@ -43,12 +43,14 @@ async def handle_telemetry_post(request: Request):
     try:
         data = await request.json()
         
-        # Only log telemetry from ganymede-managed sessions to avoid flooding
-        # the console with noise from unrelated agy IDE/CLI sessions.
+        # Only process telemetry from Ganymede-managed sessions.
+        # Non-managed sessions (IDE, terminal agy) should never reach here
+        # because broadcast.py bails early, but guard against it anyway.
         ganymede_conv_id = data.get("ganymede_conv_id", "")
-        is_managed = ganymede_conv_id.startswith("ganymede_")
-        if is_managed:
-            logger.debug("Chalice Telemetry via POST", telemetry_event=data.get("event"), ganymede_conv_id=ganymede_conv_id)
+        if not ganymede_conv_id.startswith("ganymede_"):
+            return {"status": "ignored", "reason": "not a ganymede-managed session"}
+        
+        logger.debug("Chalice Telemetry via POST", telemetry_event=data.get("event"), ganymede_conv_id=ganymede_conv_id)
         
         # Log telemetry to database
         try:
