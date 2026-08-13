@@ -18,10 +18,11 @@ class DiscordStreamer:
         self.buffer = ""
         self.last_edit_time = 0.0
         self.is_finished = False
-        self.initial_text = initial_text or "⏳ *Thinking...*"
+        self.initial_text = initial_text or "💭 *Thinking...*"
         self.persist_header = persist_header or ""
         self.edit_interval = edit_interval
         self._flush_task: asyncio.Task | None = None
+        self._update_lock = asyncio.Lock()
 
     async def start(self) -> None:
         """Send the initial placeholder message to indicate thinking state."""
@@ -77,6 +78,9 @@ class DiscordStreamer:
             return
         self.is_finished = True
         
+        if self._flush_task and not self._flush_task.done():
+            self._flush_task.cancel()
+            
         # Final flush
         await self._update_message(final=True, metadata=metadata)
         try:
@@ -89,93 +93,99 @@ class DiscordStreamer:
             logger.warning("Failed to add completion reaction", error=str(e))
 
     async def _update_message(self, final: bool = False, metadata: dict | None = None) -> None:
-        if not self.messages:
-            return
-
-        content = self.buffer.strip()
-        if not content:
-            content = "..."
-
-        if self.persist_header:
-            content = f"{self.persist_header}\n{content}"
-
-        # Handle formatting metadata (e.g. tokens, execution duration) on final edit
-        if final and metadata:
-            stats = f"\n\n*⚡ {metadata.get('tokens', '?')} tokens · ⏱ {metadata.get('duration', '?')}s"
+        async with self._update_lock:
+            if not self.messages:
+                return
+    
+            content = self.buffer.strip()
             
-            if metadata.get('tasks'):
-                stats += f" · 📝 {metadata.get('tasks')} outstanding tasks"
-            if metadata.get('artifacts'):
-                stats += f" · 📦 {metadata.get('artifacts')} outstanding artifacts"
-            if metadata.get('subagents'):
-                stats += f" · 👨‍💻 {metadata.get('subagents')} outstanding subagents"
-            if metadata.get('model'):
-                stats += f" · 🤖 {metadata.get('model')}"
+            # Show "Thinking..." with progress animation if buffer is empty
+            if not self.buffer.strip() and not final:
+                dots = "." * ((int(time.time() * 2) % 3) + 1)
+                content = f"💭 *Thinking{dots}*"
+            elif not content:
+                content = "..."
+    
+            if self.persist_header:
+                content = f"{self.persist_header}\n{content}"
+    
+            # Handle formatting metadata (e.g. tokens, execution duration) on final edit
+            if final and metadata:
+                stats = f"\n\n*⚡ {metadata.get('tokens', '?')} tokens · ⏱ {metadata.get('duration', '?')}s"
                 
-            stats += "*"
-            content += stats
-
-        # Ensure code blocks are balanced
-        content = self._balance_code_fences(content)
-
-        # Sanitize any stray HTML tags before sending to Discord
-        content = self.formatter.format_text(content)
-
-        # Split content if it exceeds the limit
-        chunks = self.formatter.split_message(content)
-        if not chunks:
-            chunks = ["..."]
-        
-        view = None
-        if final and metadata and metadata.get("interactive_tools") and self.interaction_callback:
-            try:
-                from ganymede.platforms.discord.interactive import InteractiveToolView
-                view = InteractiveToolView(metadata["interactive_tools"], self.interaction_callback)
-            except Exception as e:
-                logger.error("Failed to create InteractiveToolView", error=str(e))
-
-        files_to_attach = []
-        if final and metadata and metadata.get("artifact_files"):
-            # Discord free tier attachment limit is 10MB
-            MAX_SIZE = 10 * 1024 * 1024
-            for filepath in metadata["artifact_files"]:
-                if os.path.exists(filepath):
-                    if os.path.getsize(filepath) <= MAX_SIZE:
-                        files_to_attach.append(discord.File(filepath))
-                    else:
-                        logger.warning("Artifact too large to attach to Discord", file=filepath, size=os.path.getsize(filepath))
-
-        try:
-            for i, chunk in enumerate(chunks):
-                balanced_chunk = self._balance_code_fences(chunk)
-                is_last_chunk = (i == len(chunks) - 1)
-                kwargs = {"content": balanced_chunk}
-                if is_last_chunk and view:
-                    kwargs["view"] = view
-                
-                if i < len(self.messages):
-                    if is_last_chunk and files_to_attach:
-                        kwargs["attachments"] = files_to_attach
-                    await asyncio.wait_for(self.messages[i].edit(**kwargs), timeout=10.0)
-                else:
-                    if is_last_chunk and files_to_attach:
-                        kwargs["files"] = files_to_attach
-                    new_msg = await asyncio.wait_for(self.channel.send(**kwargs), timeout=10.0)
-                    self.messages.append(new_msg)
-            
-            # Delete any extra messages that are no longer needed
-            while len(self.messages) > len(chunks):
-                extra_msg = self.messages.pop()
-                try:
-                    await asyncio.wait_for(extra_msg.delete(), timeout=5.0)
-                except Exception as e:
-                    logger.warning("Failed to delete orphaned message", error=str(e))
+                if metadata.get('tasks'):
+                    stats += f" · 📝 {metadata.get('tasks')} outstanding tasks"
+                if metadata.get('artifacts'):
+                    stats += f" · 📦 {metadata.get('artifacts')} outstanding artifacts"
+                if metadata.get('subagents'):
+                    stats += f" · 👨‍💻 {metadata.get('subagents')} outstanding subagents"
+                if metadata.get('model'):
+                    stats += f" · 🤖 {metadata.get('model')}"
                     
-            self.last_edit_time = time.time()
-        except asyncio.TimeoutError:
-            logger.warning("Timeout while updating message on Discord")
-        except discord.errors.HTTPException as e:
-            logger.error("HTTP error during message update", error=str(e))
+                stats += "*"
+                content += stats
+    
+            # Sanitize any stray HTML tags before sending to Discord
+            content = self.formatter.format_text(content)
+    
+            # Split content if it exceeds the limit
+            chunks = self.formatter.split_message(content)
+            if not chunks:
+                chunks = ["..."]
+        
+            view = None
+            if final and metadata and metadata.get("interactive_tools") and self.interaction_callback:
+                try:
+                    from ganymede.platforms.discord.interactive import InteractiveToolView
+                    view = InteractiveToolView(metadata["interactive_tools"], self.interaction_callback)
+                except Exception as e:
+                    logger.error("Failed to create InteractiveToolView", error=str(e))
+    
+            files_to_attach = []
+            if final and metadata and metadata.get("artifact_files"):
+                # Discord free tier attachment limit is 10MB
+                MAX_SIZE = 10 * 1024 * 1024
+                for filepath in metadata["artifact_files"]:
+                    if os.path.exists(filepath):
+                        if os.path.getsize(filepath) <= MAX_SIZE:
+                            files_to_attach.append(discord.File(filepath))
+                        else:
+                            logger.warning("Artifact too large to attach to Discord", file=filepath, size=os.path.getsize(filepath))
+    
+            try:
+                for i, chunk in enumerate(chunks):
+                    balanced_chunk = self._balance_code_fences(chunk)
+                    is_last_chunk = (i == len(chunks) - 1)
+                    kwargs = {"content": balanced_chunk}
+                    if is_last_chunk and view:
+                        kwargs["view"] = view
+                    
+                    if i < len(self.messages):
+                        if is_last_chunk and files_to_attach:
+                            kwargs["attachments"] = files_to_attach
+                        await asyncio.wait_for(self.messages[i].edit(**kwargs), timeout=10.0)
+                    else:
+                        if is_last_chunk and files_to_attach:
+                            kwargs["files"] = files_to_attach
+                        new_msg = await asyncio.wait_for(self.channel.send(**kwargs), timeout=10.0)
+                        self.messages.append(new_msg)
+                
+                # Delete any extra messages that are no longer needed
+                while len(self.messages) > len(chunks):
+                    extra_msg = self.messages.pop()
+                    try:
+                        await asyncio.wait_for(extra_msg.delete(), timeout=5.0)
+                    except Exception as e:
+                        logger.warning("Failed to delete orphaned message", error=str(e))
+                        
+                self.last_edit_time = time.time()
+            except asyncio.TimeoutError:
+                logger.warning("Timeout while updating message on Discord")
+            except discord.errors.HTTPException as e:
+                logger.error("HTTP error during message update", error=str(e))
+            finally:
+                for f in files_to_attach:
+                    f.close()
 
     def _balance_code_fences(self, text: str) -> str:
         """Close open code blocks to keep rendering valid on partial edits."""

@@ -636,7 +636,7 @@ class AgentManager:
         conversation's JSONL file — CliResponse reads the response from there.
         """
         valid_events = ("Agent Lifecycle Hook", "PreToolUse", "PostToolUse", "Stop", "AgentLifecycle", "PreInvocation")
-        logger.info("Incoming telemetry", event=data.get("event"), hookName=data.get("payload", {}).get("hookName"))
+        logger.info("Incoming telemetry", telemetry_event=data.get("event"), hookName=data.get("payload", {}).get("hookName"))
         if data.get("event") not in valid_events:
             return
             
