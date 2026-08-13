@@ -42,7 +42,13 @@ async def handle_telemetry_post(request: Request):
     server = request.app.state.server
     try:
         data = await request.json()
-        logger.debug("Chalice Telemetry via POST", payload=data)
+        
+        # Only log telemetry from ganymede-managed sessions to avoid flooding
+        # the console with noise from unrelated agy IDE/CLI sessions.
+        ganymede_conv_id = data.get("ganymede_conv_id", "")
+        is_managed = ganymede_conv_id.startswith("ganymede_")
+        if is_managed:
+            logger.debug("Chalice Telemetry via POST", event=data.get("event"), ganymede_conv_id=ganymede_conv_id)
         
         # Log telemetry to database
         try:

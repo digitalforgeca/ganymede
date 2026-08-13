@@ -550,7 +550,10 @@ def manage_sessions(config, action: str, targets: list[str] = None):
             print("No active Ganymede sessions to kill.")
             return
         
-        kill_all = not targets or any(t in ("*", "all") for t in targets)
+        # "all" is the only accepted kill-all keyword.
+        # Do NOT accept "*" — the shell expands it to every file in the CWD
+        # before we ever see it, so we'd get dozens of bogus targets.
+        kill_all = not targets or (len(targets) == 1 and targets[0].lower() == "all")
         
         if kill_all:
             if not targets:
@@ -567,13 +570,24 @@ def manage_sessions(config, action: str, targets: list[str] = None):
             print(f"\nDone. All sessions terminated.")
         else:
             matched = []
+            unmatched = []
             for target in targets:
                 for s in sessions:
                     if target in (s["name"], s["uuid"], s.get("conv_id", "")):
                         matched.append(s)
                         break
                 else:
-                    print(f"  ⚠️  No session found matching: {target}")
+                    unmatched.append(target)
+            
+            # Detect shell glob expansion: many unmatched targets that look like filenames
+            if len(unmatched) > 3 and not matched:
+                print(f"  ⚠️  None of the {len(unmatched)} provided targets matched any Ganymede session.")
+                print(f"  💡 It looks like your shell expanded a glob (e.g. '*').")
+                print(f"     Use: ganymede sessions kill all")
+                return
+            
+            for t in unmatched:
+                print(f"  ⚠️  No session found matching: {t}")
             
             if matched:
                 for s in matched:

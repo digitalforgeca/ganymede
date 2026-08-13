@@ -724,7 +724,6 @@ class AgentManager:
         conversation's JSONL file — CliResponse reads the response from there.
         """
         valid_events = ("Agent Lifecycle Hook", "PreToolUse", "PostToolUse", "Stop", "AgentLifecycle", "PreInvocation")
-        logger.info("Incoming telemetry", telemetry_event=data.get("event"), hookName=data.get("payload", {}).get("hookName"))
         if data.get("event") not in valid_events:
             return
             
@@ -736,11 +735,19 @@ class AgentManager:
         ganymede_conv_id = data.get("ganymede_conv_id")
         if not ganymede_conv_id:
             return
+        
+        # Only process telemetry that matches a ganymede-managed agent.
+        # Unrelated agy sessions (IDE, other CLI) also broadcast via Chalice
+        # but don't have matching agents — skip them silently.
+        has_match = any(a.conversation_id == ganymede_conv_id for a in self._agents.values())
+        if not has_match:
+            return
             
         # Update activity timestamp to prevent idle reaping during long tasks
         for agent in self._agents.values():
             if agent.conversation_id == ganymede_conv_id:
                 agent.last_active = time.time()
+                logger.debug("Telemetry matched managed agent", event=data.get("event"), ganymede_conv_id=ganymede_conv_id)
                 
         tool_call = payload.get("toolCall", {})
         if isinstance(tool_call, str):
