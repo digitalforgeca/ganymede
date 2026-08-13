@@ -675,14 +675,15 @@ class AgentManager:
             tool_call = {}
             
         is_interactive_tool = False
-        if not payload.get("error") and payload.get("hookName") == "PreToolUse":
+        event_type = data.get("event", "")
+        if not payload.get("error") and event_type == "PreToolUse":
             tool_name = tool_call.get("name", "")
             if tool_name in ("default_api:ask_question", "default_api:ask_permission", "ask_question", "ask_permission"):
                 is_interactive_tool = True
 
         state = payload.get("state", "")
-        # Wake up the stream if fully idle (waiting for input), waiting for messages (e.g. background tasks), or using interactive tools
-        is_turn_complete = payload.get("fullyIdle") or state == "waiting_for_messages" or is_interactive_tool
+        # Wake up the stream if fully idle, waiting for messages, interactive tool, or if the event is literally "Stop"
+        is_turn_complete = event_type == "Stop" or payload.get("fullyIdle") or state == "waiting_for_messages" or is_interactive_tool
 
         if is_turn_complete:
             for agent in self._agents.values():
@@ -710,8 +711,6 @@ class AgentManager:
                     return
                     
         # Catch live tool calls globally (captures subagent artifacts)
-        hook_name = payload.get("hookName")
-        
         for agent in self._agents.values():
             if agent.conversation_id == ganymede_conv_id:
                 if not hasattr(agent, "_artifacts_this_turn"):
@@ -719,7 +718,7 @@ class AgentManager:
                 tool_call = payload.get("toolCall")
                 
                 # Yield intermediate chunks to the queue for realtime Discord streaming
-                if hook_name == "PreToolUse":
+                if event_type == "PreToolUse":
                     if isinstance(tool_call, dict):
                         t_name = tool_call.get("name", "")
                         t_args = tool_call.get("args", {})
