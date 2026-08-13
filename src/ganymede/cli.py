@@ -244,11 +244,13 @@ async def run(config: AppConfig):
     # Hook signal handling for clean exit
     loop = asyncio.get_running_loop()
     
+    dashboard = None
+    
     async def shutdown():
         logger.info("Received shutdown request, cleaning up...")
         
         async def _do_cleanup():
-            if 'dashboard' in locals():
+            if dashboard is not None:
                 await dashboard.stop()
             for provider in providers:
                 # Do NOT call destroy_all() anymore, so tmux sessions survive gateway restarts!
@@ -286,7 +288,7 @@ async def run(config: AppConfig):
     from ganymede.core.web import DashboardServer
     dashboard = DashboardServer(config, db)
     dashboard.providers = providers
-    dashboard.web_invoke_callback = providers[-1].adapter.handle_invoke
+    dashboard.web_invoke_callback = getattr(providers[-1].adapter, "handle_invoke", None)
     
     # Register global router telemetry listeners to ensure autonomous and subagent persistence
     for provider in providers:

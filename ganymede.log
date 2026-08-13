@@ -32900,3 +32900,22 @@ asyncio.exceptions.CancelledError
 2026-08-12 17:55:07 [INFO] ganymede.core.agent_manager: 2026-08-13 00:55:07 [info     ] Session destroyed and removed from pool [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1529623211808002128', thread_id=None)
 2026-08-12 17:55:07 [INFO] ganymede.core.agent_manager: 2026-08-13 00:55:07 [info     ] Sweeping idle agent session to free memory/PTY [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1537050085417025677', thread_id=None)
 2026-08-12 17:55:07 [INFO] ganymede.core.agent_manager: 2026-08-13 00:55:07 [info     ] Session destroyed and removed from pool [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1537050085417025677', thread_id=None)
+2026-08-12 18:05:07 [INFO] ganymede.core.agent_manager: 2026-08-13 01:05:07 [info     ] Sweeping idle agent session to free memory/PTY [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1509429446195679401', thread_id=None)
+2026-08-12 18:05:07 [INFO] ganymede.core.agent_manager: 2026-08-13 01:05:07 [info     ] Session destroyed and removed from pool [ganymede.core.agent_manager] context=ContextKey(platform='discord', channel_id='1509429446195679401', thread_id=None)
+2026-08-12 18:05:54 [WARNING] ganymede.core.agent_manager: 2026-08-13 01:05:54 [warning  ] Agent appears inactive, entering 2-minute grace period [ganymede.core.agent_manager] conversation_id=ganymede_discord_1536899970173505606
+2026-08-12 18:07:54 [ERROR] ganymede.core.agent_manager: 2026-08-13 01:07:54 [error    ] Agent failed grace period and timed out [ganymede.core.agent_manager] conversation_id=ganymede_discord_1536899970173505606
+2026-08-12 18:07:54 [INFO] ganymede.core.quota: 2026-08-13 01:07:54 [info     ] Recorded token usage           [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) tokens=0
+2026-08-12 18:07:55 [INFO] ganymede.core.router: 2026-08-13 01:07:55 [info     ] Processing message in context  [ganymede.core.router] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) user=dooley_21554
+2026-08-12 18:07:55 [INFO] ganymede.core.agent_manager: 2026-08-13 01:07:55 [info     ] Found existing decoupled agy session, reattaching [ganymede.core.agent_manager] session=ganymede-3ab4d87b-ebdf-52a3-9ed4-6cf03f796a4f
+2026-08-12 18:07:55 [INFO] ganymede.core.quota: 2026-08-13 01:07:55 [info     ] Recorded Gemini API turn       [ganymede.core.quota] context=ContextKey(platform='discord', channel_id='1536899970173505606', thread_id=None) daily_limit=1450 daily_turns=14
+2026-08-12 18:15:04 [INFO] ganymede.cli: 2026-08-13 01:15:04 [info     ] Received shutdown request, cleaning up... [ganymede.cli]
+2026-08-12 18:15:04 [INFO] ganymede.core.web: 2026-08-13 01:15:04 [info     ] Dashboard stopped              [ganymede.core.web]
+2026-08-12 18:15:04 [INFO] ganymede.core.scheduler: 2026-08-13 01:15:04 [info     ] APScheduler stopped.           [ganymede.core.scheduler]
+2026-08-12 18:15:04 [INFO] ganymede.platforms.discord.adapter: 2026-08-13 01:15:04 [info     ] Disconnecting from Discord...  [ganymede.platforms.discord.adapter]
+2026-08-12 18:15:04 [ERROR] uvicorn.error: Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.42/libexec/lib/python3.11/site-packages/starlette/routing.py", line 655, in lifespan
+  File "/opt/homebrew/Cellar/ganymede/0.1.42/libexec/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+  File "/opt/homebrew/Cellar/python@3.11/3.11.15_4/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+

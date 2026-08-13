@@ -80,8 +80,13 @@ class CliResponse:
     """Wrapper around agy subprocess to be compatible with Router chunks interface.
     
     ARCHITECTURE: The PTY is ONLY for injecting input. Output is read via Chalice telemetry.
-    When the Chalice Stop hook fires (fullyIdle=true), it provides the transcriptPath
-    to the child conversation's JSONL transcript. We read the agent's response from there.
+    Turn completion is signaled when handle_telemetry detects any of:
+      - event_type == "Stop" (the Chalice Stop hook fired)
+      - payload.fullyIdle == true (agent is fully idle and waiting for input)
+      - state == "waiting_for_messages" (agent has background tasks running)
+      - Interactive tool detected (ask_question / ask_permission)
+    The Stop hook provides the transcriptPath to the child conversation's JSONL
+    transcript. We read the agent's response from there.
     """
 
     def __init__(self, agent_instance, prompt: str, direct_text: str = None):
@@ -444,6 +449,11 @@ class ManagedAgent:
                 if pane_pid:
                     self.pane_pid = int(pane_pid)
                     self.tmux_session_name = session_name
+                    # Write PID map so broadcast.py can resolve our conv ID after restart
+                    pid_map_dir = os.path.expanduser("~/.ganymede/data/pid_map")
+                    os.makedirs(pid_map_dir, exist_ok=True)
+                    with open(os.path.join(pid_map_dir, pane_pid), "w") as f:
+                        f.write(self.conversation_id)
                 return
         except Exception:
             pass

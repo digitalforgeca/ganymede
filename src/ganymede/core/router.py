@@ -124,6 +124,13 @@ class Router:
     def set_adapter(self, adapter):
         self.adapter = adapter
 
+    def cleanup_context(self, context: ContextKey):
+        """Cleanup memory leaks for destroyed contexts."""
+        if context in self._locks:
+            del self._locks[context]
+        if context in self._autonomous_msgs:
+            del self._autonomous_msgs[context]
+
     async def handle_message(self, message: PlatformMessage) -> None:
         # Check for stop command
         if message.content.strip().lower() in ("/stop", "!stop"):
@@ -133,6 +140,7 @@ class Router:
                 if managed_agent:
                     await managed_agent.terminate()
                     await self.agent_manager.destroy(message.context)
+                    self.cleanup_context(message.context)
                     if self.adapter:
                         await self.adapter.send_response(message.context, "🛑 *Active agent execution aborted and session cleared successfully.*", {})
                 else:
@@ -261,6 +269,7 @@ class Router:
                     if self.agent_manager.quota_tracker:
                         self.agent_manager.quota_tracker.record_blocker(str(e))
                     await self.agent_manager.destroy(message.context)
+                    self.cleanup_context(message.context)
                 if self.adapter:
                     await self.adapter.send_response(message.context, f"⚠️ Error: {str(e)}", {"error": True})
 
@@ -355,6 +364,7 @@ class Router:
                     if self.agent_manager.quota_tracker:
                         self.agent_manager.quota_tracker.record_blocker(str(e))
                     await self.agent_manager.destroy(context)
+                    self.cleanup_context(context)
                 if self.adapter:
                     await self.adapter.send_response(context, f"⚠️ Error: {str(e)}", {"error": True})
 
@@ -403,13 +413,6 @@ class Router:
             tool_call = payload.get("toolCall", {}) if isinstance(payload, dict) else {}
             if isinstance(tool_call, str):
                 tool_call = {}
-            
-            # Derive event type from Chalice lifecycle hook
-            if event == "Agent Lifecycle Hook" and tool_call:
-                if "error" in payload:
-                    event = "PostToolUse"
-                else:
-                    event = "PreToolUse"
 
             if event == "PreToolUse":
                 tool = tool_call.get("name", "tool")
@@ -450,16 +453,35 @@ class Router:
 
         is_running = True
         
+        def get_display_content() -> str:
+            if response_text:
+                return response_text + status_text
+                
+            content = ""
+            if thought_text and verbosity != "none":
+                lines = thought_text.strip().split("\n")
+                if len(lines) > 15:
+                    lines = ["..."] + lines[-14:]
+                formatted_thought = "\n".join(f"> {line}" for line in lines)
+                
+                if "💭 *Thinking" in status_text:
+                    content = f"{status_text.strip()}\n{formatted_thought}"
+                else:
+                    content = f"💭 *Thinking...*\n{formatted_thought}\n\n{status_text}"
+            else:
+                content = status_text
+            return content
+        
         async def thinking_loop():
             nonlocal status_text
             dots = 1
             while is_running:
                 await asyncio.sleep(2.0)
-                if "⚙️" not in status_text and "✅" not in status_text:
+                if "⚙️" not in status_text and "✅" not in status_text and "❌" not in status_text:
                     status_text = f"\n\n💭 *Thinking{'.' * dots}*"
                     dots = (dots % 3) + 1
                     try:
-                        await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                        await self.adapter.edit_streaming(context, msg_id, get_display_content())
                     except Exception:
                         pass
 
@@ -470,16 +492,11 @@ class Router:
                 chunk_type = chunk.__class__.__name__
                 if chunk_type == "Thought":
                     thought_text += chunk.text
-                    if not response_text and verbosity != "none":
-                        lines = thought_text.strip().split("\n")
-                        if len(lines) > 15:
-                            lines = ["..."] + lines[-14:]
-                        formatted_thought = "\n".join(f"> {line}" for line in lines)
-                        await self.adapter.edit_streaming(context, msg_id, f"💭 *Thinking...*\n{formatted_thought}" + status_text)
+                    await self.adapter.edit_streaming(context, msg_id, get_display_content())
                 
                 elif chunk_type == "Text":
                     response_text += chunk.text
-                    await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                    await self.adapter.edit_streaming(context, msg_id, get_display_content())
                 
                 elif chunk_type == "ToolCall":
                     base_name = chunk.name.split(":")[-1] if ":" in chunk.name else chunk.name
@@ -501,7 +518,7 @@ class Router:
                         status_text = ""
                     
                     if status_text:
-                        await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                        await self.adapter.edit_streaming(context, msg_id, get_display_content())
                 
                 elif isinstance(chunk, ToolResult):
                     if verbosity == "normal":
@@ -523,7 +540,7 @@ class Router:
                     else:
                         status_text = ""
                     
-                    await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                    await self.adapter.edit_streaming(context, msg_id, get_display_content())
 
             # Final edit to clear the last status line so it does not pollute the history
             if status_text:
@@ -536,8 +553,11 @@ class Router:
             is_running = False
             if heartbeat_task:
                 heartbeat_task.cancel()
-            if dashboard_instance and on_telemetry in dashboard_instance.telemetry_listeners:
-                dashboard_instance.telemetry_listeners.remove(on_telemetry)
+            if dashboard_instance:
+                try:
+                    dashboard_instance.telemetry_listeners.remove(on_telemetry)
+                except ValueError:
+                    pass
 
         return response_text
 

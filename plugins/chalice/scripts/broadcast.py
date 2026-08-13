@@ -49,15 +49,17 @@ def main():
             # Antigravity CLI passes context JSON into the hook's stdin
             hook_context = json.load(sys.stdin)
             
-            # Infer hook type from payload structure since agy strips most env vars
-            if "toolResult" in hook_context:
-                hook_type = "PostToolUse"
-            elif "toolCall" in hook_context:
-                hook_type = "PreToolUse"
-            elif "terminationReason" in hook_context:
+            # Infer hook type from payload structure since agy strips most env vars.
+            # Order matters: Stop and PreInvocation first (most specific),
+            # then PostToolUse (toolCall + error), then PreToolUse (toolCall only).
+            if "terminationReason" in hook_context:
                 hook_type = "Stop"
             elif "initialNumSteps" in hook_context:
                 hook_type = "PreInvocation"
+            elif "toolCall" in hook_context and "error" in hook_context:
+                hook_type = "PostToolUse"
+            elif "toolCall" in hook_context:
+                hook_type = "PreToolUse"
             else:
                 hook_type = "Agent Lifecycle Hook"
             
