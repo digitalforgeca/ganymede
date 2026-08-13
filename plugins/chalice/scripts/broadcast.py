@@ -52,84 +52,77 @@ def _get_ppid(pid):
         return 0
 
 def main():
-    if not sys.stdin.isatty():
-        try:
-            # Antigravity CLI passes context JSON into the hook's stdin
-            hook_context = json.load(sys.stdin)
-            
-            # Infer hook type from payload structure since agy strips most env vars.
-            # Order matters: Stop and PreInvocation first (most specific),
-            # then PostToolUse (toolCall + error), then PreToolUse (toolCall only).
-            if "terminationReason" in hook_context:
-                hook_type = "Stop"
-            elif "initialNumSteps" in hook_context:
-                hook_type = "PreInvocation"
-            elif "toolCall" in hook_context and "error" in hook_context:
-                hook_type = "PostToolUse"
-            elif "toolCall" in hook_context:
-                hook_type = "PreToolUse"
-            else:
-                hook_type = "Agent Lifecycle Hook"
-            
-            # Extract basic context ID if present
-            conversation_id = hook_context.get("conversationId", "unknown")
-            
-            # Only broadcast if this agy session was spawned by Ganymede.
-            # _resolve_ganymede_conv_id() walks the PPID chain looking for a
-            # PID mapping file created by ManagedAgent.  If none is found,
-            # this is a standalone agy session (IDE, terminal) and we should
-            # not send telemetry to the gateway.
-            ganymede_id = _resolve_ganymede_conv_id()
-            if not ganymede_id:
-                # Not a Ganymede-managed session — exit silently.
-                return
+    # Single gate: if this agy session wasn't spawned by Ganymede, bail immediately.
+    ganymede_id = _resolve_ganymede_conv_id()
+    if not ganymede_id:
+        return
 
-            payload = {
-                "event": hook_type,
-                "level": "info",
-                "context": conversation_id,
-                "ganymede_conv_id": ganymede_id,
-                "payload": hook_context
-            }
-            
-            def _get_dashboard_port():
-                port = os.environ.get("GANYMEDE_PORT")
-                if port and port.isdigit():
-                    return int(port)
-                
-                rpc_port_path = os.path.expanduser("~/.ganymede/data/rpc_port.txt")
-                if os.path.exists(rpc_port_path):
-                    try:
-                        with open(rpc_port_path, "r") as f:
-                            val = f.read().strip()
-                            if val.isdigit():
-                                return int(val)
-                    except Exception:
-                        pass
-                
-                config_path = os.path.expanduser("~/.ganymede/config.yaml")
-                if os.path.exists(config_path):
-                    try:
-                        with open(config_path, "r") as f:
-                            for line in f:
-                                if line.strip().startswith("dashboard_port:"):
-                                    val = line.split(":", 1)[1].strip()
-                                    if val.isdigit():
-                                        return int(val)
-                    except Exception:
-                        pass
-                return 8180
+    if sys.stdin.isatty():
+        return
 
-            port = _get_dashboard_port()
-            req = urllib.request.Request(
-                f"http://127.0.0.1:{port}/api/telemetry",
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            urllib.request.urlopen(req, timeout=2.0)
-            
-        except Exception:
-            pass
+    try:
+        hook_context = json.load(sys.stdin)
+
+        # Infer hook type from payload structure since agy strips most env vars.
+        if "terminationReason" in hook_context:
+            hook_type = "Stop"
+        elif "initialNumSteps" in hook_context:
+            hook_type = "PreInvocation"
+        elif "toolCall" in hook_context and "error" in hook_context:
+            hook_type = "PostToolUse"
+        elif "toolCall" in hook_context:
+            hook_type = "PreToolUse"
+        else:
+            hook_type = "Agent Lifecycle Hook"
+
+        conversation_id = hook_context.get("conversationId", "unknown")
+
+        payload = {
+            "event": hook_type,
+            "level": "info",
+            "context": conversation_id,
+            "ganymede_conv_id": ganymede_id,
+            "payload": hook_context
+        }
+
+        def _get_dashboard_port():
+            port = os.environ.get("GANYMEDE_PORT")
+            if port and port.isdigit():
+                return int(port)
+
+            rpc_port_path = os.path.expanduser("~/.ganymede/data/rpc_port.txt")
+            if os.path.exists(rpc_port_path):
+                try:
+                    with open(rpc_port_path, "r") as f:
+                        val = f.read().strip()
+                        if val.isdigit():
+                            return int(val)
+                except Exception:
+                    pass
+
+            config_path = os.path.expanduser("~/.ganymede/config.yaml")
+            if os.path.exists(config_path):
+                try:
+                    with open(config_path, "r") as f:
+                        for line in f:
+                            if line.strip().startswith("dashboard_port:"):
+                                val = line.split(":", 1)[1].strip()
+                                if val.isdigit():
+                                    return int(val)
+                except Exception:
+                    pass
+            return 8180
+
+        port = _get_dashboard_port()
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/api/telemetry",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
+        urllib.request.urlopen(req, timeout=2.0)
+
+    except Exception:
+        pass
 
 if __name__ == "__main__":
     main()
