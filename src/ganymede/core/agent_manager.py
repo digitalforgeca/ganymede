@@ -741,6 +741,13 @@ class AgentManager:
         # but don't have matching agents — skip them silently.
         has_match = any(a.conversation_id == ganymede_conv_id for a in self._agents.values())
         if not has_match:
+            # Log at debug to diagnose PID map resolution failures
+            expected = [a.conversation_id for a in self._agents.values()]
+            if expected:
+                logger.debug("Telemetry conv_id mismatch — no managed agent matched",
+                             received=ganymede_conv_id,
+                             expected=expected,
+                             telemetry_event=data.get("event"))
             return
             
         # Update activity timestamp to prevent idle reaping during long tasks
