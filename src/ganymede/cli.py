@@ -55,10 +55,13 @@ def setup_logging(level_name: str, log_file: str = "ganymede_live.log"):
     root_logger = logging.getLogger()
     for handler in root_logger.handlers:
         handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
-    # Suppress overly verbose discord.py debug logs if we aren't in debug
+    # Suppress overly verbose library debug logs
     if numeric_level > logging.DEBUG:
         logging.getLogger("discord").setLevel(logging.WARNING)
         logging.getLogger("apscheduler").setLevel(logging.WARNING)
+    
+    # Always suppress aiosqlite because it logs every single DB execution
+    logging.getLogger("aiosqlite").setLevel(logging.WARNING)
         
     class UglyErrorFilter(logging.Filter):
         def filter(self, record):
