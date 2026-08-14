@@ -24,6 +24,7 @@ class Ganymede < Formula
 
     # Copy the plugins directory so the daemon can auto-install them during validation
     (libexec/"plugins").install "plugins/chalice"
+    (libexec/"plugins").install "plugins/medea"
 
     # Symlink the generated executable into the Homebrew bin directory
     bin.install_symlink libexec/"bin/ganymede"
