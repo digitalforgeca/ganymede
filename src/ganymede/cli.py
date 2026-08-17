@@ -603,7 +603,7 @@ def main():
     load_dotenv()
     
     parser = argparse.ArgumentParser(prog="ganymede")
-    parser.add_argument("command", nargs="?", default="start", help="Action to perform: start (default), stop, restart, status, sessions, mcp")
+    parser.add_argument("command", nargs="?", default=None, help="Action to perform: stop, restart, status, sessions, mcp")
     parser.add_argument("subargs", nargs="*", help="Sub-arguments for commands like 'sessions kill <name>'")
     parser.add_argument("--config", default=None, help="Path to YAML configuration file")
     parser.add_argument("--workspace", default=None, help="Target workspace path for the agent")
@@ -645,7 +645,7 @@ def main():
         subprocess.Popen([sys.argv[0]], start_new_session=True, stdout=log_file, stderr=log_file)
         sys.exit(0)
 
-    if args.command not in ("run", "start"):
+    if args.command not in ("run", None):
         print(f"Error: Unknown command '{args.command}'.")
         parser.print_help()
         sys.exit(1)
