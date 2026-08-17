@@ -25,6 +25,7 @@ class SyncedPlatformsDict(dict):
 class AgentConfig:
     name: str = "Agent"
     model: str = "Gemini 3.1 Pro (High)"
+    raw_model_string: str = None
     workspace: str = "~/dev"
     capabilities: dict[str, bool] = field(default_factory=lambda: {
         "read_tools": True,
@@ -177,6 +178,8 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
             config.agent.workspace = args.workspace
         if getattr(args, "log_level", None):
             config.log_level = args.log_level
+        if getattr(args, "model", None):
+            config.agent.raw_model_string = args.model
 
     # Final expansions & setup
     config.agent.workspace = os.path.expanduser(config.agent.workspace)

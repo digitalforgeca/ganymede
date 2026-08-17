@@ -607,6 +607,7 @@ def main():
     parser.add_argument("subargs", nargs="*", help="Sub-arguments for commands like 'sessions kill <name>'")
     parser.add_argument("--config", default=None, help="Path to YAML configuration file")
     parser.add_argument("--workspace", default=None, help="Target workspace path for the agent")
+    parser.add_argument("--model", default=None, help="Force a specific model string, bypassing any config mappings")
     parser.add_argument("--log-level", default=None, help="Logging level")
     parser.add_argument("--platform", default=None, help="Target platform (discord, console)")
     

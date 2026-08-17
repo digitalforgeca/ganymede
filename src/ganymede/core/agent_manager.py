@@ -131,6 +131,7 @@ class CliResponse:
                         yield chunk
                         continue # Re-enter loop without checking timeouts yet
                     except asyncio.TimeoutError:
+                        logger.debug(f"[_read_chunks] asyncio.TimeoutError caught for {self.agent.conversation_id}")
                         pass
                         
                     # Periodically verify the tmux session is still alive
@@ -139,11 +140,17 @@ class CliResponse:
                         if res.returncode != 0:
                             logger.error("Tmux session died unexpectedly during turn", conversation_id=self.agent.conversation_id)
                             chalice_error = getattr(self.agent, "_chalice_error", None)
-                            # If we caught an error before it died, break and let normal error processing handle it
                             if chalice_error:
                                 break
                             yield Text(text="⚠️ *The agent process terminated unexpectedly (e.g. quota limit reached or crash).* Check logs.", step_index=0)
                             return
+                        else:
+                            res_pane = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", self.agent.tmux_session_name, capture_output=True, text=True)
+                            logger.debug(f"[_read_chunks] Tmux pane text captured (length {len(res_pane.stdout)})")
+                            if "Verifying your account..." in res_pane.stdout and "account eligibility" in res_pane.stdout:
+                                logger.error("Agent hit Google account verification hold", conversation_id=self.agent.conversation_id)
+                                yield Text(text="⚠️ **Google AI Account Verification Hold:**\nThe `agy` CLI is currently locked because Google is verifying your account eligibility. It refuses to process any prompts. Please wait before trying again.", step_index=0)
+                                return
 
                     now = time.time()
                     
@@ -178,7 +185,7 @@ class CliResponse:
             self.agent._chalice_error = None  # Consume the error
             
             if chalice_error and "429" in str(chalice_error) and ("RESOURCE_EXHAUSTED" in str(chalice_error) or "quota" in str(chalice_error).lower()) and attempts < max_attempts:
-                fallback_model = "gemini-3.1-pro-high"
+                fallback_model = "gemini-pro-agent"
                 yield await self._handle_429_fallback(fallback_model)
                 continue
             
@@ -427,33 +434,39 @@ class ManagedAgent:
             
         # Model resolution — ALWAYS pass --model to prevent agy's global
         # settings.json from applying its own model (which may be Opus/Claude).
-        # Priority: model.txt (per-channel /model override) > config.agent.model
-        model_txt = os.path.join(sdk_brain_dir, "model.txt")
-        if os.path.exists(model_txt):
-            with open(model_txt, "r") as f:
-                resolved_model = f.read().strip().strip("\"'")
-            if not resolved_model:
-                resolved_model = self.config.agent.model
+        raw_override = getattr(self.config.agent, "raw_model_string", None)
+        if raw_override:
+            resolved_model = raw_override
         else:
-            resolved_model = self.config.agent.model
+            # Priority: model.txt (per-channel /model override) > config.agent.model
+            model_txt = os.path.join(sdk_brain_dir, "model.txt")
+            if os.path.exists(model_txt):
+                with open(model_txt, "r") as f:
+                    resolved_model = f.read().strip().strip("\"'")
+                if not resolved_model:
+                    resolved_model = self.config.agent.model
+            else:
+                resolved_model = self.config.agent.model
 
-        # Reverse map human-readable names to agy slugs
-        reverse_map = {
-            "Gemini 3.1 Pro (High)": "gemini-3.1-pro-high",
-            "Gemini 3.1 Pro (Low)": "gemini-3.1-pro-low",
-            "Gemini Flash": "gemini-pro-agent",
-            "Gemini 3.5 Flash (High)": "gemini-3.5-flash-high",
-            "Gemini 3.5 Flash (Medium)": "gemini-3.5-flash-medium",
-            "Gemini 3.5 Flash (Low)": "gemini-3.5-flash-low",
-            "Gemini 3.6 Flash (High)": "gemini-3.6-flash-high",
-            "Gemini 3.6 Flash (Medium)": "gemini-3.6-flash-medium",
-            "Gemini 3.6 Flash (Low)": "gemini-3.6-flash-low",
-            "Claude 3.5 Sonnet (4-6)": "claude-sonnet-4-6",
-            "Claude Opus (Thinking)": "claude-opus-4-6-thinking",
-        }
-        resolved_model = reverse_map.get(resolved_model, resolved_model)
+            # Reverse map human-readable names to agy slugs
+            reverse_map = {
+                "Gemini 3.1 Pro (High)": "gemini-pro-agent",
+                "Gemini 3.1 Pro (Low)": "gemini-flash-agent",
+                "gemini-3.1-pro-high": "gemini-pro-agent",
+                "gemini-3.1-pro-low": "gemini-flash-agent",
+                "Gemini Flash": "gemini-pro-agent",
+                "Gemini 3.5 Flash (High)": "gemini-3.5-flash-high",
+                "Gemini 3.5 Flash (Medium)": "gemini-3.5-flash-medium",
+                "Gemini 3.5 Flash (Low)": "gemini-3.5-flash-low",
+                "Gemini 3.6 Flash (High)": "gemini-3.6-flash-high",
+                "Gemini 3.6 Flash (Medium)": "gemini-3.6-flash-medium",
+                "Gemini 3.6 Flash (Low)": "gemini-3.6-flash-low",
+                "Claude 3.5 Sonnet (4-6)": "claude-sonnet-4-6",
+                "Claude Opus (Thinking)": "claude-opus-4-6-thinking",
+            }
+            resolved_model = reverse_map.get(resolved_model, resolved_model)
 
-        args.extend(["--model", resolved_model])
+        # args.extend(["--model", resolved_model])
             
         if getattr(self.config.agent, "skip_permissions", True):
             args.append("--dangerously-skip-permissions")
@@ -664,8 +677,8 @@ class ManagedAgent:
                 # Wait up to 5 seconds for it to exit gracefully
                 for _ in range(10):
                     await asyncio.sleep(0.5)
-                    out, err, code = await async_run("tmux", "has-session", "-t", self.tmux_session_name, capture_output=True)
-                    if code != 0:
+                    res = await async_run("tmux", "has-session", "-t", self.tmux_session_name, capture_output=True)
+                    if res.returncode != 0:
                         break # Session is dead!
                 else:
                     logger.warning("Session did not close gracefully in time, force killing", session=self.tmux_session_name)
