@@ -311,12 +311,12 @@ discord:
       allowed_guilds: [111]
       namespace: "planner-memories"
       agent:
-        system_instructions: "planner inst"
+        name: "planner inst"
     - name: "orchestrator"
       token: "orch_tok"
       allowed_guilds: [222]
       agent:
-        system_instructions: "orch inst"
+        name: "worker inst"
 """
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
             f.write(yaml_content)
@@ -349,17 +349,17 @@ discord:
                 }
                 if "agent" in bot_raw:
                     agent_overrides = bot_raw["agent"]
-                    bot_config.agent.system_instructions = agent_overrides.get("system_instructions", bot_config.agent.system_instructions)
+                    bot_config.agent.name = agent_overrides.get("name", bot_config.agent.name)
                 instances.append(bot_config)
                 
             self.assertEqual(len(instances), 2)
             self.assertEqual(instances[0].platforms["discord"]["name"], "planner")
             self.assertEqual(instances[0].platforms["discord"]["namespace"], "planner-memories")
-            self.assertEqual(instances[0].agent.system_instructions, "planner inst")
+            self.assertEqual(instances[0].agent.name, "planner inst")
+            self.assertEqual(instances[1].agent.name, "worker inst")
             
             self.assertEqual(instances[1].platforms["discord"]["name"], "orchestrator")
             self.assertIsNone(instances[1].platforms["discord"]["namespace"])
-            self.assertEqual(instances[1].agent.system_instructions, "orch inst")
             
         finally:
             if os.path.exists(temp_name):

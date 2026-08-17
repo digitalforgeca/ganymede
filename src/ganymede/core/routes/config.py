@@ -32,8 +32,8 @@ async def handle_models_get(request: Request):
         
         # Map raw slugs to pretty formatted strings
         format_map = {
-            "gemini-3.1-pro-high": "Gemini 3.1 Pro (High)",
-            "gemini-3.1-pro-low": "Gemini 3.1 Pro (Low)",
+            "gemini-pro-agent": "Gemini 3.1 Pro (High)",
+            "gemini-flash-agent": "Gemini 3.1 Pro (Low)",
             "gemini-3.5-flash-high": "Gemini 3.5 Flash (High)",
             "gemini-3.5-flash-medium": "Gemini 3.5 Flash (Medium)",
             "gemini-3.5-flash-low": "Gemini 3.5 Flash (Low)",
