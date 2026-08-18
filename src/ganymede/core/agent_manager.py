@@ -519,11 +519,7 @@ class ManagedAgent:
                 original_model = settings.get("model")
                 settings_changed = False
                 
-                # Swap model if needed
-                if original_model != resolved_model:
-                    settings["model"] = resolved_model
-                    settings_changed = True
-                    logger.info("Swapped agy settings.json model for spawn", from_model=original_model, to_model=resolved_model)
+                # Model swapping logic disabled by request
                 
                 # Pre-trust the workspace so agy doesn't show a blocking trust dialog
                 trusted = settings.get("trustedWorkspaces", [])
@@ -575,16 +571,7 @@ class ManagedAgent:
                     break
                 await asyncio.sleep(0.5)
             
-            # Restore the original model so the user's IDE sessions aren't affected
-            if original_model is not None and original_model != resolved_model:
-                try:
-                    with open(settings_path, "r") as f:
-                        settings = json.load(f)
-                    settings["model"] = original_model
-                    with open(settings_path, "w") as f:
-                        json.dump(settings, f, indent=4)
-                except Exception:
-                    pass
+            # Model restoration logic disabled by request
 
 
     async def chat(self, prompt: str) -> CliResponse:
