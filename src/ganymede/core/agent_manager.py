@@ -466,7 +466,7 @@ class ManagedAgent:
             }
             resolved_model = reverse_map.get(resolved_model, resolved_model)
 
-        # args.extend(["--model", resolved_model])
+        args.extend(["--model", resolved_model])
             
         if getattr(self.config.agent, "skip_permissions", True):
             args.append("--dangerously-skip-permissions")
@@ -506,20 +506,13 @@ class ManagedAgent:
         
         logger.info("Spawning decoupled agy in tmux", command=cmd, session=session_name, model=resolved_model, context=self.context_key)
         
-        # Temporarily override the model in agy's global settings.json.
-        # agy's --model flag is unreliable: settings.json takes precedence.
-        # We serialize spawns with _settings_lock so concurrent sessions don't
-        # clobber each other, and restore the original model after agy boots.
+        # Pre-trust the workspace so agy doesn't show a blocking trust dialog
         settings_path = os.path.expanduser("~/.gemini/antigravity-cli/settings.json")
         async with ManagedAgent._settings_lock:
-            original_model = None
             try:
                 with open(settings_path, "r") as f:
                     settings = json.load(f)
-                original_model = settings.get("model")
                 settings_changed = False
-                
-                # Model swapping logic disabled by request
                 
                 # Pre-trust the workspace so agy doesn't show a blocking trust dialog
                 trusted = settings.get("trustedWorkspaces", [])
@@ -571,7 +564,7 @@ class ManagedAgent:
                     break
                 await asyncio.sleep(0.5)
             
-            # Model restoration logic disabled by request
+
 
 
     async def chat(self, prompt: str) -> CliResponse:
