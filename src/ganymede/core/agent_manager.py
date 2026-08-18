@@ -567,7 +567,7 @@ class ManagedAgent:
                     continue
                 
                 if "? for shortcuts" in pane_text or "Error" in pane_text:
-                    await asyncio.sleep(0.5)  # Give it just a moment to settle
+                    await asyncio.sleep(2.0)  # Give agy time to complete background auth handshakes
                     break
                 await asyncio.sleep(0.5)
             
