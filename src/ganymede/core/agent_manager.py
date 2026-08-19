@@ -110,7 +110,12 @@ class CliResponse:
         while attempts < max_attempts:
             attempts += 1
             
-            # Clear the event before we wait
+            # Clear the event and queue before we wait
+            while not self.agent.chunk_queue.empty():
+                try:
+                    self.agent.chunk_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
             self.agent.turn_completed_event.clear()
             self.agent.aborted = False
             
@@ -318,25 +323,20 @@ class CliResponse:
         except Exception as e:
             logger.error("Failed to parse agent transcript", error=str(e), path=transcript_path)
 
-        # Build message with tool calls formatting
-        agent_message = final_text
+        # Extract interactive tools and artifacts from tool calls
         artifacts_created = []
         
         if current_turn_tool_calls:
-            tool_text = ""
             for t in current_turn_tool_calls:
                 t_name = t.get("name", "tool")
                 args = t.get("args", {})
-                args_formatted = ""
                 args_obj = {}
                 try:
                     import json
                     if isinstance(args, str):
                         args_obj = json.loads(args)
-                        args_formatted = json.dumps(args_obj, indent=2)
                     else:
                         args_obj = args
-                        args_formatted = json.dumps(args, indent=2)
                         
                     if t_name in ("write_to_file", "replace_file_content", "multi_replace_file_content"):
                         metadata = args_obj.get("ArtifactMetadata", {})
@@ -346,28 +346,18 @@ class CliResponse:
                             if not any(a["file"] == target_file for a in artifacts_created):
                                 artifacts_created.append({"file": target_file, "summary": summary})
                 except Exception:
-                    args_formatted = str(args)
+                    pass
                     
                 if "ask_question" in t_name or "ask_permission" in t_name:
                     if not hasattr(self, "interactive_tools"):
                         self.interactive_tools = []
                     self.interactive_tools.append({"name": t_name, "args": args_obj})
-                    continue
-
-                tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
-            
-            final_text = tool_text.strip()
-        else:
-            final_text = ""
 
         # Merge artifacts globally captured from telemetry (which covers subagents!)
         captured_artifacts = getattr(self.agent, "_artifacts_this_turn", [])
         for art in captured_artifacts:
             if not any(a["file"] == art["file"] for a in artifacts_created):
                 artifacts_created.append(art)
-
-        if agent_message:
-            final_text = (final_text + "\n\n" + agent_message) if final_text else agent_message
                 
         return final_text, artifacts_created
 
@@ -629,6 +619,18 @@ class ManagedAgent:
                 else:
                     final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
             
+            # Flush any stale chunks/events from previous turns or background tasks
+            while not self.chunk_queue.empty():
+                try:
+                    self.chunk_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+            self.turn_completed_event.clear()
+            self.aborted = False
+            self._chalice_error = None
+            self._chalice_transcript_path = None
+            self._artifacts_this_turn = []
+
             # Write prompt as simulated keystrokes to tmux session.
             import uuid
             buf_name = f"buf-{uuid.uuid4().hex[:8]}"
