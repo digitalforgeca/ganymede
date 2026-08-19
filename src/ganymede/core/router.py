@@ -1,5 +1,7 @@
 import asyncio
 import time
+import os
+import re
 from typing import Any
 import structlog
 import json
@@ -20,6 +22,54 @@ class Router:
         self._locks: dict[ContextKey, asyncio.Lock] = {}
         self._autonomous_msgs: dict[str, dict] = {}
         self._main_agent_ids: dict[str, str] = {}
+
+    def _parse_transcript_from_path(self, transcript_path: str) -> tuple[str, list]:
+        """Parses an agent JSONL transcript to extract the latest turn's text and artifacts."""
+        final_text = ""
+        artifacts_created = []
+        try:
+            with open(transcript_path, 'r') as f:
+                lines = f.readlines()
+                
+            start_idx = 0
+            for i in range(len(lines) - 1, -1, -1):
+                try:
+                    data = json.loads(lines[i])
+                    if data.get("type") in ("USER_INPUT", "SYSTEM_MESSAGE") or data.get("source") in ("USER_EXPLICIT", "SYSTEM") or "<SYSTEM_MESSAGE>" in data.get("content", ""):
+                        start_idx = i
+                        break
+                except Exception:
+                    continue
+                    
+            for i in range(start_idx, len(lines)):
+                try:
+                    data = json.loads(lines[i])
+                    if data.get("type") in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
+                        content = data.get("content", "")
+                        if content:
+                            final_text = content
+                    if data.get("tool_calls"):
+                        for t in data.get("tool_calls"):
+                            t_name = t.get("name", "")
+                            t_args = t.get("args", {})
+                            if isinstance(t_args, str):
+                                try:
+                                    t_args = json.loads(t_args)
+                                except Exception:
+                                    t_args = {}
+                            if t_name in ("write_to_file", "replace_file_content", "multi_replace_file_content"):
+                                meta = t_args.get("ArtifactMetadata", {})
+                                if meta and (meta.get("UserFacing") or meta.get("RequestFeedback")):
+                                    tf = t_args.get("TargetFile")
+                                    summary = meta.get("Summary", "")
+                                    if tf and not any(a["file"] == tf for a in artifacts_created):
+                                        artifacts_created.append({"file": tf, "summary": summary})
+                except Exception:
+                    continue
+        except Exception as e:
+            logger.error("Failed to parse transcript file", error=str(e), path=transcript_path)
+            
+        return final_text, artifacts_created
 
     async def global_telemetry_listener(self, data: dict) -> None:
         """Global listener that permanently streams subagent and background goal telemetry into the channel."""
@@ -45,8 +95,6 @@ class Router:
         if event not in ("PreToolUse", "PostToolUse", "Stop"):
             return
 
-        import re
-        from ganymede.core import ContextKey
         match = re.search(r"_(\d{17,20})$", ganymede_conv_id)
         if not match:
             return
@@ -72,6 +120,117 @@ class Router:
         if not is_subagent and not is_autonomous_main:
             # Ephemeral streaming handles the active main agent turn
             return
+
+        state = self._autonomous_msgs.setdefault(conv_uuid, {"msg_id": None, "lines": [], "start_time": time.time()})
+            
+        if event == "Stop" and is_autonomous_main:
+            # Main agent finished an autonomous turn (e.g. background task completion or timer)
+            transcript_path = payload.get("transcriptPath")
+            if not transcript_path and self.agent_manager:
+                managed_agent = self.agent_manager._agents.get(context)
+                if managed_agent:
+                    transcript_path = getattr(managed_agent, "_chalice_transcript_path", None)
+                    if not transcript_path:
+                        transcript_path = os.path.expanduser(
+                            f"~/.gemini/antigravity-cli/brain/{managed_agent.sdk_conversation_id}/.system_generated/logs/transcript.jsonl"
+                        )
+
+            final_text = ""
+            artifacts_created = []
+            if transcript_path and os.path.exists(transcript_path):
+                final_text, artifacts_created = self._parse_transcript_from_path(transcript_path)
+
+            # Merge any globally captured artifacts from telemetry
+            if self.agent_manager:
+                managed_agent = self.agent_manager._agents.get(context)
+                if managed_agent:
+                    captured = getattr(managed_agent, "_artifacts_this_turn", [])
+                    for art in captured:
+                        if not any(a["file"] == art["file"] for a in artifacts_created):
+                            artifacts_created.append(art)
+                    managed_agent._artifacts_this_turn = []
+
+            # Format artifact review section if artifacts were created
+            if artifacts_created:
+                port = getattr(self.config.agent, "dashboard_port", 8180)
+                dash_url = f"http://127.0.0.1:{port}"
+                art_text = "**📄 Artifacts Requiring Review:**\n"
+                channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{context.ganymede_conv_id}")
+                os.makedirs(channel_brain_dir, exist_ok=True)
+                import shutil
+                for art in artifacts_created:
+                    target_file = art["file"]
+                    name = os.path.basename(target_file)
+                    if os.path.exists(target_file):
+                        dest_file = os.path.join(channel_brain_dir, name)
+                        if target_file != dest_file:
+                            try:
+                                shutil.copy2(target_file, dest_file)
+                            except Exception:
+                                pass
+                    art_text += f"- **{name}**: {art['summary']}\n"
+                art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
+                final_text = (final_text + "\n\n" + art_text) if final_text else art_text.strip()
+
+            if not final_text:
+                final_text = "\n\n".join(state["lines"]) if state["lines"] else "🏁 *Autonomous task finished.*"
+
+            # Extract artifact files for attachment
+            artifact_files = self._extract_artifact_files(None, final_text)
+            for art in artifacts_created:
+                fpath = art["file"]
+                if fpath and fpath not in artifact_files and os.path.isabs(fpath) and os.path.isfile(fpath):
+                    artifact_files.append(fpath)
+
+            start_ts = state.get("start_time", time.time())
+            duration = round(time.time() - start_ts, 2)
+            tokens_count = len(final_text) // 4
+            model_name = getattr(self.config.agent, "model", "gemini-3.7-flash-high")
+
+            metadata = {
+                "tokens": tokens_count,
+                "duration": duration,
+                "model": model_name,
+                "artifacts": len(artifacts_created),
+                "artifact_files": artifact_files,
+                "tasks": payload.get("activeTasks", 0),
+                "subagents": payload.get("activeSubagents", 0),
+            }
+
+            if self.adapter:
+                if state.get("msg_id"):
+                    try:
+                        await self.adapter.edit_streaming(context, state["msg_id"], final_text)
+                        await self.adapter.send_streaming_end(context, state["msg_id"], metadata)
+                    except Exception as e:
+                        logger.error("Failed to finalize autonomous streaming message", error=str(e))
+                else:
+                    try:
+                        new_msg_id = await self.adapter.send_streaming_start(
+                            context, initial_text=final_text, persist_header=f"🤖 **Background Task Complete**"
+                        )
+                        await self.adapter.send_streaming_end(context, new_msg_id, metadata)
+                    except Exception as e:
+                        logger.error("Failed to send autonomous response message", error=str(e))
+
+            if self.db:
+                try:
+                    bot_id = "bot"
+                    if self.adapter and hasattr(self.adapter, "user") and self.adapter.user:
+                        bot_id = str(self.adapter.user.id)
+                    await self.db.save_message(
+                        context=context,
+                        author_id=bot_id,
+                        role="assistant",
+                        content=final_text,
+                        tokens=tokens_count
+                    )
+                except Exception as e:
+                    logger.error("Failed to save autonomous response to DB", error=str(e))
+
+            if conv_uuid in self._autonomous_msgs:
+                del self._autonomous_msgs[conv_uuid]
+            return
             
         tool = tool_call.get("name", "tool")
         args = tool_call.get("args", {})
@@ -94,7 +253,6 @@ class Router:
         ts = f"<t:{int(time.time())}:T>"
         line = f"{prefix}`{ts}` {status}"
         
-        state = self._autonomous_msgs.setdefault(conv_uuid, {"msg_id": None, "lines": []})
         state["lines"].append(line)
         
         # Keep last 15 lines to avoid hitting 2000 char limits
@@ -562,9 +720,7 @@ class Router:
         return response_text
 
     def _extract_artifact_files(self, response: Any, response_text: str) -> list[str]:
-        import re
-        import os
-        artifact_files = list(getattr(response, "artifact_files", []))
+        artifact_files = list(getattr(response, "artifact_files", [])) if response else []
         file_links = re.findall(r'\[.*?\]\(file://(.*?)\)|`?file://(.*?)`?', response_text)
         for match in file_links:
             path = match[0] or match[1]

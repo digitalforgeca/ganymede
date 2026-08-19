@@ -389,3 +389,71 @@ discord:
                 ganymede.cli._lock_file.close()
                 ganymede.cli._lock_file = None
             shutil.rmtree(temp_dir)
+
+    async def test_autonomous_turn_telemetry_transmission(self):
+        """Tests that when an autonomous turn finishes, global_telemetry_listener extracts the agent response and transmits it to Discord."""
+        import tempfile
+        import json
+        from ganymede.core.router import Router
+        
+        router = Router(self.config, self.agent_manager, None, self.db)
+        mock_adapter = MagicMock()
+        mock_adapter.send_streaming_start = AsyncMock(return_value="test_stream_id")
+        mock_adapter.edit_streaming = AsyncMock()
+        mock_adapter.send_streaming_end = AsyncMock()
+        mock_adapter.user = MagicMock()
+        mock_adapter.user.id = 123456789
+        router.set_adapter(mock_adapter)
+
+        # Create temporary transcript
+        with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
+            temp_path = f.name
+            lines = [
+                {"step_index": 0, "source": "USER_EXPLICIT", "type": "USER_INPUT", "content": "Snapshot and rebuild"},
+                {"step_index": 1, "source": "MODEL", "type": "PLANNER_RESPONSE", "content": "Waiting for snapshot task..."},
+                {"step_index": 2, "source": "SYSTEM", "type": "SYSTEM_MESSAGE", "content": "<SYSTEM_MESSAGE> Task finished"},
+                {"step_index": 3, "source": "MODEL", "type": "PLANNER_RESPONSE", "content": "Snapshot created and verified successfully!"}
+            ]
+            for line in lines:
+                f.write(json.dumps(line) + "\n")
+
+        try:
+            conv_uuid = "test-autonomous-uuid-123"
+            channel_id = "1525376171636822096"
+            ganymede_conv_id = f"ganymede_discord_{channel_id}"
+            
+            # First tool call establishes main_agent_id
+            await router.global_telemetry_listener({
+                "event": "PreToolUse",
+                "ganymede_conv_id": ganymede_conv_id,
+                "payload": {
+                    "conversationId": conv_uuid,
+                    "toolCall": {"name": "run_command", "args": {"toolAction": "Validating snapshot"}}
+                }
+            })
+            
+            # Stop hook fires when autonomous turn completes
+            await router.global_telemetry_listener({
+                "event": "Stop",
+                "ganymede_conv_id": ganymede_conv_id,
+                "payload": {
+                    "conversationId": conv_uuid,
+                    "transcriptPath": temp_path,
+                    "terminationReason": "NO_TOOL_CALL"
+                }
+            })
+
+            # Verify streaming edit and end were called with the parsed agent response
+            mock_adapter.edit_streaming.assert_called()
+            mock_adapter.send_streaming_end.assert_called()
+            call_args = mock_adapter.edit_streaming.call_args_list[-1]
+            self.assertIn("Snapshot created and verified successfully!", call_args[0][2])
+            
+            # Verify response was saved to database
+            messages = await self.db.get_history(ContextKey("discord", channel_id, None), limit=5)
+            self.assertTrue(any("Snapshot created and verified successfully!" in m.get("content", "") for m in messages))
+
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
