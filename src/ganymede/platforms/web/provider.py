@@ -115,6 +115,7 @@ class WebProvider(BasePlatformProvider):
 
     def __init__(self, config: Any, router: Any, db: Any, bot_id: str = "default", bot_config: Any = None):
         super().__init__(config, router, db, bot_id)
+        self.platform = "web"
         self.adapter = WebAdapter(config)
         
     async def start(self) -> None:

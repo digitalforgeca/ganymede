@@ -95,12 +95,20 @@ class Router:
         if event not in ("PreToolUse", "PostToolUse", "Stop"):
             return
 
-        match = re.search(r"_(\d{17,20})$", ganymede_conv_id)
-        if not match:
+        parts = ganymede_conv_id.split("_")
+        if len(parts) >= 3 and parts[0] == "ganymede":
+            platform = parts[1]
+            channel_id = parts[2]
+            thread_id = parts[3] if len(parts) > 3 else None
+            context = ContextKey(platform, channel_id, thread_id)
+        else:
             return
-            
-        channel_id = match.group(1)
-        context = ContextKey("discord", channel_id, None)
+        
+        # Only process telemetry for contexts managed by this router's agent_manager
+        if not self.agent_manager or context not in self.agent_manager._agents:
+            return
+
+        managed_agent = self.agent_manager._agents[context]
         
         conv_uuid = payload.get("conversationId")
         if not conv_uuid:
@@ -113,9 +121,8 @@ class Router:
             main_id = conv_uuid
             
         is_subagent = (conv_uuid != main_id)
-        
-        lock = self._locks.get(context)
-        is_autonomous_main = not is_subagent and (not lock or not lock.locked())
+        is_interactive = getattr(managed_agent, "is_interactive_turn", False)
+        is_autonomous_main = not is_subagent and not is_interactive
         
         if not is_subagent and not is_autonomous_main:
             # Ephemeral streaming handles the active main agent turn

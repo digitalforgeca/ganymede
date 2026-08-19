@@ -74,14 +74,8 @@ async def handle_telemetry_post(request: Request):
         except Exception as e:
             logger.error("Failed to write telemetry to database", error=str(e))
         
-        # Broadcast to all connected dashboard clients
-        for client in server.dashboard_clients:
-            if client.client_state.name == "CONNECTED":
-                await client.send_json(data)
-                
-        # Broadcast to internal python listeners
-        for listener in getattr(server, "telemetry_listeners", []):
-            asyncio.create_task(listener(data))
+        # Broadcast to all connected dashboard clients and internal listeners
+        await server.broadcast_telemetry(data)
                 
         return {"status": "received", "event": data.get("event", "unknown")}
     except json.JSONDecodeError:

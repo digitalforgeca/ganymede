@@ -103,159 +103,162 @@ class CliResponse:
         yield Text(text=self.response_text, step_index=0)
 
     async def _read_chunks(self):
-        attempts = 0
-        max_attempts = 2
-        chalice_error = None
-        
-        while attempts < max_attempts:
-            attempts += 1
+        try:
+            attempts = 0
+            max_attempts = 2
+            chalice_error = None
             
-            # Clear the event and queue before we wait
-            while not self.agent.chunk_queue.empty():
-                try:
-                    self.agent.chunk_queue.get_nowait()
-                except asyncio.QueueEmpty:
-                    break
-            self.agent.turn_completed_event.clear()
-            self.agent.aborted = False
-            
-            try:
-                # Wait for Chalice to fire the Stop hook signaling generation is done.
-                # Check for activity exactly as requested: 15 minute wait, then 2 minute grace period if silent.
-                activity_timeout = 900  # 15 minutes
-                grace_period = 120      # 2 minutes
-                hard_ceiling = 7200     # 2 hours hard cap
-                start_wait = time.time()
+            while attempts < max_attempts:
+                attempts += 1
                 
-                while True:
+                # Clear the event and queue before we wait
+                while not self.agent.chunk_queue.empty():
                     try:
-                        # Sleep for a shorter interval (5 seconds) so we can periodically check tmux health
-                        chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=5.0)
-                        if chunk is None:
-                            break  # Turn completed successfully
-                        yield chunk
-                        continue # Re-enter loop without checking timeouts yet
-                    except asyncio.TimeoutError:
-                        logger.debug(f"[_read_chunks] asyncio.TimeoutError caught for {self.agent.conversation_id}")
-                        pass
-                        
-                    # Periodically verify the tmux session is still alive
-                    if getattr(self.agent, "tmux_session_name", None):
-                        res = await async_run("tmux", "has-session", "-t", self.agent.tmux_session_name, capture_output=True)
-                        if res.returncode != 0:
-                            logger.error("Tmux session died unexpectedly during turn", conversation_id=self.agent.conversation_id)
-                            chalice_error = getattr(self.agent, "_chalice_error", None)
-                            if chalice_error:
-                                break
-                            yield Text(text="⚠️ *The agent process terminated unexpectedly (e.g. quota limit reached or crash).* Check logs.", step_index=0)
-                            return
-                        else:
-                            res_pane = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", self.agent.tmux_session_name, capture_output=True, text=True)
-                            logger.debug(f"[_read_chunks] Tmux pane text captured (length {len(res_pane.stdout)})")
-                            if "Verifying your account..." in res_pane.stdout and "account eligibility" in res_pane.stdout:
-                                logger.error("Agent hit Google account verification hold", conversation_id=self.agent.conversation_id)
-                                yield Text(text="⚠️ **Google AI Account Verification Hold:**\nThe `agy` CLI is currently locked because Google is verifying your account eligibility. It refuses to process any prompts. Please wait before trying again.", step_index=0)
-                                return
-
-                    now = time.time()
+                        self.agent.chunk_queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        break
+                self.agent.turn_completed_event.clear()
+                self.agent.aborted = False
+                
+                try:
+                    # Wait for Chalice to fire the Stop hook signaling generation is done.
+                    # Check for activity exactly as requested: 15 minute wait, then 2 minute grace period if silent.
+                    activity_timeout = 900  # 15 minutes
+                    grace_period = 120      # 2 minutes
+                    hard_ceiling = 7200     # 2 hours hard cap
+                    start_wait = time.time()
                     
-                    if now - start_wait > hard_ceiling:
-                        logger.error("Agent hit hard ceiling timeout", conversation_id=self.agent.conversation_id)
-                        yield Text(text="[Error: Agent hit hard 2-hour maximum execution limit]", step_index=0)
-                        return
-                        
-                    # Has the agent emitted telemetry in the last 15 minutes?
-                    if now - self.agent.last_active > activity_timeout:
-                        if now - self.agent.last_active > (activity_timeout + grace_period):
-                            logger.error("Agent failed grace period and timed out", conversation_id=self.agent.conversation_id)
-                            yield Text(text="[Error: Agent timed out (no activity detected for 17 minutes)]", step_index=0)
-                            return
-                        else:
-                            if not hasattr(self, "_warned_grace_period"):
-                                logger.warning("Agent appears inactive, entering 2-minute grace period", conversation_id=self.agent.conversation_id)
-                                self._warned_grace_period = True
-            except Exception as e:
-                logger.error("Error waiting for agent turn completion", error=str(e), conversation_id=self.agent.conversation_id)
-                yield Text(text="[Error: Internal wait error]", step_index=0)
-                return
-
-            # Check if we were woken by an abort (/stop) rather than clean completion
-            if self.agent.aborted:
-                logger.info("Agent turn aborted by /stop", conversation_id=self.agent.conversation_id)
-                return
-
-            # Check if the Stop hook carried an error (e.g., API rate limit / quota exhaustion).
-            # Surface it immediately so the user sees what went wrong.
-            chalice_error = self.agent._chalice_error
-            self.agent._chalice_error = None  # Consume the error
-            
-            if chalice_error and "429" in str(chalice_error) and ("RESOURCE_EXHAUSTED" in str(chalice_error) or "quota" in str(chalice_error).lower()) and attempts < max_attempts:
-                fallback_model = "gemini-pro-agent"
-                yield await self._handle_429_fallback(fallback_model)
-                continue
-            
-            break
-
-        # Turn is complete. Read the clean output from the transcript path
-        transcript_path = self.agent._chalice_transcript_path
-        if not transcript_path:
-            transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.sdk_conversation_id}/.system_generated/logs/transcript.jsonl")
-            
-        if not transcript_path or not os.path.exists(transcript_path):
-            error_msg = chalice_error or "No transcript available from agent"
-            logger.error("No transcript path from Chalice telemetry",
-                         conversation_id=self.agent.conversation_id,
-                         transcript_path=transcript_path,
-                         chalice_error=chalice_error)
-            yield Text(text=f"⚠️ {error_msg}", step_index=0)
-            return
-            
-        final_text, artifacts_created = self._parse_transcript(transcript_path)
-
-        # Process syncing and generating the Discord notification
-        if artifacts_created:
-            port = getattr(self.agent.config, "dashboard_port", 8180)
-            dash_url = f"http://127.0.0.1:{port}"
-            art_text = "**📄 Artifacts Requiring Review:**\n"
-            
-            channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.conversation_id}")
-            os.makedirs(channel_brain_dir, exist_ok=True)
-            
-            import shutil
-            for art in artifacts_created:
-                target_file = art["file"]
-                name = os.path.basename(target_file)
-                
-                # Sync artifact from isolated subagent directory back to channel's root brain directory
-                if os.path.exists(target_file):
-                    dest_file = os.path.join(channel_brain_dir, name)
-                    if target_file != dest_file:
+                    while True:
                         try:
-                            shutil.copy2(target_file, dest_file)
-                        except Exception as e:
-                            logger.error("Failed to sync subagent artifact", error=str(e))
+                            # Sleep for a shorter interval (5 seconds) so we can periodically check tmux health
+                            chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=5.0)
+                            if chunk is None:
+                                break  # Turn completed successfully
+                            yield chunk
+                            continue # Re-enter loop without checking timeouts yet
+                        except asyncio.TimeoutError:
+                            logger.debug(f"[_read_chunks] asyncio.TimeoutError caught for {self.agent.conversation_id}")
+                            pass
                             
-                art_text += f"- **{name}**: {art['summary']}\n"
+                        # Periodically verify the tmux session is still alive
+                        if getattr(self.agent, "tmux_session_name", None):
+                            res = await async_run("tmux", "has-session", "-t", self.agent.tmux_session_name, capture_output=True)
+                            if res.returncode != 0:
+                                logger.error("Tmux session died unexpectedly during turn", conversation_id=self.agent.conversation_id)
+                                chalice_error = getattr(self.agent, "_chalice_error", None)
+                                if chalice_error:
+                                    break
+                                yield Text(text="⚠️ *The agent process terminated unexpectedly (e.g. quota limit reached or crash).* Check logs.", step_index=0)
+                                return
+                            else:
+                                res_pane = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", self.agent.tmux_session_name, capture_output=True, text=True)
+                                logger.debug(f"[_read_chunks] Tmux pane text captured (length {len(res_pane.stdout)})")
+                                if "Verifying your account..." in res_pane.stdout and "account eligibility" in res_pane.stdout:
+                                    logger.error("Agent hit Google account verification hold", conversation_id=self.agent.conversation_id)
+                                    yield Text(text="⚠️ **Google AI Account Verification Hold:**\nThe `agy` CLI is currently locked because Google is verifying your account eligibility. It refuses to process any prompts. Please wait before trying again.", step_index=0)
+                                    return
+
+                        now = time.time()
+                        
+                        if now - start_wait > hard_ceiling:
+                            logger.error("Agent hit hard ceiling timeout", conversation_id=self.agent.conversation_id)
+                            yield Text(text="[Error: Agent hit hard 2-hour maximum execution limit]", step_index=0)
+                            return
+                            
+                        # Has the agent emitted telemetry in the last 15 minutes?
+                        if now - self.agent.last_active > activity_timeout:
+                            if now - self.agent.last_active > (activity_timeout + grace_period):
+                                logger.error("Agent failed grace period and timed out", conversation_id=self.agent.conversation_id)
+                                yield Text(text="[Error: Agent timed out (no activity detected for 17 minutes)]", step_index=0)
+                                return
+                            else:
+                                if not hasattr(self, "_warned_grace_period"):
+                                    logger.warning("Agent appears inactive, entering 2-minute grace period", conversation_id=self.agent.conversation_id)
+                                    self._warned_grace_period = True
+                except Exception as e:
+                    logger.error("Error waiting for agent turn completion", error=str(e), conversation_id=self.agent.conversation_id)
+                    yield Text(text="[Error: Internal wait error]", step_index=0)
+                    return
+
+                # Check if we were woken by an abort (/stop) rather than clean completion
+                if self.agent.aborted:
+                    logger.info("Agent turn aborted by /stop", conversation_id=self.agent.conversation_id)
+                    return
+
+                # Check if the Stop hook carried an error (e.g., API rate limit / quota exhaustion).
+                # Surface it immediately so the user sees what went wrong.
+                chalice_error = self.agent._chalice_error
+                self.agent._chalice_error = None  # Consume the error
                 
-            art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
-            final_text = (final_text + "\n\n" + art_text) if final_text else art_text.strip()
+                if chalice_error and "429" in str(chalice_error) and ("RESOURCE_EXHAUSTED" in str(chalice_error) or "quota" in str(chalice_error).lower()) and attempts < max_attempts:
+                    fallback_model = "gemini-pro-agent"
+                    yield await self._handle_429_fallback(fallback_model)
+                    continue
+                
+                break
+
+            # Turn is complete. Read the clean output from the transcript path
+            transcript_path = self.agent._chalice_transcript_path
+            if not transcript_path:
+                transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.sdk_conversation_id}/.system_generated/logs/transcript.jsonl")
+                
+            if not transcript_path or not os.path.exists(transcript_path):
+                error_msg = chalice_error or "No transcript available from agent"
+                logger.error("No transcript path from Chalice telemetry",
+                             conversation_id=self.agent.conversation_id,
+                             transcript_path=transcript_path,
+                             chalice_error=chalice_error)
+                yield Text(text=f"⚠️ {error_msg}", step_index=0)
+                return
+                
+            final_text, artifacts_created = self._parse_transcript(transcript_path)
+
+            # Process syncing and generating the Discord notification
+            if artifacts_created:
+                port = getattr(self.agent.config, "dashboard_port", 8180)
+                dash_url = f"http://127.0.0.1:{port}"
+                art_text = "**📄 Artifacts Requiring Review:**\n"
+                
+                channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{self.agent.conversation_id}")
+                os.makedirs(channel_brain_dir, exist_ok=True)
+                
+                import shutil
+                for art in artifacts_created:
+                    target_file = art["file"]
+                    name = os.path.basename(target_file)
+                    
+                    # Sync artifact from isolated subagent directory back to channel's root brain directory
+                    if os.path.exists(target_file):
+                        dest_file = os.path.join(channel_brain_dir, name)
+                        if target_file != dest_file:
+                            try:
+                                shutil.copy2(target_file, dest_file)
+                            except Exception as e:
+                                logger.error("Failed to sync subagent artifact", error=str(e))
+                                
+                    art_text += f"- **{name}**: {art['summary']}\n"
+                    
+                art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
+                final_text = (final_text + "\n\n" + art_text) if final_text else art_text.strip()
+                
+            # Clear telemetry capture for next turn
+            self.agent._artifacts_this_turn = []
             
-        # Clear telemetry capture for next turn
-        self.agent._artifacts_this_turn = []
-        
-        self.artifacts_count = len(artifacts_created)
-        self.artifact_files = [os.path.join(channel_brain_dir, os.path.basename(a["file"])) for a in artifacts_created]
-        self.tasks_count = getattr(self.agent, "_chalice_tasks_count", 0)
-        self.subagents_count = getattr(self.agent, "_chalice_subagents_count", 0)
+            self.artifacts_count = len(artifacts_created)
+            self.artifact_files = [os.path.join(channel_brain_dir, os.path.basename(a["file"])) for a in artifacts_created]
+            self.tasks_count = getattr(self.agent, "_chalice_tasks_count", 0)
+            self.subagents_count = getattr(self.agent, "_chalice_subagents_count", 0)
+                
+            # If the transcript had no model response but we got an API error, surface it
+            if not final_text and chalice_error:
+                final_text = f"⚠️ {chalice_error}"
             
-        # If the transcript had no model response but we got an API error, surface it
-        if not final_text and chalice_error:
-            final_text = f"⚠️ {chalice_error}"
-        
-        self.response_text = final_text
-        yield Text(text=final_text, step_index=0)
-        
-        self.usage_metadata.total_token_count = (len(self.prompt) + len(final_text)) // 4
+            self.response_text = final_text
+            yield Text(text=final_text, step_index=0)
+            
+            self.usage_metadata.total_token_count = (len(self.prompt) + len(final_text)) // 4
+        finally:
+            self.agent.is_interactive_turn = False
 
     async def _handle_429_fallback(self, fallback_model: str) -> Text:
         """Handles 429 quota exhaustion by injecting fallback model override and restarting agent."""
@@ -391,6 +394,7 @@ class ManagedAgent:
         self.turn_completed_event = asyncio.Event()
         self.chunk_queue = asyncio.Queue()
         self.aborted = False
+        self.is_interactive_turn = False
         self._chalice_transcript_path = None  # Set by handle_telemetry when Stop fires
         self._chalice_error = None  # Set by handle_telemetry if Stop fires with an error
 
@@ -642,6 +646,7 @@ class ManagedAgent:
             # Send Enter to submit the prompt. Bracketed paste (-p) ensures autocomplete doesn't swallow it.
             await async_run("tmux", "send-keys", "-t", session_target, "Enter")
             
+            self.is_interactive_turn = True
             return CliResponse(self, prompt)
 
     async def terminate(self) -> None:

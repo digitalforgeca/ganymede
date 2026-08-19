@@ -98,11 +98,38 @@ class DashboardServer:
     def set_platform_status(self, platform: str, is_connected: bool) -> None:
         self.platform_states[platform] = is_connected
 
+    async def broadcast_telemetry(self, data: dict) -> None:
+        """Broadcast telemetry event to all connected dashboard WebSocket clients and internal listeners."""
+        for client in list(self.dashboard_clients):
+            try:
+                if hasattr(client, "client_state") and client.client_state.name == "CONNECTED":
+                    await client.send_json(data)
+            except Exception:
+                pass
+                
+        for listener in list(getattr(self, "telemetry_listeners", [])):
+            try:
+                if asyncio.iscoroutinefunction(listener):
+                    asyncio.create_task(listener(data))
+                else:
+                    listener(data)
+            except Exception:
+                pass
+
     def _get_provider_adapter(self, platform: str):
+        platform = platform.lower()
         for provider in getattr(self, "providers", []):
-            provider_platform = getattr(provider.config, "platform", "discord").lower()
-            if provider_platform == platform.lower():
-                return getattr(provider, "adapter", None)
+            adapter = getattr(provider, "adapter", None)
+            if adapter:
+                adapter_name = adapter.__class__.__name__.lower()
+                if platform in adapter_name:
+                    return adapter
+            provider_platform = getattr(provider, "platform", None) or getattr(provider.config, "platform", None)
+            if provider_platform and provider_platform.lower() == platform:
+                return adapter
+            bot_type = getattr(getattr(provider.config, "bot", None), "provider", {}).get("type")
+            if bot_type and bot_type.lower() == platform:
+                return adapter
         return None
 
     async def start_mcp_server(self):
