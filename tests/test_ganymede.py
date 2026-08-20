@@ -500,3 +500,42 @@ discord:
         self.assertEqual(agent3["id"], "default")
         self.assertEqual(agent3["name"], "Icarus")
 
+    async def test_interactive_tool_turn_telemetry_isolation(self):
+        """Tests that tool turns executed during an interactive user session do not spawn duplicate autonomous streaming messages."""
+        from ganymede.core.router import Router
+
+        router = Router(self.config, self.agent_manager, None, self.db)
+        mock_adapter = MagicMock()
+        mock_adapter.send_streaming_start = AsyncMock()
+        router.set_adapter(mock_adapter)
+
+        channel_id = "1539870389780348977"
+        ganymede_conv_id = f"ganymede_discord_{channel_id}"
+        conv_uuid = "32da8dfc-9826-4c3e-ba20-16b4e128a046"
+
+        managed_agent = await self.agent_manager.get_or_create(ContextKey("discord", channel_id, None))
+        managed_agent.is_interactive_turn = True
+
+        # PreToolUse event for main agent tool execution
+        await router.global_telemetry_listener({
+            "event": "PreToolUse",
+            "ganymede_conv_id": ganymede_conv_id,
+            "payload": {
+                "conversationId": conv_uuid,
+                "toolCall": {"name": "list_dir", "args": {"toolAction": "Listing workspace directory"}}
+            }
+        })
+
+        # PostToolUse event
+        await router.global_telemetry_listener({
+            "event": "PostToolUse",
+            "ganymede_conv_id": ganymede_conv_id,
+            "payload": {
+                "conversationId": conv_uuid,
+                "toolCall": {"name": "list_dir", "args": {"toolAction": "Listing workspace directory"}}
+            }
+        })
+
+        # Verify that send_streaming_start was NOT called because this is an active interactive turn
+        mock_adapter.send_streaming_start.assert_not_called()
+

@@ -397,6 +397,7 @@ class ManagedAgent:
         self.aborted = False
         self.is_interactive_turn = False
         self.active_model: str | None = None
+        self.active_conversation_id: str | None = None
         self._chalice_transcript_path = None  # Set by handle_telemetry when Stop fires
         self._chalice_error = None  # Set by handle_telemetry if Stop fires with an error
 
@@ -796,6 +797,9 @@ class AgentManager:
                 m = payload.get("modelName") or payload.get("model")
                 if m:
                     agent.active_model = str(m)
+                conv_id = payload.get("conversationId")
+                if conv_id and (agent.is_interactive_turn or not agent.active_conversation_id):
+                    agent.active_conversation_id = str(conv_id)
                 logger.debug("Telemetry matched managed agent", telemetry_event=data.get("event"), ganymede_conv_id=ganymede_conv_id, model=agent.active_model)
                 
         tool_call = payload.get("toolCall", {})

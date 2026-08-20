@@ -115,15 +115,25 @@ class Router:
         if not conv_uuid:
             return
             
-        main_id = self._main_agent_ids.get(ganymede_conv_id)
-        if not main_id:
-            # The very first telemetry event establishes the main agent's conversationId
+        # If this is an active interactive turn, record the main agent conversation ID
+        if getattr(managed_agent, "is_interactive_turn", False):
+            managed_agent.active_conversation_id = conv_uuid
             self._main_agent_ids[ganymede_conv_id] = conv_uuid
+
+        main_id = getattr(managed_agent, "active_conversation_id", None) or self._main_agent_ids.get(ganymede_conv_id)
+        if not main_id:
+            self._main_agent_ids[ganymede_conv_id] = conv_uuid
+            managed_agent.active_conversation_id = conv_uuid
             main_id = conv_uuid
             
-        is_subagent = (conv_uuid != main_id)
+        is_main_conv = (
+            conv_uuid == main_id
+            or conv_uuid == getattr(managed_agent, "sdk_conversation_id", None)
+            or conv_uuid == getattr(managed_agent, "conversation_id", None)
+        )
+        is_subagent = not is_main_conv
         is_interactive = getattr(managed_agent, "is_interactive_turn", False)
-        is_autonomous_main = not is_subagent and not is_interactive
+        is_autonomous_main = is_main_conv and not is_interactive
         
         if not is_subagent and not is_autonomous_main:
             # Ephemeral streaming handles the active main agent turn
@@ -259,11 +269,8 @@ class Router:
         elif event == "Stop":
             status = f"🏁 *Finished*"
                 
-        prefix = "🧬 **Subagent** | " if is_subagent else "🤖 **Background** | "
-        
-        # Add Discord relative timestamp: <t:TIMESTAMP:T> renders as 12:34 PM
-        ts = f"<t:{int(time.time())}:T>"
-        line = f"{prefix}`{ts}` {status}"
+        prefix = "🧬 **Subagent** | " if is_subagent else "🤖 **Task** | "
+        line = f"{prefix}{status}"
         
         state["lines"].append(line)
         
@@ -273,16 +280,15 @@ class Router:
             
         display_lines = list(state["lines"])
         if event != "Stop":
-            # Add dynamic timestamp to thinking indicator as well
-            ts_thinking = f"<t:{int(time.time())}:T>"
-            display_lines.append(f"{prefix}`{ts_thinking}` 💭 *Thinking...*")
+            display_lines.append(f"{prefix}💭 *Thinking...*")
             
         text = "\n\n".join(display_lines)
         
         if self.adapter:
+            header = "🧬 **Subagent Session**" if is_subagent else "🚀 **Autonomous Background Task**"
             if not state["msg_id"]:
                 try:
-                    state["msg_id"] = await self.adapter.send_streaming_start(context, initial_text=text, persist_header=f"🚀 **Autonomous Session attached...**")
+                    state["msg_id"] = await self.adapter.send_streaming_start(context, initial_text=text, persist_header=header)
                 except Exception:
                     pass
             else:
