@@ -10,6 +10,7 @@ from google.antigravity.types import Text
 from ganymede.core import ContextKey
 from ganymede.config import AppConfig
 from ganymede.core.quota import QuotaTracker
+from ganymede.core.model_registry import ModelRegistry
 
 logger = structlog.get_logger()
 
@@ -18,7 +19,7 @@ async def async_run(*args, capture_output=False, text=True, check=False, env=Non
         *args,
         stdout=asyncio.subprocess.PIPE if capture_output else None,
         stderr=asyncio.subprocess.PIPE if capture_output else None,
-        stdin=asyncio.subprocess.PIPE if input is not None else None,
+        stdin=asyncio.subprocess.PIPE if input is not None else asyncio.subprocess.DEVNULL,
         env=env
     )
     if input is not None:
@@ -151,9 +152,9 @@ class CliResponse:
                                 yield Text(text="⚠️ *The agent process terminated unexpectedly (e.g. quota limit reached or crash).* Check logs.", step_index=0)
                                 return
                             else:
-                                res_pane = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", self.agent.tmux_session_name, capture_output=True, text=True)
+                                res_pane = await async_run("tmux", "capture-pane", "-p", "-t", self.agent.tmux_session_name, capture_output=True, text=True)
                                 logger.debug(f"[_read_chunks] Tmux pane text captured (length {len(res_pane.stdout)})")
-                                if "Verifying your account..." in res_pane.stdout and "account eligibility" in res_pane.stdout:
+                                if "Verifying your account..." in res_pane.stdout and "account eligibility" in res_pane.stdout and "? for shortcuts" not in res_pane.stdout:
                                     logger.error("Agent hit Google account verification hold", conversation_id=self.agent.conversation_id)
                                     yield Text(text="⚠️ **Google AI Account Verification Hold:**\nThe `agy` CLI is currently locked because Google is verifying your account eligibility. It refuses to process any prompts. Please wait before trying again.", step_index=0)
                                     return
@@ -191,7 +192,7 @@ class CliResponse:
                 self.agent._chalice_error = None  # Consume the error
                 
                 if chalice_error and "429" in str(chalice_error) and ("RESOURCE_EXHAUSTED" in str(chalice_error) or "quota" in str(chalice_error).lower()) and attempts < max_attempts:
-                    fallback_model = "gemini-pro-agent"
+                    fallback_model = "gemini-3.7-flash-high"
                     yield await self._handle_429_fallback(fallback_model)
                     continue
                 
@@ -395,8 +396,36 @@ class ManagedAgent:
         self.chunk_queue = asyncio.Queue()
         self.aborted = False
         self.is_interactive_turn = False
+        self.active_model: str | None = None
         self._chalice_transcript_path = None  # Set by handle_telemetry when Stop fires
         self._chalice_error = None  # Set by handle_telemetry if Stop fires with an error
+
+    def get_resolved_slug(self) -> str:
+        """Resolve the active model slug for spawning agy."""
+        if self.active_model:
+            return ModelRegistry.to_slug(self.active_model)
+        app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+        model_txt = os.path.join(app_data, "brain", self.sdk_conversation_id, "model.txt")
+        if os.path.exists(model_txt):
+            try:
+                with open(model_txt, "r") as f:
+                    m = f.read().strip().strip("\"'")
+                if m:
+                    return ModelRegistry.to_slug(m)
+            except Exception:
+                pass
+        raw_override = getattr(self.config.agent, "raw_model_string", None)
+        if raw_override:
+            return ModelRegistry.to_slug(raw_override)
+        global_model = getattr(self.config.agent, "model", "gemini-3.7-flash-high")
+        return ModelRegistry.to_slug(global_model)
+
+    def get_current_display_model(self) -> str:
+        """Return the user-facing human-readable model name for this agent."""
+        if self.active_model:
+            return ModelRegistry.to_display_name(self.active_model)
+        slug = self.get_resolved_slug()
+        return ModelRegistry.to_display_name(slug)
 
     async def ensure_running(self):
 
@@ -428,38 +457,8 @@ class ManagedAgent:
             
         # Model resolution — ALWAYS pass --model to prevent agy's global
         # settings.json from applying its own model (which may be Opus/Claude).
-        raw_override = getattr(self.config.agent, "raw_model_string", None)
-        if raw_override:
-            resolved_model = raw_override
-        else:
-            # Priority: model.txt (per-channel /model override) > config.agent.model
-            model_txt = os.path.join(sdk_brain_dir, "model.txt")
-            if os.path.exists(model_txt):
-                with open(model_txt, "r") as f:
-                    resolved_model = f.read().strip().strip("\"'")
-                if not resolved_model:
-                    resolved_model = self.config.agent.model
-            else:
-                resolved_model = self.config.agent.model
-
-            # Reverse map human-readable names to agy slugs
-            reverse_map = {
-                "Gemini 3.1 Pro (High)": "gemini-pro-agent",
-                "Gemini 3.1 Pro (Low)": "gemini-flash-agent",
-                "gemini-3.1-pro-high": "gemini-pro-agent",
-                "gemini-3.1-pro-low": "gemini-flash-agent",
-                "Gemini Flash": "gemini-pro-agent",
-                "Gemini 3.5 Flash (High)": "gemini-3.5-flash-high",
-                "Gemini 3.5 Flash (Medium)": "gemini-3.5-flash-medium",
-                "Gemini 3.5 Flash (Low)": "gemini-3.5-flash-low",
-                "Gemini 3.6 Flash (High)": "gemini-3.6-flash-high",
-                "Gemini 3.6 Flash (Medium)": "gemini-3.6-flash-medium",
-                "Gemini 3.6 Flash (Low)": "gemini-3.6-flash-low",
-                "Claude 3.5 Sonnet (4-6)": "claude-sonnet-4-6",
-                "Claude Opus (Thinking)": "claude-opus-4-6-thinking",
-            }
-            resolved_model = reverse_map.get(resolved_model, resolved_model)
-
+        resolved_model = self.get_resolved_slug()
+        self.active_model = resolved_model
         args.extend(["--model", resolved_model])
             
         if getattr(self.config.agent, "skip_permissions", True):
@@ -543,7 +542,7 @@ class ManagedAgent:
             # prompt, not on the trust dialog (which also contains ">").
             # If we see "trust" in the pane, auto-accept it with Enter.
             for _ in range(40):  # Wait up to 20 seconds
-                res = await async_run("tmux", "capture-pane", "-p", "-S", "-", "-t", session_name, capture_output=True, text=True)
+                res = await async_run("tmux", "capture-pane", "-p", "-t", session_name, capture_output=True, text=True)
                 pane_text = res.stdout
                 
                 # Detect and auto-dismiss the trust prompt
@@ -570,8 +569,9 @@ class ManagedAgent:
             # Intercept /models
             if prompt_stripped == "/models":
                 try:
-                    result = await async_run("agy", "models", capture_output=True, text=True, check=True)
-                    out = _ANSI_ESCAPE.sub('', result.stdout).strip()
+                    available = ModelRegistry.get_available_models()
+                    lines = [f"{slug}\t{disp}" for slug, disp in available]
+                    out = "\n".join(lines)
                     return CliResponse(self, prompt, direct_text=f"```\n{out}\n```")
                 except Exception as e:
                     return CliResponse(self, prompt, direct_text=f"❌ Error listing models: {e}")
@@ -582,16 +582,20 @@ class ManagedAgent:
                 if (model_name.startswith('"') and model_name.endswith('"')) or (model_name.startswith("'") and model_name.endswith("'")):
                     model_name = model_name[1:-1]
                 
+                slug = ModelRegistry.to_slug(model_name)
+                disp = ModelRegistry.to_display_name(model_name)
+                self.active_model = slug
+
                 # Write to model.txt in the conversation's brain dir
                 app_data = os.path.expanduser("~/.gemini/antigravity-cli")
                 sdk_brain_dir = os.path.join(app_data, "brain", self.sdk_conversation_id)
                 os.makedirs(sdk_brain_dir, exist_ok=True)
                 with open(os.path.join(sdk_brain_dir, "model.txt"), "w") as f:
-                    f.write(model_name)
+                    f.write(slug)
                     
                 # Terminate the current PTY process so it restarts with the new model on next message
                 await self.terminate()
-                return CliResponse(self, prompt, direct_text=f"✅ Model successfully switched to `{model_name}` for this channel.\n*(It will take effect on your next message)*")
+                return CliResponse(self, prompt, direct_text=f"✅ Model successfully switched to `{disp}` for this channel.\n*(It will take effect on your next message)*")
 
             await self.ensure_running()
             
@@ -767,11 +771,14 @@ class AgentManager:
                                expected=expected)
             return
             
-        # Update activity timestamp to prevent idle reaping during long tasks
+        # Update activity timestamp and dynamic active model from telemetry
         for agent in self._agents.values():
             if agent.conversation_id == ganymede_conv_id:
                 agent.last_active = time.time()
-                logger.debug("Telemetry matched managed agent", telemetry_event=data.get("event"), ganymede_conv_id=ganymede_conv_id)
+                m = payload.get("modelName") or payload.get("model")
+                if m:
+                    agent.active_model = str(m)
+                logger.debug("Telemetry matched managed agent", telemetry_event=data.get("event"), ganymede_conv_id=ganymede_conv_id, model=agent.active_model)
                 
         tool_call = payload.get("toolCall", {})
         if isinstance(tool_call, str):

@@ -451,10 +451,9 @@ def print_status(config):
                 if os.path.exists(model_txt):
                     with open(model_txt, "r") as f:
                         model = f.read().strip()
-                elif hasattr(config.agent, "model"):
-                    model = config.agent.model
-                    
-                status_line = f"  • {s} | Model: {model}"
+                from ganymede.core.model_registry import ModelRegistry
+                display_model = ModelRegistry.to_display_name(model)
+                status_line = f"  • {s} | Model: {display_model}"
                 if active_tasks > 0:
                     status_line += f" | ⚙️ {active_tasks} active tasks"
                 print(status_line)

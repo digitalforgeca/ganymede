@@ -50,3 +50,4 @@ data/
 *.sln
 *.swp
 ganymede_live.log
+ganymede.log

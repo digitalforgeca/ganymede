@@ -22,45 +22,14 @@ _cached_models = None
 
 @router.get('/api/models')
 async def handle_models_get(request: Request):
-    global _cached_models
-    if _cached_models is not None:
-        return _cached_models
-        
+    from ganymede.core.model_registry import ModelRegistry
     try:
-        import subprocess
-        out = subprocess.check_output(["agy", "models"], text=True, timeout=15)
-        
-        # Map raw slugs to pretty formatted strings
-        format_map = {
-            "gemini-pro-agent": "Gemini 3.1 Pro (High)",
-            "gemini-flash-agent": "Gemini 3.1 Pro (Low)",
-            "gemini-3.5-flash-high": "Gemini 3.5 Flash (High)",
-            "gemini-3.5-flash-medium": "Gemini 3.5 Flash (Medium)",
-            "gemini-3.5-flash-low": "Gemini 3.5 Flash (Low)",
-            "gemini-3.6-flash-high": "Gemini 3.6 Flash (High)",
-            "gemini-3.6-flash-medium": "Gemini 3.6 Flash (Medium)",
-            "gemini-3.6-flash-low": "Gemini 3.6 Flash (Low)",
-            "claude-sonnet-4-6": "Claude 3.5 Sonnet (4-6)",
-            "claude-opus-4-6-thinking": "Claude Opus (Thinking)",
-        }
-        
-        models = []
-        for line in out.splitlines():
-            line = line.strip()
-            if line.startswith("-"):
-                line = line[1:].strip()
-            if line and not line.startswith("Available") and not line.startswith("=="):
-                # Use mapped name if available, otherwise raw slug
-                models.append(format_map.get(line, line))
-                
-        if not models:
-            models = ["Gemini 3.1 Pro (High)", "Gemini Flash", "gemini-1.5-pro-002", "gemini-1.5-flash-002"]
-            
-        _cached_models = {"models": models}
-        return _cached_models
+        available = ModelRegistry.get_available_models()
+        models = [disp for slug, disp in available]
+        return {"models": models}
     except Exception as e:
         logger.error("Failed to list models", error=str(e))
-        return {"models": ["Gemini 3.1 Pro (High)", "Gemini Flash", "gemini-1.5-pro-002", "gemini-1.5-flash-002"]}
+        return {"models": ["Gemini 3.7 Flash (High)", "Gemini 3.1 Pro (High)"]}
     
 
 @router.post('/api/config')

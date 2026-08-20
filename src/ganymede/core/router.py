@@ -9,6 +9,7 @@ from google.antigravity.types import ToolResult
 from ganymede.core import ContextKey
 from ganymede.core.models import PlatformMessage
 from ganymede.config import AppConfig
+from ganymede.core.model_registry import ModelRegistry
 
 logger = structlog.get_logger()
 
@@ -192,7 +193,11 @@ class Router:
             start_ts = state.get("start_time", time.time())
             duration = round(time.time() - start_ts, 2)
             tokens_count = len(final_text) // 4
-            model_name = getattr(self.config.agent, "model", "gemini-3.7-flash-high")
+            managed_agent = self.agent_manager._agents.get(context) if self.agent_manager else None
+            if managed_agent and hasattr(managed_agent, "get_current_display_model"):
+                model_name = managed_agent.get_current_display_model()
+            else:
+                model_name = ModelRegistry.to_display_name(getattr(self.config.agent, "model", "gemini-3.7-flash-high"))
 
             metadata = {
                 "tokens": tokens_count,
@@ -382,7 +387,7 @@ class Router:
                             metadata = {
                                 "tokens": tokens_count, 
                                 "duration": duration,
-                                "model": self.agent_manager.config.agent.model,
+                                "model": managed_agent.get_current_display_model() if hasattr(managed_agent, "get_current_display_model") else ModelRegistry.to_display_name(self.agent_manager.config.agent.model),
                                 "artifacts": getattr(response, "artifacts_count", 0),
                                 "artifact_files": artifact_files,
                                 "tasks": getattr(response, "tasks_count", 0),
@@ -484,7 +489,7 @@ class Router:
                             metadata = {
                                 "tokens": tokens_count, 
                                 "duration": duration,
-                                "model": self.agent_manager.config.agent.model,
+                                "model": managed_agent.get_current_display_model() if hasattr(managed_agent, "get_current_display_model") else ModelRegistry.to_display_name(self.agent_manager.config.agent.model),
                                 "artifacts": getattr(response, "artifacts_count", 0),
                                 "artifact_files": artifact_files,
                                 "tasks": getattr(response, "tasks_count", 0),

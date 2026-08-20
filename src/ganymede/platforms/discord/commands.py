@@ -428,42 +428,51 @@ def setup_commands(adapter: discord.Client):
 
     @tree.command(name="models", description="List all available models")
     async def models_cmd(interaction: discord.Interaction):
-        await interaction.response.send_message("🔍 *Fetching available models...*", ephemeral=True)
-        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
-        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
-        
-        message = PlatformMessage(
-            context=ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id),
-            author_id=str(interaction.user.id),
-            author_name=interaction.user.name,
-            content="/models",
-            is_bot=interaction.user.bot,
-            mentions_us=False,
-            attachments=[],
-            reply_to=None,
-            raw=interaction
-        )
-        asyncio.create_task(adapter.router.handle_message(message))
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from ganymede.core.agent_manager import async_run
+            res = await async_run("agy", "models", capture_output=True, text=True, check=False)
+            out = res.stdout.strip()
+            if not out:
+                out = "gemini-3.7-flash-high\tGemini 3.7 Flash (High)\ngemini-3.1-pro-high\tGemini 3.1 Pro (High)\nclaude-sonnet-4-6\tClaude Sonnet 4.6 (Thinking)\nclaude-opus-4-6-thinking\tClaude Opus 4.6 (Thinking)"
+            await interaction.followup.send(f"**Available Models:**\n```\n{out}\n```", ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"❌ Error listing models: {e}", ephemeral=True)
 
     @tree.command(name="model", description="Switch the model for the current channel")
-    @app_commands.describe(model_name='The exact model name to switch to (e.g. "Gemini 3.1 Pro (High)")')
+    @app_commands.describe(model_name='The exact model name to switch to (e.g. "Gemini 3.7 Flash (High)")')
     async def model_cmd(interaction: discord.Interaction, model_name: str):
-        await interaction.response.send_message(f"🔄 *Switching model to {model_name}...*", ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
         channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
         
-        message = PlatformMessage(
-            context=ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id),
-            author_id=str(interaction.user.id),
-            author_name=interaction.user.name,
-            content=f"/model {model_name}",
-            is_bot=interaction.user.bot,
-            mentions_us=False,
-            attachments=[],
-            reply_to=None,
-            raw=interaction
-        )
-        asyncio.create_task(adapter.router.handle_message(message))
+        try:
+            clean_name = model_name.strip().strip("\"'")
+            app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+            conv_id = f"ganymede_discord_{channel_id}"
+            if thread_id:
+                conv_id += f"_{thread_id}"
+            import uuid
+            sdk_conv_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, conv_id))
+            sdk_brain_dir = os.path.join(app_data, "brain", sdk_conv_id)
+            os.makedirs(sdk_brain_dir, exist_ok=True)
+            with open(os.path.join(sdk_brain_dir, "model.txt"), "w") as f:
+                f.write(clean_name)
+            
+            # Kill existing tmux session so next message boots with new model
+            from ganymede.core.agent_manager import async_run
+            tmux_name = f"ganymede-{sdk_conv_id}"
+            await async_run("tmux", "kill-session", "-t", tmux_name, capture_output=True, check=False)
+            
+            context = ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id)
+            if adapter.router and adapter.router.agent_manager:
+                agent = adapter.router.agent_manager._agents.get(context)
+                if agent:
+                    await agent.terminate()
+            
+            await interaction.followup.send(f"✅ Model successfully switched to `{clean_name}` for this channel.\n*(It will take effect on your next message)*", ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"❌ Error switching model: {e}", ephemeral=True)
 
     @tree.command(name="about", description="Display information about the bot, active workspace, and credits")
     async def about(interaction: discord.Interaction):
