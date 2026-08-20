@@ -446,11 +446,16 @@ def print_status(config):
                             except Exception:
                                 pass
                                 
-                model = "unknown"
+                model = None
                 model_txt = os.path.join(brain_dir, "model.txt")
                 if os.path.exists(model_txt):
-                    with open(model_txt, "r") as f:
-                        model = f.read().strip()
+                    try:
+                        with open(model_txt, "r") as f:
+                            model = f.read().strip()
+                    except Exception:
+                        pass
+                if not model:
+                    model = getattr(config.agent, "model", "gemini-3.7-flash-high")
                 from ganymede.core.model_registry import ModelRegistry
                 display_model = ModelRegistry.to_display_name(model)
                 status_line = f"  • {s} | Model: {display_model}"
