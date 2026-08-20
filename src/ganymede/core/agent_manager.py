@@ -158,6 +158,13 @@ class CliResponse:
                                     logger.error("Agent hit Google account verification hold", conversation_id=self.agent.conversation_id)
                                     yield Text(text="⚠️ **Google AI Account Verification Hold:**\nThe `agy` CLI is currently locked because Google is verifying your account eligibility. It refuses to process any prompts. Please wait before trying again.", step_index=0)
                                     return
+                                # Watchdog: if 3s have elapsed and agy is still idle at ? for shortcuts without Working/Thinking, retry Enter
+                                now_check = time.time()
+                                if (now_check - start_wait) > 3.0 and not getattr(self, "_kickstarted_prompt", False):
+                                    if "? for shortcuts" in res_pane.stdout and "Working..." not in res_pane.stdout and "Thinking" not in res_pane.stdout:
+                                        self._kickstarted_prompt = True
+                                        logger.info("Watchdog detected idle prompt after paste, sending Enter retry", conversation_id=self.agent.conversation_id)
+                                        await async_run("tmux", "send-keys", "-t", self.agent.tmux_session_name, "Enter")
 
                         now = time.time()
                         
@@ -666,7 +673,9 @@ class ManagedAgent:
             session_target = f"ganymede-{self.sdk_conversation_id}"
             await async_run("tmux", "paste-buffer", "-p", "-r", "-b", buf_name, "-t", session_target)
             await async_run("tmux", "delete-buffer", "-b", buf_name)
-            # Send Enter to submit the prompt. Bracketed paste (-p) ensures autocomplete doesn't swallow it.
+            # Give PTY/bubbletea event loop 150ms to swallow the pasted buffer before sending Enter
+            await asyncio.sleep(0.15)
+            # Send Enter to submit the prompt.
             await async_run("tmux", "send-keys", "-t", session_target, "Enter")
             
             self.is_interactive_turn = True
