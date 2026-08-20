@@ -124,5 +124,11 @@ class BasePlatformProvider:
         """Gracefully shutdown all transport and integration services."""
         raise NotImplementedError()
 
+    def get_channels(self) -> list[dict[str, Any]]:
+        """Return a list of discovered channels for this provider (e.g. text channels, direct messages)."""
+        if self.adapter and hasattr(self.adapter, "get_discovered_channels"):
+            return self.adapter.get_discovered_channels()
+        return []
+
 
 

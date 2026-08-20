@@ -382,7 +382,7 @@ class ManagedAgent:
     _settings_lock = asyncio.Lock()
 
 
-    def __init__(self, context_key: ContextKey, config: AppConfig, conversation_id: str, bot_namespace: str = "ganymede", ipc_port: int | None = None, manager=None):
+    def __init__(self, context_key: ContextKey, config: AppConfig, conversation_id: str, bot_namespace: str = "ganymede", ipc_port: int | None = None, manager=None, agent_profile: dict[str, Any] | None = None):
         self.manager = manager
         self.context_key = context_key
         self.config = config
@@ -399,6 +399,22 @@ class ManagedAgent:
         self.active_model: str | None = None
         self._chalice_transcript_path = None  # Set by handle_telemetry when Stop fires
         self._chalice_error = None  # Set by handle_telemetry if Stop fires with an error
+
+        # Multi-Agent Profile resolution
+        if agent_profile is None:
+            if hasattr(config, "get_agent_for_context"):
+                agent_profile = config.get_agent_for_context(context_key)
+            else:
+                agent_profile = {}
+        self.agent_profile = agent_profile
+        self.agent_id = agent_profile.get("id", "default")
+        self.agent_name = agent_profile.get("name", getattr(config.agent, "name", "Icarus"))
+        self.agent_model = agent_profile.get("model", getattr(config.agent, "model", "gemini-3.7-flash-high"))
+        self.agent_workspace = agent_profile.get("workspace", getattr(config.agent, "workspace", "~/dev"))
+        self.agent_mode = agent_profile.get("mode", getattr(config.agent, "mode", "accept-edits"))
+        self.agent_identity = agent_profile.get("identity", getattr(config.bot, "identity", ""))
+        self.agent_mission = agent_profile.get("mission_statement", getattr(config.agent, "mission_statement", "to be of help"))
+        self.skip_permissions = agent_profile.get("skip_permissions", getattr(config.agent, "skip_permissions", True))
 
     def get_resolved_slug(self) -> str:
         """Resolve the active model slug for spawning agy."""
@@ -417,8 +433,8 @@ class ManagedAgent:
         raw_override = getattr(self.config.agent, "raw_model_string", None)
         if raw_override:
             return ModelRegistry.to_slug(raw_override)
-        global_model = getattr(self.config.agent, "model", "gemini-3.7-flash-high")
-        return ModelRegistry.to_slug(global_model)
+        target_model = getattr(self, "agent_model", None) or getattr(self.config.agent, "model", "gemini-3.7-flash-high")
+        return ModelRegistry.to_slug(target_model)
 
     def get_current_display_model(self) -> str:
         """Return the user-facing human-readable model name for this agent."""
@@ -444,8 +460,8 @@ class ManagedAgent:
         if not os.path.exists(sdk_brain_dir):
             os.symlink(brain_dir, sdk_brain_dir)
             
-        base_workspace = os.path.expanduser(getattr(self.config.agent, 'workspace', '~/.ganymede/workspace'))
-        workspace_dir = os.path.join(base_workspace, project_name)
+        base_workspace = os.path.expanduser(getattr(self, 'agent_workspace', None) or getattr(self.config.agent, 'workspace', '~/dev'))
+        workspace_dir = os.path.join(base_workspace, project_name) if project_name != "default" and not os.path.isabs(project_name) else base_workspace
         os.makedirs(workspace_dir, exist_ok=True)
             
         if is_new_conversation:
@@ -453,7 +469,7 @@ class ManagedAgent:
         else:
             args.extend(["--project", project_name])
             
-        args.extend(["--mode", "accept-edits"])
+        args.extend(["--mode", getattr(self, "agent_mode", "accept-edits")])
             
         # Model resolution — ALWAYS pass --model to prevent agy's global
         # settings.json from applying its own model (which may be Opus/Claude).
@@ -461,7 +477,7 @@ class ManagedAgent:
         self.active_model = resolved_model
         args.extend(["--model", resolved_model])
             
-        if getattr(self.config.agent, "skip_permissions", True):
+        if getattr(self, "skip_permissions", True):
             args.append("--dangerously-skip-permissions")
             
         session_name = f"ganymede-{self.sdk_conversation_id}"
@@ -604,10 +620,12 @@ class ManagedAgent:
             is_new = not os.path.exists(os.path.join(db_dir, f"{self.sdk_conversation_id}.db"))
             
             final_prompt = prompt
-            if is_new and hasattr(self.config.bot, "identity") and self.config.bot.identity:
-                sys_inst = self.config.bot.identity.replace("{bot_name}", self.bot_namespace)
-                sys_inst = sys_inst.replace("{model_name}", self.config.agent.model)
-                mission = getattr(self.config.agent, "mission_statement", "to be of help")
+            identity_template = getattr(self, "agent_identity", None) or getattr(self.config.bot, "identity", "")
+            if is_new and identity_template:
+                bot_name = getattr(self, "agent_name", None) or self.bot_namespace
+                sys_inst = identity_template.replace("{bot_name}", bot_name)
+                sys_inst = sys_inst.replace("{model_name}", self.get_current_display_model())
+                mission = getattr(self, "agent_mission", "to be of help")
                 sys_inst = sys_inst.replace("{mission_statement}", mission)
                 
                 user_name = "user"
@@ -921,15 +939,16 @@ class AgentManager:
             if self.db:
                 await self.db.save_conversation_mapping(conversation_id, context)
 
-        bot_namespace = "ganymede"
+        agent_profile = self.config.get_agent_for_context(context) if hasattr(self.config, "get_agent_for_context") else None
+        bot_namespace = agent_profile.get("name", "ganymede") if agent_profile else "ganymede"
         ipc_port = None
         if self.adapter:
-            if hasattr(self.adapter, "get_bot_namespace"):
+            if hasattr(self.adapter, "get_bot_namespace") and not agent_profile:
                 bot_namespace = self.adapter.get_bot_namespace()
             if hasattr(self.adapter, "ipc_server") and self.adapter.ipc_server and hasattr(self.adapter.ipc_server, "port"):
                 ipc_port = self.adapter.ipc_server.port
 
-        managed = ManagedAgent(context, self.config, conversation_id, bot_namespace, ipc_port, manager=self)
+        managed = ManagedAgent(context, self.config, conversation_id, bot_namespace, ipc_port, manager=self, agent_profile=agent_profile)
         self._agents[context] = managed
         return managed
 

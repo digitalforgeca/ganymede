@@ -422,6 +422,9 @@ discord:
             channel_id = "1525376171636822096"
             ganymede_conv_id = f"ganymede_discord_{channel_id}"
             
+            # Ensure managed agent exists in agent manager
+            await self.agent_manager.get_or_create(ContextKey("discord", channel_id, None))
+            
             # First tool call establishes main_agent_id
             await router.global_telemetry_listener({
                 "event": "PreToolUse",
@@ -456,4 +459,44 @@ discord:
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+
+    async def test_multi_agent_profile_resolution(self):
+        """Tests that AppConfig.get_agent_for_context resolves agent profiles via direct mapping, bindings, and defaults."""
+        self.config.agents = {
+            "default": {
+                "id": "default",
+                "name": "Icarus",
+                "model": "gemini-3.7-flash-high",
+                "workspace": "~/dev/default"
+            },
+            "rotor": {
+                "id": "rotor",
+                "name": "Daedalus",
+                "model": "gemini-3.1-pro-high",
+                "workspace": "~/dev/rotor",
+                "bindings": [
+                    {"provider": "discord", "channels": ["1234567890"]}
+                ]
+            }
+        }
+        self.config.channel_mappings = {
+            "discord:999888": "rotor"
+        }
+
+        # 1. Direct channel mapping
+        ctx1 = ContextKey("discord", "999888", None)
+        agent1 = self.config.get_agent_for_context(ctx1)
+        self.assertEqual(agent1["id"], "rotor")
+        self.assertEqual(agent1["name"], "Daedalus")
+
+        # 2. Agent bindings list
+        ctx2 = ContextKey("discord", "1234567890", None)
+        agent2 = self.config.get_agent_for_context(ctx2)
+        self.assertEqual(agent2["id"], "rotor")
+
+        # 3. Default fallback
+        ctx3 = ContextKey("discord", "777777", None)
+        agent3 = self.config.get_agent_for_context(ctx3)
+        self.assertEqual(agent3["id"], "default")
+        self.assertEqual(agent3["name"], "Icarus")
 

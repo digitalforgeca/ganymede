@@ -90,7 +90,8 @@
                     </ul>
                     <p class="menu-label">Configuration</p>
                     <ul class="menu-list sidebar-nav">
-                        <li><a class="nav-item" href="#view-bots" data-target="view-bots"><span class="icon is-small mr-2"><i class="ph ph-robot"></i></span>Bots</a></li>
+                        <li><a class="nav-item" href="#view-agents" data-target="view-agents"><span class="icon is-small mr-2"><i class="ph ph-users-three"></i></span>Agents</a></li>
+                        <li><a class="nav-item" href="#view-channels" data-target="view-channels"><span class="icon is-small mr-2"><i class="ph ph-broadcast"></i></span>Channels</a></li>
                         <li><a class="nav-item" href="#view-settings" data-target="view-settings"><span class="icon is-small mr-2"><i class="ph ph-gear"></i></span>Settings</a></li>
                         <li><a href="/auth/logout" class="has-text-danger mt-2" style="font-weight: 500;"><span class="icon is-small mr-2"><i class="ph ph-sign-out"></i></span>Sign Out</a></li>
                     </ul>
@@ -345,123 +346,190 @@
                     </div>
                 </div>
 
-                <!-- Bots View -->
-                <main class="section view-section is-hidden pt-5" id="view-bots">
+                <!-- Agents View -->
+                <main class="section view-section is-hidden pt-5" id="view-agents">
                     <div class="box facet">
-                        <h2 class="title is-3 cinzel facet-title">Bots</h2>
-                        <p class="has-text-grey mb-4">Manage connected bot identities and their associated providers.</p>
-                        <!-- TODO: Currently Ganymede runs a single primary bot gateway. Multi-bot support is in active development. -->
-                        <div class="columns is-multiline" id="bots-list">
+                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+                            <div>
+                                <h2 class="title is-3 cinzel facet-title mb-1">Agents</h2>
+                                <p class="has-text-grey">Specialized agent profiles with custom personas, models, workspace paths, and provider bindings.</p>
+                            </div>
+                            <button class="button is-small is-primary cinzel" id="btn-create-agent">
+                                <span class="icon is-small mr-1"><i class="ph ph-plus-circle"></i></span>
+                                <span>New Agent</span>
+                            </button>
+                        </div>
+                        <div class="columns is-multiline" id="agents-list">
                             <!-- Populated by JS -->
                             <div class="column is-12 has-text-centered has-text-grey mt-5">
                                 <span class="icon is-large mb-2"><i class="ph ph-spinner ph-spin fa-2x"></i></span>
-                                <p>Loading connected bots...</p>
+                                <p>Loading agents...</p>
                             </div>
                         </div>
-                    </div>
-                    <div class="box p-5 mt-4 is-hidden" id="no-rules-message">
-                        <p class="has-text-grey has-text-centered">No rules found. Create one to get started.</p>
                     </div>
                 </main>
 
-                <!-- Bot Detail View -->
-                <main class="section view-section pt-5 is-hidden" id="view-bot-detail">
+                <!-- Agent Detail / Editor View -->
+                <main class="section view-section pt-5 is-hidden" id="view-agent-detail">
+                    <div class="mb-4 is-flex is-justify-content-space-between is-align-items-center">
+                        <button class="button is-small is-light" id="btn-back-to-agents">
+                            <span class="icon is-small mr-1"><i class="ph ph-arrow-left"></i></span>
+                            <span>Back to Agents</span>
+                        </button>
+                        <div class="buttons">
+                            <button class="button is-small is-danger is-outlined" id="btn-delete-agent">
+                                <span class="icon is-small mr-1"><i class="ph ph-trash"></i></span>
+                                <span>Delete Agent</span>
+                            </button>
+                            <button class="button is-small is-primary" id="btn-save-agent">
+                                <span class="icon is-small mr-1"><i class="ph ph-floppy-disk"></i></span>
+                                <span>Save Changes</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="columns">
-                        <!-- Left Column: Bot Profile & Config -->
-                        <div class="column is-4">
-                            <div class="box mb-4">
+                        <!-- Left Column: Core Agent Profile -->
+                        <div class="column is-5">
+                            <div class="box facet mb-4">
                                 <div class="is-flex is-align-items-center mb-4">
-                                    <span class="icon is-large has-text-info mr-3"><i class="ph ph-spinner ph-spin fa-2x"></i></span>
+                                    <span class="icon is-large has-text-primary mr-3" id="agent-detail-icon"><i class="ph ph-robot fa-2x"></i></span>
                                     <div>
-                                        <h2 class="title is-4 mb-1" id="bot-detail-name">Loading...</h2>
-                                        <p class="subtitle is-6 has-text-grey">Bot Configuration</p>
+                                        <h2 class="title is-4 cinzel mb-1" id="agent-detail-title">Loading...</h2>
+                                        <p class="subtitle is-6 has-text-grey" id="agent-detail-id-label">Agent Profile</p>
                                     </div>
                                 </div>
-                                <hr>
-                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-plug"></i></span>Invocation Points</h3>
-                                <div class="tags mb-4">
-                                    <span class="tag is-info is-light">Discord Slash Commands</span>
-                                    <span class="tag is-info is-light">@Mentions</span>
-                                    <span class="tag is-info is-light">Web Dashboard</span>
+                                <hr class="my-3">
+                                
+                                <div class="field">
+                                    <label class="label is-small">Agent ID</label>
+                                    <div class="control">
+                                        <input class="input is-small font-mono" type="text" id="agent-input-id" placeholder="e.g. rotor, devops, default">
+                                    </div>
+                                    <p class="help is-size-7 has-text-grey">Unique identifier used for channel routing and internal mappings.</p>
                                 </div>
-                            </div>
-                            
-                            <div class="box">
 
-                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-robot"></i></span>Bot Settings</h3>
                                 <div class="field">
-                                    <label class="label is-small">Name</label>
+                                    <label class="label is-small">Display Name</label>
                                     <div class="control">
-                                        <input class="input is-small" type="text" id="bot-setting-name">
+                                        <input class="input is-small" type="text" id="agent-input-name" placeholder="e.g. Daedalus (Rotor Engine)">
                                     </div>
                                 </div>
+
                                 <div class="field">
-                                    <label class="label is-small">Default Model</label>
+                                    <label class="label is-small">Active Model</label>
                                     <div class="control">
-                                        <input class="input is-small" type="text" id="bot-setting-model">
+                                        <div class="select is-small is-fullwidth">
+                                            <select id="agent-select-model">
+                                                <option value="gemini-3.7-flash-high">Gemini 3.7 Flash (High)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <p class="help is-size-7 has-text-grey">Dynamically resolved and mapped via Antigravity Model Registry.</p>
+                                </div>
+
+                                <div class="field">
+                                    <label class="label is-small">Workspace Root Directory</label>
+                                    <div class="control">
+                                        <input class="input is-small font-mono" type="text" id="agent-input-workspace" placeholder="~/dev/rotor">
+                                    </div>
+                                    <p class="help is-size-7 has-text-grey">Working directory where this agent operates and creates projects.</p>
+                                </div>
+
+                                <div class="columns is-mobile is-vcentered mb-2">
+                                    <div class="column is-6">
+                                        <div class="field">
+                                            <label class="label is-small">Execution Mode</label>
+                                            <div class="control">
+                                                <div class="select is-small is-fullwidth">
+                                                    <select id="agent-select-mode">
+                                                        <option value="accept-edits">accept-edits</option>
+                                                        <option value="plan">plan</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="column is-6">
+                                        <div class="field pt-3">
+                                            <label class="checkbox is-size-7 pt-2">
+                                                <input type="checkbox" id="agent-skip-permissions" checked>
+                                                Auto-Approve Tools
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
-                                
-                                <div id="bot-provider-config-container" class="mt-4 mb-4" style="border-left: 2px solid #3273dc; padding-left: 10px;">
-                                    <h4 class="title is-6 mb-2 has-text-info">Provider Settings (<span id="bot-provider-type-label"></span>)</h4>
-                                    <div id="bot-provider-fields"></div>
-                                </div>
-                                <hr>
-                                                                <h3 class="title is-6"><span class="icon is-small mr-2"><i class="ph ph-magic"></i></span>System Prompt</h3>
+
                                 <div class="field">
+                                    <label class="label is-small">Mission Statement</label>
                                     <div class="control">
-                                        <textarea class="textarea is-small" id="bot-system-prompt" rows="8" placeholder="Loading system prompt..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="field">
-                                    <button class="button is-small is-info is-fullwidth" id="btn-save-bot-prompt">Save Configuration</button>
-                                </div>
-                                
-                                <div class="message is-small is-info is-light mt-3">
-                                    <div class="message-header"><p>Replacement Tokens</p></div>
-                                    <div class="message-body content is-small">
-                                        <ul style="margin-top:0; padding-left:1em;">
-                                            <li><code>{bot_name}</code> - Replaced with bot namespace</li>
-                                            <li><code>{model_name}</code> - Replaced with active model ID</li>
-                                            <li><code>{mission_statement}</code> - Bot's configured mission</li>
-                                            <li><code>{user_name}</code> - Author of the prompt</li>
-                                        </ul>
+                                        <input class="input is-small" type="text" id="agent-input-mission" placeholder="e.g. building the Rotor game engine with Rust & Godot">
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Right Column: Conversations List -->
-                        <div class="column is-8">
-                            <div class="box h-100 is-flex is-flex-direction-column">
-                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
-                                    <h3 class="title is-5 m-0"><span class="icon is-small mr-2"><i class="ph ph-comments"></i></span>Bot Conversations</h3>
-                                </div>
-                                <div class="field mb-4">
-                                    <div class="control has-icons-left">
-                                        <input class="input is-small" type="text" id="bot-conversations-search" placeholder="Search channels by name, thread, or context...">
-                                        <span class="icon is-small is-left">
-                                            <i class="ph ph-magnifying-glass"></i>
-                                        </span>
+
+                        <!-- Right Column: Persona, Instructions & Channel Routing -->
+                        <div class="column is-7">
+                            <div class="box facet mb-4">
+                                <h3 class="title is-6 mb-2"><span class="icon is-small mr-2"><i class="ph ph-magic"></i></span>Persona & System Instructions</h3>
+                                <div class="field">
+                                    <div class="control">
+                                        <textarea class="textarea is-small font-mono" id="agent-input-identity" rows="8" placeholder="You are {bot_name}, specialized in..."></textarea>
                                     </div>
                                 </div>
                                 
-                                <div class="table-container flex-grow-1" style="overflow-y: auto; max-height: 600px;">
-                                    <table class="table is-fullwidth is-hoverable">
-                                        <thead>
-                                            <tr>
-                                                <th>Project/Channel</th>
-                                                <th>Conversation ID</th>
-                                                <th>Last Active</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="bot-conversations-list">
-                                            <tr><td colspan="4" class="has-text-centered has-text-grey">Loading conversations...</td></tr>
-                                        </tbody>
-                                    </table>
+                                <div class="tags are-small mb-4">
+                                    <span class="tag is-light is-info"><code>{bot_name}</code></span>
+                                    <span class="tag is-light is-info"><code>{model_name}</code></span>
+                                    <span class="tag is-light is-info"><code>{mission_statement}</code></span>
+                                    <span class="tag is-light is-info"><code>{user_name}</code></span>
+                                    <span class="tag is-light is-info"><code>{workspace}</code></span>
+                                </div>
+
+                                <hr class="my-3">
+                                <h3 class="title is-6 mb-2"><span class="icon is-small mr-2"><i class="ph ph-broadcast"></i></span>Channel Bindings</h3>
+                                <p class="has-text-grey is-size-7 mb-3">Select the platform channels this agent handles. Invocations in these channels will spin up this agent persona.</p>
+                                
+                                <div id="agent-channel-bindings-container" class="box is-shadowless p-3 has-background-light" style="max-height: 220px; overflow-y: auto;">
+                                    <p class="has-text-grey is-size-7 has-text-centered">Loading channels...</p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Channels View -->
+                <main class="section view-section is-hidden pt-5" id="view-channels">
+                    <div class="box facet">
+                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+                            <div>
+                                <h2 class="title is-3 cinzel facet-title mb-1">Channels & Routing</h2>
+                                <p class="has-text-grey">Map incoming provider channels to specific agent personas.</p>
+                            </div>
+                            <div class="field mb-0">
+                                <div class="control has-icons-left">
+                                    <input class="input is-small" type="text" id="channels-search-input" placeholder="Search channels or guilds...">
+                                    <span class="icon is-small is-left"><i class="ph ph-magnifying-glass"></i></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="table is-fullwidth is-hoverable is-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Provider</th>
+                                        <th>Guild / Server</th>
+                                        <th>Channel</th>
+                                        <th>Topic</th>
+                                        <th style="min-width: 220px;">Assigned Agent</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="channels-table-body">
+                                    <tr><td colspan="6" class="has-text-centered has-text-grey py-5"><span class="icon mr-2"><i class="ph ph-spinner ph-spin"></i></span>Loading channels...</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </main>

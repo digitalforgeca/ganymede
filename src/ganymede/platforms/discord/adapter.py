@@ -56,6 +56,27 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         logger.info("Disconnecting from Discord...")
         await discord.Client.close(self)
 
+    def get_discovered_channels(self) -> list[dict[str, Any]]:
+        """Enumerate text channels across connected Discord guilds."""
+        channels = []
+        try:
+            for guild in self.guilds:
+                if self.discord_config.allowed_guilds and str(guild.id) not in self.discord_config.allowed_guilds:
+                    continue
+                for ch in guild.text_channels:
+                    channels.append({
+                        "platform": "discord",
+                        "id": str(ch.id),
+                        "name": ch.name,
+                        "guild_id": str(guild.id),
+                        "guild_name": guild.name,
+                        "topic": ch.topic or "",
+                        "type": "text"
+                    })
+        except Exception as e:
+            logger.warning("Error enumerating Discord channels", error=str(e))
+        return channels
+
     async def send_response(self, context: ContextKey, content: str, metadata: dict[str, Any]) -> None:
         channel = await self._resolve_channel(context)
         if not channel:

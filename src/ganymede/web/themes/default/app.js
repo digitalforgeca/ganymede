@@ -299,8 +299,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             
             // Trigger specific actions based on the view
-            if (targetId === 'view-bots') {
-                loadBots();
+            if (targetId === 'view-agents' || targetId === 'view-bots') {
+                loadAgents();
+            } else if (targetId === 'view-agent-detail' || targetId === 'view-bot-detail') {
+                const params = new URLSearchParams(hash.split('?')[1] || '');
+                const agentId = params.get('id') || 'default';
+                loadAgentDetails(agentId);
+            } else if (targetId === 'view-channels') {
+                loadChannels();
             } else if (targetId === 'view-chats') {
                 const params = new URLSearchParams(hash.split('?')[1] || '');
                 if (params.has('chat') && window.selectChatById) {
@@ -310,12 +316,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.selectChatTab(params.get('tab'));
                 } else if (window.selectChatTab) {
                     window.selectChatTab('chat');
-                }
-            } else if (targetId === 'view-bot-detail') {
-                const params = new URLSearchParams(hash.split('?')[1] || '');
-                const botId = params.get('id');
-                if (botId) {
-                    loadBotDetails(botId);
                 }
             } else if (targetId === 'view-settings') {
                 const params = new URLSearchParams(hash.split('?')[1] || '');
@@ -1247,187 +1247,461 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 olympusSidebar.style.display = 'none';
             }
-        });
-    }
-});
+    // ==========================================
+    // AGENTS & CHANNEL ROUTING CONTROLLERS
+    // ==========================================
 
-    async function loadBots() {
+    let cachedAvailableModels = [];
+    let cachedAgents = {};
+    let cachedChannelMappings = {};
+    let cachedChannels = [];
+
+    async function fetchAvailableModels() {
+        if (cachedAvailableModels.length > 0) return cachedAvailableModels;
         try {
-            const res = await fetch('/api/bots');
+            const res = await fetch('/api/models');
             if (res.ok) {
                 const data = await res.json();
-                const bots = data.bots;
-                
-                const botsGrid = document.getElementById('bots-list');
-                if (!botsGrid) return;
-                botsGrid.innerHTML = ''; // Clear hardcoded
-                
-                for (const [botId, botData] of Object.entries(bots)) {
-                    const platformType = botData.provider?.type || 'discord';
-                    
-                    const avatarHtml = botData.avatar_url 
-                        ? `<img class="is-rounded" src="${botData.avatar_url}" referrerpolicy="no-referrer" style="background: #f5f5f5; object-fit: cover; width: 100%; height: 100%;">`
-                        : `<span class="icon is-large has-text-info" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"><i class="ph ph-robot" style="font-size: 4rem;"></i></span>`;
+                cachedAvailableModels = data.models || [];
+            }
+        } catch (e) {
+            console.error('Failed to load models list', e);
+            cachedAvailableModels = ["Gemini 3.7 Flash (High)", "Gemini 3.1 Pro (High)"];
+        }
+        return cachedAvailableModels;
+    }
 
-                    const html = `
-                    <div class="column is-4">
-                        <div class="card is-clickable" onclick="window.location.hash='#view-bot-detail?id=' + encodeURIComponent('${botId}')" style="height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                            <div class="card-content has-text-centered is-flex is-flex-direction-column" style="height: 100%;">
-                                <div class="mb-3">
-                                    <figure class="image is-96x96 is-inline-block" style="border-radius: 50%; overflow: hidden; border: 2px solid #eee;">
-                                        ${avatarHtml}
-                                    </figure>
+    async function populateModelDropdown(selectEl, selectedValue) {
+        if (!selectEl) return;
+        const models = await fetchAvailableModels();
+        selectEl.innerHTML = '';
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            if (selectedValue && (selectedValue.toLowerCase() === m.toLowerCase() || selectedValue.toLowerCase() === m.toLowerCase().replace(/ /g, '-'))) {
+                opt.selected = true;
+            }
+            selectEl.appendChild(opt);
+        });
+        if (!selectEl.value && models.length > 0) {
+            selectEl.value = selectedValue || models[0];
+        }
+    }
+
+    async function loadAgents() {
+        const grid = document.getElementById('agents-list');
+        if (!grid) return;
+        grid.innerHTML = '<div class="column is-12 has-text-centered has-text-grey py-5"><span class="icon is-large mb-2"><i class="ph ph-spinner ph-spin fa-2x"></i></span><p>Loading agents...</p></div>';
+
+        try {
+            const [agentsRes, channelsRes] = await Promise.all([
+                fetch('/api/agents'),
+                fetch('/api/channels')
+            ]);
+
+            if (agentsRes.ok) {
+                const data = await agentsRes.json();
+                cachedAgents = data.agents || {};
+                cachedChannelMappings = data.channel_mappings || {};
+            }
+            if (channelsRes.ok) {
+                const cData = await channelsRes.json();
+                cachedChannels = cData.channels || [];
+            }
+
+            grid.innerHTML = '';
+
+            const agentEntries = Object.entries(cachedAgents);
+            if (agentEntries.length === 0) {
+                grid.innerHTML = '<div class="column is-12 has-text-centered has-text-grey py-5"><p>No custom agents defined. Click <strong>New Agent</strong> to create one.</p></div>';
+                return;
+            }
+
+            for (const [agentId, agent] of agentEntries) {
+                // Count bound channels
+                let boundChannelsCount = 0;
+                for (const ch of cachedChannels) {
+                    if (ch.assigned_agent_id === agentId) {
+                        boundChannelsCount++;
+                    }
+                }
+
+                const displayName = agent.name || agentId;
+                const modelName = agent.model || 'Gemini 3.7 Flash (High)';
+                const workspacePath = agent.workspace || '~/dev';
+                const modeName = agent.mode || 'accept-edits';
+                const isDefault = (agentId === 'default');
+
+                const html = `
+                <div class="column is-4">
+                    <div class="card facet is-clickable" onclick="window.location.hash='#view-agent-detail?id=' + encodeURIComponent('${agentId}')" style="height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                        <div class="card-content is-flex is-flex-direction-column" style="height: 100%;">
+                            <div class="is-flex is-align-items-center mb-3">
+                                <span class="icon is-large has-text-primary mr-3" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(50, 115, 220, 0.1); border-radius: 50%;">
+                                    <i class="ph ph-robot fa-2x"></i>
+                                </span>
+                                <div>
+                                    <h3 class="title is-5 cinzel mb-0">${displayName}</h3>
+                                    <p class="subtitle is-7 has-text-grey font-mono">@${agentId} ${isDefault ? '<span class="tag is-primary is-light is-small ml-1">Default</span>' : ''}</p>
                                 </div>
-                                <p class="title is-4 cinzel mb-1">${botData.name || botId}</p>
-                                <p class="subtitle is-6 has-text-grey">@${botId}</p>
-                                
-                                <div class="mt-auto pt-4" style="border-top: 1px solid #eee; width: 100%;">
-                                    <div class="is-flex is-justify-content-space-between mb-2">
-                                        <span class="has-text-grey is-size-7">Platform</span>
-                                        <span class="has-text-info has-text-weight-bold is-size-7" style="text-transform: capitalize;">${platformType}</span>
-                                    </div>
-                                    <div class="is-flex is-justify-content-space-between">
-                                        <span class="has-text-grey is-size-7">Model</span>
-                                        <span class="has-text-primary has-text-weight-bold is-size-7">${botData.model || 'Default'}</span>
-                                    </div>
+                            </div>
+                            
+                            <p class="is-size-7 has-text-grey mb-3" style="overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.4em;">
+                                ${agent.mission_statement || 'Custom autonomous agent for Ganymede.'}
+                            </p>
+
+                            <div class="mt-auto pt-3" style="border-top: 1px solid var(--border-marble); width: 100%;">
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                                    <span class="has-text-grey is-size-7">Model</span>
+                                    <span class="tag is-info is-light is-small">${modelName}</span>
+                                </div>
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                                    <span class="has-text-grey is-size-7">Workspace</span>
+                                    <span class="is-size-7 font-mono has-text-weight-semibold" style="max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${workspacePath}</span>
+                                </div>
+                                <div class="is-flex is-justify-content-space-between is-align-items-center">
+                                    <span class="has-text-grey is-size-7">Channels</span>
+                                    <span class="tag is-small ${boundChannelsCount > 0 ? 'is-success is-light' : 'is-light'}">${boundChannelsCount} bound</span>
                                 </div>
                             </div>
                         </div>
-                    </div>`;
-                    botsGrid.insertAdjacentHTML('beforeend', html);
-                }
+                    </div>
+                </div>`;
+                grid.insertAdjacentHTML('beforeend', html);
             }
         } catch (e) {
-            console.error('Failed to load bots from API', e);
+            console.error('Failed to load agents', e);
+            grid.innerHTML = '<div class="column is-12 has-text-centered has-text-danger py-5"><p>Failed to load agents list.</p></div>';
         }
     }
 
-    async function loadBotDetails(botId) {
-        // Load the system prompt and mission from config
+    async function loadAgentDetails(agentId) {
         try {
-            const configRes = await fetch('/api/config');
-            if (configRes.ok) {
-                const configData = await configRes.json();
-                document.getElementById('bot-detail-name').textContent = configData.agent?.name || botId || 'Ganymede';
-                
-                // Change icon back from spinner to robot
-                const iconSpan = document.getElementById('bot-detail-name').parentElement.previousElementSibling;
-                if (iconSpan) {
-                    iconSpan.innerHTML = '<i class="ph ph-robot fa-2x"></i>';
-                }
-                
-                document.getElementById('bot-setting-name').value = configData.agent?.name || '';
-                document.getElementById('bot-setting-model').value = configData.agent?.model || '';
-                document.getElementById('bot-system-prompt').value = configData.bot?.identity || '';
+            const [agentsRes, channelsRes] = await Promise.all([
+                fetch('/api/agents'),
+                fetch('/api/channels')
+            ]);
+
+            let agents = {};
+            let channelMappings = {};
+            if (agentsRes.ok) {
+                const data = await agentsRes.json();
+                agents = data.agents || {};
+                channelMappings = data.channel_mappings || {};
             }
+
+            let channels = [];
+            if (channelsRes.ok) {
+                const cData = await channelsRes.json();
+                channels = cData.channels || [];
+            }
+
+            let agent = agents[agentId];
+            const isNew = (agentId === 'new' || !agent);
+            if (isNew) {
+                agent = {
+                    id: '',
+                    name: 'New Agent',
+                    model: 'Gemini 3.7 Flash (High)',
+                    workspace: '~/dev',
+                    mode: 'accept-edits',
+                    skip_permissions: true,
+                    identity: 'You are {bot_name}, a specialized autonomous AI assistant. Your mission is {mission_statement}.',
+                    mission_statement: 'assisting with specialized engineering tasks',
+                    bindings: []
+                };
+            }
+
+            // Populate form fields
+            document.getElementById('agent-detail-title').textContent = agent.name || 'New Agent';
+            document.getElementById('agent-detail-id-label').textContent = isNew ? 'Create New Agent Profile' : `@${agentId}`;
             
-            // Load conversations
-            const convRes = await fetch('/api/chats');
-            if (convRes.ok) {
-                const data = await convRes.json();
-                const chatsData = data.chats || [];
-                const list = document.getElementById('bot-conversations-list');
-                list.innerHTML = '';
-                
-                if (chatsData.length === 0) {
-                    list.innerHTML = '<tr><td colspan="4" class="has-text-centered has-text-grey">No conversations found.</td></tr>';
+            const idInput = document.getElementById('agent-input-id');
+            idInput.value = isNew ? '' : agentId;
+            idInput.disabled = (!isNew && agentId === 'default');
+
+            document.getElementById('agent-input-name').value = agent.name || '';
+            document.getElementById('agent-input-workspace').value = agent.workspace || '~/dev';
+            document.getElementById('agent-select-mode').value = agent.mode || 'accept-edits';
+            document.getElementById('agent-skip-permissions').checked = (agent.skip_permissions !== false);
+            document.getElementById('agent-input-mission').value = agent.mission_statement || '';
+            document.getElementById('agent-input-identity').value = agent.identity || '';
+
+            // Populate dynamic models
+            await populateModelDropdown(document.getElementById('agent-select-model'), agent.model || 'Gemini 3.7 Flash (High)');
+
+            // Delete button state
+            const deleteBtn = document.getElementById('btn-delete-agent');
+            if (deleteBtn) {
+                deleteBtn.style.display = (isNew || agentId === 'default') ? 'none' : '';
+            }
+
+            // Populate Channel Bindings Checkboxes
+            const bindingsContainer = document.getElementById('agent-channel-bindings-container');
+            if (bindingsContainer) {
+                bindingsContainer.innerHTML = '';
+                if (channels.length === 0) {
+                    bindingsContainer.innerHTML = '<p class="has-text-grey is-size-7 has-text-centered py-3">No active platform channels discovered yet. Connect Discord to see live channels.</p>';
                 } else {
-                    chatsData.forEach(conv => {
-                        const tr = document.createElement('tr');
-                        tr.dataset.platform = conv.platform || '';
-                        tr.dataset.channel = conv.channel_id || '';
-                        tr.dataset.thread = conv.thread_id || '';
-                        tr.dataset.project = conv.project_name || '';
-                        tr.dataset.actualConvId = conv.actual_conv_id || '';
+                    channels.forEach(ch => {
+                        const key = `${ch.platform}:${ch.id}`;
+                        const isAssigned = (ch.assigned_agent_id === agentId) || (channelMappings[key] === agentId);
                         
-                        let dateStr = 'Unknown';
-                        if (conv.last_active) {
-                            if (typeof conv.last_active === 'number') {
-                                dateStr = new Date(conv.last_active * 1000).toLocaleString();
-                            } else {
-                                dateStr = new Date(conv.last_active + (conv.last_active.endsWith('Z') ? '' : 'Z')).toLocaleString();
-                            }
-                        }
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'field mb-2 is-flex is-align-items-center is-justify-content-space-between p-2';
+                        itemDiv.style.borderRadius = '4px';
+                        itemDiv.style.backgroundColor = isAssigned ? 'rgba(50, 115, 220, 0.08)' : 'transparent';
                         
-                        tr.innerHTML = `
-                            <td>${conv.project_name || conv.platform}</td>
-                            <td><span class="tag is-light is-small">${conv.id}</span></td>
-                            <td class="is-size-7">${dateStr}</td>
-                            <td><a href="#view-chats?chat=${encodeURIComponent(conv.id)}" class="button is-small is-light">View</a></td>
+                        itemDiv.innerHTML = `
+                            <label class="checkbox is-size-7 is-flex is-align-items-center">
+                                <input type="checkbox" class="channel-binding-cb mr-2" data-platform="${ch.platform}" data-channel-id="${ch.id}" ${isAssigned ? 'checked' : ''}>
+                                <span><strong>#${ch.name}</strong> <span class="has-text-grey">(${ch.guild_name || ch.platform})</span></span>
+                            </label>
+                            <span class="tag is-small is-light">${ch.id}</span>
                         `;
-                        list.appendChild(tr);
+                        bindingsContainer.appendChild(itemDiv);
                     });
                 }
             }
+
         } catch (e) {
-            console.error('Failed to load bot details', e);
+            console.error('Failed to load agent details', e);
         }
     }
 
-    document.getElementById('btn-save-bot-prompt').addEventListener('click', async () => {
-        const prompt = document.getElementById('bot-system-prompt').value;
-        const name = document.getElementById('bot-setting-name').value;
-        const model = document.getElementById('bot-setting-model').value;
-        const btn = document.getElementById('btn-save-bot-prompt');
-        btn.classList.add('is-loading');
-        
-        try {
-            // First fetch existing config to preserve other fields
-            const configRes = await fetch('/api/config');
-            let data = {};
-            if (configRes.ok) {
-                data = await configRes.json();
-            }
-            
-            if (!data.bot) data.bot = {};
-            data.bot.identity = prompt;
-            
-            if (!data.agent) data.agent = {};
-            if (name) data.agent.name = name;
-            if (model) data.agent.model = model;
-            
-            const res = await fetch('/api/config', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            
-            if (res.ok) {
-                btn.classList.remove('is-info', 'is-loading');
-                btn.classList.add('is-success');
-                btn.textContent = 'Saved!';
-                setTimeout(() => {
-                    btn.classList.remove('is-success');
-                    btn.classList.add('is-info');
-                    btn.textContent = 'Save Configuration';
-                }, 2000);
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Failed to save configuration');
-            btn.classList.remove('is-loading');
-        }
-    });
+    async function loadChannels() {
+        const tbody = document.getElementById('channels-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="6" class="has-text-centered has-text-grey py-5"><span class="icon mr-2"><i class="ph ph-spinner ph-spin"></i></span>Loading channels...</td></tr>';
 
-    // Add search listener for bot conversations
-    document.getElementById('bot-conversations-search').addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        const rows = document.querySelectorAll('#bot-conversations-list tr');
-        rows.forEach(row => {
-            if (row.children.length === 1 && row.children[0].colSpan > 1) return; // Skip "No conversations" row
-            
-            const platform = row.dataset.platform || '';
-            const channel = row.dataset.channel || '';
-            const thread = row.dataset.thread || '';
-            const project = row.dataset.project || '';
-            const actualConvId = row.dataset.actualConvId || '';
-            
-            const searchStr = `${platform} ${channel} ${thread} ${project} ${actualConvId}`.toLowerCase();
-            
-            if (searchStr.includes(query) || row.textContent.toLowerCase().includes(query)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
+        try {
+            const [channelsRes, agentsRes] = await Promise.all([
+                fetch('/api/channels'),
+                fetch('/api/agents')
+            ]);
+
+            let channels = [];
+            let agents = {};
+            if (channelsRes.ok) {
+                const cData = await channelsRes.json();
+                channels = cData.channels || [];
+            }
+            if (agentsRes.ok) {
+                const aData = await agentsRes.json();
+                agents = aData.agents || {};
+            }
+
+            tbody.innerHTML = '';
+
+            if (channels.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="has-text-centered has-text-grey py-5">No channels discovered yet. Make sure Discord bot is running.</td></tr>';
+                return;
+            }
+
+            channels.forEach(ch => {
+                const tr = document.createElement('tr');
+                tr.dataset.platform = ch.platform || 'discord';
+                tr.dataset.channelId = ch.id || '';
+                tr.dataset.guildId = ch.guild_id || '';
+                
+                // Build agent options
+                let agentOptions = '';
+                for (const [aid, adata] of Object.entries(agents)) {
+                    const isSelected = (ch.assigned_agent_id === aid);
+                    agentOptions += `<option value="${aid}" ${isSelected ? 'selected' : ''}>${adata.name || aid} (@${aid})</option>`;
+                }
+
+                tr.innerHTML = `
+                    <td><span class="tag is-info is-light is-capitalized"><i class="ph ph-discord-logo mr-1"></i>${ch.platform}</span></td>
+                    <td><strong>${ch.guild_name || 'Direct / Global'}</strong></td>
+                    <td><span class="tag is-dark is-small mr-1">#</span><strong>${ch.name}</strong> <span class="is-size-7 has-text-grey">(${ch.id})</span></td>
+                    <td class="is-size-7 has-text-grey" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ch.topic || '—'}</td>
+                    <td>
+                        <div class="select is-small is-fullwidth">
+                            <select class="channel-agent-select" data-platform="${ch.platform}" data-channel-id="${ch.id}">
+                                ${agentOptions}
+                            </select>
+                        </div>
+                    </td>
+                    <td>
+                        <a href="#view-agent-detail?id=${encodeURIComponent(ch.assigned_agent_id || 'default')}" class="button is-small is-light" title="Edit Assigned Agent">
+                            <span class="icon is-small"><i class="ph ph-sliders"></i></span>
+                        </a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Add change listener to channel agent selects
+            document.querySelectorAll('.channel-agent-select').forEach(sel => {
+                sel.addEventListener('change', async (e) => {
+                    const platform = e.target.dataset.platform;
+                    const channelId = e.target.dataset.channelId;
+                    const agentId = e.target.value;
+                    sel.disabled = true;
+                    
+                    try {
+                        const res = await fetch('/api/channels/assign', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ platform, channel_id: channelId, agent_id: agentId })
+                        });
+                        if (res.ok) {
+                            sel.classList.add('is-success');
+                            setTimeout(() => sel.classList.remove('is-success'), 1500);
+                        }
+                    } catch (err) {
+                        console.error('Failed to assign agent', err);
+                        alert('Failed to assign agent to channel');
+                    } finally {
+                        sel.disabled = false;
+                    }
+                });
+            });
+
+        } catch (e) {
+            console.error('Failed to load channels', e);
+            tbody.innerHTML = '<tr><td colspan="6" class="has-text-centered has-text-danger py-5">Failed to load channels.</td></tr>';
+        }
+    }
+
+    // Agent Creation & Save Event Listeners
+    const btnCreateAgent = document.getElementById('btn-create-agent');
+    if (btnCreateAgent) {
+        btnCreateAgent.addEventListener('click', () => {
+            window.location.hash = '#view-agent-detail?id=new';
+        });
+    }
+
+    const btnBackToAgents = document.getElementById('btn-back-to-agents');
+    if (btnBackToAgents) {
+        btnBackToAgents.addEventListener('click', () => {
+            window.location.hash = '#view-agents';
+        });
+    }
+
+    const btnSaveAgent = document.getElementById('btn-save-agent');
+    if (btnSaveAgent) {
+        btnSaveAgent.addEventListener('click', async () => {
+            const rawId = document.getElementById('agent-input-id').value.trim();
+            if (!rawId) {
+                alert('Please enter an Agent ID (e.g. rotor, devops, default)');
+                return;
+            }
+            const agentId = rawId.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+            const name = document.getElementById('agent-input-name').value.trim() || agentId;
+            const model = document.getElementById('agent-select-model').value;
+            const workspace = document.getElementById('agent-input-workspace').value.trim() || '~/dev';
+            const mode = document.getElementById('agent-select-mode').value;
+            const skipPermissions = document.getElementById('agent-skip-permissions').checked;
+            const missionStatement = document.getElementById('agent-input-mission').value.trim();
+            const identity = document.getElementById('agent-input-identity').value;
+
+            // Collect bound channels
+            const boundChannels = [];
+            document.querySelectorAll('.channel-binding-cb:checked').forEach(cb => {
+                boundChannels.push({
+                    platform: cb.dataset.platform,
+                    channel_id: cb.dataset.channelId
+                });
+            });
+
+            btnSaveAgent.classList.add('is-loading');
+
+            try {
+                // Save Agent
+                const agentData = {
+                    id: agentId,
+                    name: name,
+                    model: model,
+                    workspace: workspace,
+                    mode: mode,
+                    skip_permissions: skipPermissions,
+                    mission_statement: missionStatement,
+                    identity: identity,
+                    bindings: [{ provider: 'discord', channels: boundChannels.map(b => b.channel_id) }]
+                };
+
+                const res = await fetch(`/api/agents/${encodeURIComponent(agentId)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(agentData)
+                });
+
+                if (res.ok) {
+                    // Update channel bindings individually
+                    for (const b of boundChannels) {
+                        await fetch('/api/channels/assign', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ platform: b.platform, channel_id: b.channel_id, agent_id: agentId })
+                        });
+                    }
+
+                    btnSaveAgent.classList.remove('is-loading');
+                    btnSaveAgent.classList.add('is-success');
+                    btnSaveAgent.textContent = 'Saved!';
+                    setTimeout(() => {
+                        btnSaveAgent.classList.remove('is-success');
+                        btnSaveAgent.textContent = 'Save Changes';
+                        window.location.hash = '#view-agents';
+                    }, 1200);
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to save agent');
+                    btnSaveAgent.classList.remove('is-loading');
+                }
+            } catch (e) {
+                console.error('Failed to save agent', e);
+                alert('Network error while saving agent');
+                btnSaveAgent.classList.remove('is-loading');
             }
         });
-    });
+    }
+
+    const btnDeleteAgent = document.getElementById('btn-delete-agent');
+    if (btnDeleteAgent) {
+        btnDeleteAgent.addEventListener('click', async () => {
+            const agentId = document.getElementById('agent-input-id').value.trim();
+            if (!agentId || agentId === 'default') {
+                alert('Cannot delete the default agent');
+                return;
+            }
+            if (!confirm(`Are you sure you want to delete agent '@${agentId}'?`)) {
+                return;
+            }
+
+            btnDeleteAgent.classList.add('is-loading');
+            try {
+                const res = await fetch(`/api/agents/${encodeURIComponent(agentId)}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    window.location.hash = '#view-agents';
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete agent');
+                }
+            } catch (e) {
+                console.error('Failed to delete agent', e);
+            } finally {
+                btnDeleteAgent.classList.remove('is-loading');
+            }
+        });
+    }
+
+    // Search filter for channels view
+    const channelsSearch = document.getElementById('channels-search-input');
+    if (channelsSearch) {
+        channelsSearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#channels-table-body tr');
+            rows.forEach(row => {
+                if (row.children.length === 1) return;
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        });
+    }
+});

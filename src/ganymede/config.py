@@ -90,6 +90,8 @@ class AppConfig:
     platforms: dict[str, Any] = field(default_factory=dict)
 
     bots: dict[str, Any] = field(default_factory=dict)
+    agents: dict[str, Any] = field(default_factory=dict)
+    channel_mappings: dict[str, str] = field(default_factory=dict)
     theme: str = "default"
 
     def __post_init__(self):
@@ -97,7 +99,21 @@ class AppConfig:
         p_type = self.bot.provider.get("type", "discord")
         self.platforms[p_type] = self.bot.provider
         
-        # Populate default bots if none exist
+        # Populate default agent if none exists
+        if "default" not in self.agents:
+            self.agents["default"] = {
+                "id": "default",
+                "name": self.agent.name,
+                "model": self.agent.model,
+                "workspace": self.agent.workspace,
+                "mode": self.agent.mode,
+                "skip_permissions": self.agent.skip_permissions,
+                "identity": self.bot.identity,
+                "mission_statement": self.agent.mission_statement,
+                "bindings": [{"provider": p_type, "channels": ["*"]}]
+            }
+        
+        # Populate default bots if none exist for legacy backwards-compat
         if not self.bots:
             self.bots = {
                 "default": {
@@ -107,6 +123,56 @@ class AppConfig:
                     "provider": self.bot.provider
                 }
             }
+
+    def get_agent_profile(self, agent_id: str = "default") -> dict[str, Any]:
+        """Retrieve full agent profile dict with fallbacks to global defaults."""
+        profile = self.agents.get(agent_id) or self.agents.get("default") or {}
+        return {
+            "id": profile.get("id", agent_id),
+            "name": profile.get("name", self.agent.name),
+            "model": profile.get("model", self.agent.model),
+            "workspace": profile.get("workspace", self.agent.workspace),
+            "mode": profile.get("mode", self.agent.mode),
+            "skip_permissions": profile.get("skip_permissions", self.agent.skip_permissions),
+            "identity": profile.get("identity", self.bot.identity),
+            "mission_statement": profile.get("mission_statement", self.agent.mission_statement),
+            "bindings": profile.get("bindings", []),
+            "provider_config": profile.get("provider_config", {})
+        }
+
+    def get_agent_for_context(self, context: Any) -> dict[str, Any]:
+        """Resolve which agent profile governs a given context (e.g. Discord channel)."""
+        if not context:
+            return self.get_agent_profile("default")
+        
+        platform = getattr(context, "platform", "discord")
+        channel_id = str(getattr(context, "channel_id", "") or "")
+
+        # 1. Direct explicit channel mapping (e.g. "discord:1539870389780348977" -> "rotor")
+        direct_key = f"{platform}:{channel_id}"
+        if direct_key in self.channel_mappings:
+            agent_id = self.channel_mappings[direct_key]
+            if agent_id in self.agents:
+                return self.get_agent_profile(agent_id)
+
+        # 2. Check each agent's bindings list
+        for aid, a_data in self.agents.items():
+            if isinstance(a_data, dict) and "bindings" in a_data:
+                for b in a_data.get("bindings", []):
+                    if isinstance(b, dict) and b.get("provider", "").lower() == platform.lower():
+                        channels = [str(c) for c in b.get("channels", [])]
+                        if channel_id in channels or "*" in channels:
+                            return self.get_agent_profile(aid)
+
+        # 3. Check wildcard platform mapping (e.g. "discord:*" -> "default")
+        wildcard_key = f"{platform}:*"
+        if wildcard_key in self.channel_mappings:
+            agent_id = self.channel_mappings[wildcard_key]
+            if agent_id in self.agents:
+                return self.get_agent_profile(agent_id)
+
+        # 4. Fallback to default
+        return self.get_agent_profile("default")
 
     @property
     def platform(self) -> str:
@@ -211,8 +277,24 @@ def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
         config.bot.provider.update(d)
         config.bot.provider["type"] = "discord"
 
+    if "agents" in data and isinstance(data["agents"], dict):
+        config.agents.update(data["agents"])
+
+    if "channel_mappings" in data and isinstance(data["channel_mappings"], dict):
+        config.channel_mappings.update(data["channel_mappings"])
+
+    if "providers" in data and isinstance(data["providers"], dict):
+        for p_name, p_cfg in data["providers"].items():
+            if isinstance(p_cfg, dict):
+                if p_name in config.platforms and isinstance(config.platforms[p_name], dict):
+                    config.platforms[p_name].update(p_cfg)
+                else:
+                    config.platforms[p_name] = p_cfg
+                if p_name == config.platform:
+                    config.bot.provider.update(p_cfg)
+
     # Merge platform-specific config keys into config.platforms dict
-    core_keys = {"agent", "quota", "activation", "log_level", "platform", "bot", "discord"}
+    core_keys = {"agent", "agents", "channel_mappings", "providers", "quota", "activation", "log_level", "platform", "bot", "bots", "discord", "auth", "theme", "dashboard_port"}
     for k, v in data.items():
         if k not in core_keys:
             if isinstance(v, dict) and k in config.platforms and isinstance(config.platforms[k], dict):

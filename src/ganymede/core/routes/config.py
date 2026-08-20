@@ -157,10 +157,196 @@ async def handle_bot_conversations(request: Request):
 
 
 
+@router.get('/api/agents')
+async def handle_agents_get(request: Request):
+    server = request.app.state.server
+    return {
+        "agents": getattr(server.config, "agents", {}),
+        "channel_mappings": getattr(server.config, "channel_mappings", {})
+    }
+
+@router.post('/api/agents/{agent_id}')
+async def handle_agent_post(request: Request):
+    server = request.app.state.server
+    agent_id = request.path_params.get('agent_id', 'default').strip()
+    agent_data = await request.json()
+    
+    config_path = os.path.expanduser("~/.ganymede/config.yaml")
+    data = {}
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+            
+    if "agents" not in data:
+        data["agents"] = {}
+        
+    data["agents"][agent_id] = agent_data
+    server.config.agents[agent_id] = agent_data
+    
+    # If this is the default agent, also update top-level agent/bot defaults
+    if agent_id == "default":
+        if "name" in agent_data:
+            server.config.agent.name = agent_data["name"]
+        if "model" in agent_data:
+            server.config.agent.model = agent_data["model"]
+        if "workspace" in agent_data:
+            server.config.agent.workspace = agent_data["workspace"]
+        if "identity" in agent_data:
+            server.config.bot.identity = agent_data["identity"]
+        if "mission_statement" in agent_data:
+            server.config.agent.mission_statement = agent_data["mission_statement"]
+        if "mode" in agent_data:
+            server.config.agent.mode = agent_data["mode"]
+            
+    with open(config_path, "w") as f:
+        yaml.dump(data, f, default_flow_style=False)
+        
+    return {"status": "saved", "agent_id": agent_id}
+
+@router.delete('/api/agents/{agent_id}')
+async def handle_agent_delete(request: Request):
+    server = request.app.state.server
+    agent_id = request.path_params.get('agent_id')
+    if agent_id == "default":
+        return JSONResponse({"error": "Cannot delete the default agent"}, status_code=400)
+        
+    config_path = os.path.expanduser("~/.ganymede/config.yaml")
+    data = {}
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+            
+    if "agents" in data and agent_id in data["agents"]:
+        del data["agents"][agent_id]
+        if agent_id in server.config.agents:
+            del server.config.agents[agent_id]
+            
+        # Clean up any channel mappings referencing this agent
+        if "channel_mappings" in data:
+            data["channel_mappings"] = {k: v for k, v in data["channel_mappings"].items() if v != agent_id}
+            server.config.channel_mappings = data["channel_mappings"]
+            
+        with open(config_path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False)
+            
+        return {"status": "deleted", "agent_id": agent_id}
+    return JSONResponse({"error": "Agent not found"}, status_code=404)
+
+@router.get('/api/channels')
+async def handle_channels_get(request: Request):
+    server = request.app.state.server
+    channels = []
+    
+    # Query all active platform providers
+    if getattr(server, "providers", None):
+        for p in server.providers:
+            if hasattr(p, "get_channels"):
+                try:
+                    p_channels = p.get_channels()
+                    for ch in p_channels:
+                        platform = ch.get("platform", "discord")
+                        ch_id = ch.get("id")
+                        
+                        from ganymede.core import ContextKey
+                        ctx = ContextKey(platform, ch_id, None)
+                        assigned_agent = server.config.get_agent_for_context(ctx)
+                        
+                        channels.append({
+                            **ch,
+                            "assigned_agent_id": assigned_agent.get("id", "default"),
+                            "assigned_agent_name": assigned_agent.get("name", "Icarus"),
+                            "assigned_agent_model": assigned_agent.get("model", "Default")
+                        })
+                except Exception as e:
+                    logger.warning("Error fetching channels from provider", provider=getattr(p, "bot_id", "unknown"), error=str(e))
+
+    # Also list any historical channels from conversation database if not already discovered
+    if server.db:
+        try:
+            async with server.db._conn.execute(
+                """
+                SELECT DISTINCT context_platform, context_channel, MAX(created_at) as last_active
+                FROM conversations
+                GROUP BY context_platform, context_channel
+                ORDER BY last_active DESC
+                """
+            ) as cursor:
+                rows = await cursor.fetchall()
+                for row in rows:
+                    p_form = row["context_platform"]
+                    c_id = row["context_channel"]
+                    if not any(c.get("id") == c_id and c.get("platform") == p_form for c in channels):
+                        from ganymede.core import ContextKey
+                        ctx = ContextKey(p_form, c_id, None)
+                        assigned_agent = server.config.get_agent_for_context(ctx)
+                        channels.append({
+                            "platform": p_form,
+                            "id": c_id,
+                            "name": f"Channel {c_id}",
+                            "guild_id": "",
+                            "guild_name": p_form.capitalize(),
+                            "topic": "",
+                            "type": "text",
+                            "assigned_agent_id": assigned_agent.get("id", "default"),
+                            "assigned_agent_name": assigned_agent.get("name", "Icarus"),
+                            "assigned_agent_model": assigned_agent.get("model", "Default")
+                        })
+        except Exception as e:
+            logger.warning("Error querying conversation channels", error=str(e))
+            
+    return {"channels": channels}
+
+@router.post('/api/channels/assign')
+async def handle_channel_assign_post(request: Request):
+    server = request.app.state.server
+    payload = await request.json()
+    platform = payload.get("platform", "discord").lower()
+    channel_id = str(payload.get("channel_id", "")).strip()
+    agent_id = payload.get("agent_id", "default").strip()
+    
+    if not channel_id:
+        return JSONResponse({"error": "channel_id is required"}, status_code=400)
+        
+    config_path = os.path.expanduser("~/.ganymede/config.yaml")
+    data = {}
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            data = yaml.safe_load(f) or {}
+            
+    if "channel_mappings" not in data:
+        data["channel_mappings"] = {}
+        
+    key = f"{platform}:{channel_id}"
+    data["channel_mappings"][key] = agent_id
+    server.config.channel_mappings[key] = agent_id
+    
+    # Keep agent bindings in sync
+    if "agents" not in data:
+        data["agents"] = server.config.agents
+    if agent_id in data["agents"]:
+        agent = data["agents"][agent_id]
+        bindings = agent.get("bindings", [])
+        # Add channel to this agent's bindings if not already present
+        found = False
+        for b in bindings:
+            if b.get("provider") == platform:
+                if channel_id not in b.get("channels", []):
+                    b.setdefault("channels", []).append(channel_id)
+                found = True
+                break
+        if not found:
+            bindings.append({"provider": platform, "channels": [channel_id]})
+        agent["bindings"] = bindings
+        server.config.agents[agent_id] = agent
+
+    with open(config_path, "w") as f:
+        yaml.dump(data, f, default_flow_style=False)
+        
+    return {"status": "assigned", "key": key, "agent_id": agent_id}
+
 @router.get('/api/providers')
 async def handle_providers_get(request: Request):
     server = request.app.state.server
-    # Dynamically list all providers and their schemas
     import pkgutil
     import importlib
     import os
@@ -179,10 +365,12 @@ async def handle_providers_get(request: Request):
             for obj_name in dir(module):
                 obj = getattr(module, obj_name)
                 if isinstance(obj, type) and issubclass(obj, BasePlatformProvider) and obj is not BasePlatformProvider:
+                    is_connected = server.platform_states.get(name, False)
                     providers.append({
                         "id": name,
                         "name": name.capitalize(),
-                        "schema": obj.get_config_schema()
+                        "schema": obj.get_config_schema(),
+                        "connected": is_connected
                     })
                     break
         except Exception:
@@ -202,10 +390,12 @@ async def handle_providers_get(request: Request):
                     for obj_name in dir(module):
                         obj = getattr(module, obj_name)
                         if isinstance(obj, type) and issubclass(obj, BasePlatformProvider) and obj is not BasePlatformProvider:
+                            is_connected = server.platform_states.get(name, False)
                             providers.append({
                                 "id": name,
                                 "name": name.capitalize() + " (External)",
-                                "schema": obj.get_config_schema()
+                                "schema": obj.get_config_schema(),
+                                "connected": is_connected
                             })
                             break
                 except Exception:
@@ -216,85 +406,12 @@ async def handle_providers_get(request: Request):
 @router.get('/api/bots')
 async def handle_bots_get(request: Request):
     server = request.app.state.server
-    config_path = os.path.expanduser("~/.ganymede/config.yaml")
-    bots = {}
-    if os.path.exists(config_path):
-        with open(config_path, "r") as f:
-            data = yaml.safe_load(f) or {}
-            bots = data.get("bots", {})
-            if not bots and "bot" in data:
-                # Fallback mapping for single bot gateway configurations
-                bots = {"primary": data["bot"]}
-                
-    # Augment with live info if available
-    live_bot_name = None
-    live_avatar_url = None
-    if getattr(server, "providers", None):
-        for p in server.providers:
-            adapter = getattr(p, "adapter", None)
-            if adapter and hasattr(adapter, "user") and adapter.user:
-                try:
-                    live_bot_name = adapter.user.name
-                    if getattr(adapter.user, "display_avatar", None):
-                        live_avatar_url = adapter.user.display_avatar.url
-                except Exception:
-                    pass
-                
-    for bot_id, bot_data in bots.items():
-        if "name" not in bot_data:
-            bot_data["name"] = live_bot_name if live_bot_name else bot_id.capitalize()
-        if "avatar_url" not in bot_data and live_avatar_url:
-            bot_data["avatar_url"] = live_avatar_url
-        if "model" not in bot_data:
-            bot_data["model"] = getattr(server.config.agent, "model", "Default")
-            
-    return {"bots": bots}
+    return await handle_agents_get(request)
 
 @router.post('/api/bots/{bot_id}')
 async def handle_bot_post(request: Request):
-    server = request.app.state.server
-    bot_id = request.path_params.get('bot_id')
-    bot_data = await request.json()
-    
-    config_path = os.path.expanduser("~/.ganymede/config.yaml")
-    data = {}
-    if os.path.exists(config_path):
-        with open(config_path, "r") as f:
-            data = yaml.safe_load(f) or {}
-            
-    if "bots" not in data:
-        data["bots"] = {}
-        
-    data["bots"][bot_id] = bot_data
-    
-    # Also update in-memory config
-    server.config.bots[bot_id] = bot_data
-    
-    with open(config_path, "w") as f:
-        yaml.dump(data, f, default_flow_style=False)
-        
-    return {"status": "saved", "bot_id": bot_id}
+    return await handle_agent_post(request)
 
 @router.delete('/api/bots/{bot_id}')
 async def handle_bot_delete(request: Request):
-    server = request.app.state.server
-    bot_id = request.path_params.get('bot_id')
-    
-    config_path = os.path.expanduser("~/.ganymede/config.yaml")
-    data = {}
-    if os.path.exists(config_path):
-        with open(config_path, "r") as f:
-            data = yaml.safe_load(f) or {}
-            
-    if "bots" in data and bot_id in data["bots"]:
-        del data["bots"][bot_id]
-        
-        # Also update in-memory config
-        if bot_id in server.config.bots:
-            del server.config.bots[bot_id]
-            
-        with open(config_path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False)
-            
-        return {"status": "deleted", "bot_id": bot_id}
-    return JSONResponse({"error": "Bot not found"}, status_code=404)
+    return await handle_agent_delete(request)

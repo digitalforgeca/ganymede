@@ -65,6 +65,7 @@ async def handle_chats(request: Request):
                         except Exception:
                             pass
                             
+                    assigned_agent = server.config.get_agent_for_context(ctx)
                     chats.append({
                         "platform": r["context_platform"],
                         "channel_id": r["context_channel"],
@@ -73,7 +74,10 @@ async def handle_chats(request: Request):
                         "msg_count": r["msg_count"],
                         "id": f"{r['context_platform']}_{r['context_channel']}_{r['context_thread'] or 'main'}",
                         "actual_conv_id": actual_conv_id,
-                        "project_name": project_name
+                        "project_name": project_name,
+                        "agent_id": assigned_agent.get("id", "default"),
+                        "agent_name": assigned_agent.get("name", "Icarus"),
+                        "agent_model": assigned_agent.get("model", "Default")
                     })
                     
     # Merge Antigravity CLI native conversations from brain directory
