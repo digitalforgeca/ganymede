@@ -539,3 +539,33 @@ discord:
         # Verify that send_streaming_start was NOT called because this is an active interactive turn
         mock_adapter.send_streaming_start.assert_not_called()
 
+    async def test_stop_command_abort_handling(self):
+        """Tests that terminating a managed agent immediately unblocks CliResponse with an abort message."""
+        from ganymede.core.agent_manager import CliResponse
+
+        channel_id = "1539870389780348977"
+        ctx = ContextKey("discord", channel_id, None)
+        managed_agent = await self.agent_manager.get_or_create(ctx)
+
+        # Mock prompt response
+        response = CliResponse(managed_agent, "test long running prompt")
+
+        async def read_chunks():
+            chunks = []
+            async for chunk in response.chunks:
+                chunks.append(chunk.text)
+            return chunks
+
+        # Start generator task
+        read_task = asyncio.create_task(read_chunks())
+
+        # Give it a moment to enter the wait loop
+        await asyncio.sleep(0.05)
+
+        # Terminate / abort agent
+        await managed_agent.terminate()
+
+        # Wait for generator to finish with timeout
+        result_chunks = await asyncio.wait_for(read_task, timeout=2.0)
+        self.assertIn("🛑 *Execution stopped by user.*", result_chunks)
+

@@ -130,16 +130,21 @@ class CliResponse:
                     start_wait = time.time()
                     
                     while True:
+                        if self.agent.aborted:
+                            break
+
                         try:
-                            # Sleep for a shorter interval (5 seconds) so we can periodically check tmux health
-                            chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=5.0)
+                            # Sleep for a shorter interval (1.0 second) so we can check abort and tmux health promptly
+                            chunk = await asyncio.wait_for(self.agent.chunk_queue.get(), timeout=1.0)
                             if chunk is None:
-                                break  # Turn completed successfully
+                                break  # Turn completed successfully or aborted
                             yield chunk
                             continue # Re-enter loop without checking timeouts yet
                         except asyncio.TimeoutError:
-                            logger.debug(f"[_read_chunks] asyncio.TimeoutError caught for {self.agent.conversation_id}")
                             pass
+
+                        if self.agent.aborted:
+                            break
                             
                         # Periodically verify the tmux session is still alive
                         if getattr(self.agent, "tmux_session_name", None):
@@ -191,6 +196,7 @@ class CliResponse:
                 # Check if we were woken by an abort (/stop) rather than clean completion
                 if self.agent.aborted:
                     logger.info("Agent turn aborted by /stop", conversation_id=self.agent.conversation_id)
+                    yield Text(text="🛑 *Execution stopped by user.*", step_index=0)
                     return
 
                 # Check if the Stop hook carried an error (e.g., API rate limit / quota exhaustion).
@@ -686,6 +692,10 @@ class ManagedAgent:
         # Signal abort FIRST so the blocked CliResponse generator wakes up immediately
         self.aborted = True
         self.turn_completed_event.set()
+        try:
+            self.chunk_queue.put_nowait(None)
+        except Exception:
+            pass
 
         if getattr(self, "tmux_session_name", None):
             logger.info("Gracefully closing decoupled tmux session", session=self.tmux_session_name)
