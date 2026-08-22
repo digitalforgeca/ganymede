@@ -478,9 +478,7 @@ class ManagedAgent:
         workspace_dir = os.path.join(base_workspace, project_name) if project_name != "default" and not os.path.isabs(project_name) else base_workspace
         os.makedirs(workspace_dir, exist_ok=True)
             
-        if is_new_conversation:
-            args.extend(["--new-project", project_name])
-        else:
+        if project_name and project_name != "default":
             args.extend(["--project", project_name])
             
         args.extend(["--mode", getattr(self, "agent_mode", "accept-edits")])
