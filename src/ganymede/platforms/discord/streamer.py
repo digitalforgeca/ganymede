@@ -6,11 +6,17 @@ import structlog
 from ganymede.platforms.discord.formatter import DiscordFormatter
 from typing import Callable, Awaitable
 
+from ganymede.core.constants import (
+    DISCORD_STREAM_EDIT_INTERVAL_SEC,
+    DISCORD_MAX_ATTACHMENT_BYTES,
+    DISCORD_API_TIMEOUT_SEC,
+)
+
 logger = structlog.get_logger()
 
 class DiscordStreamer:
     """Manages rate-limited token streaming and message updates on Discord."""
-    def __init__(self, channel: discord.abc.Messageable, initial_text: str | None = None, persist_header: str | None = None, edit_interval: float = 1.5, interaction_callback: Callable[[str, discord.Interaction], Awaitable[None]] | None = None):
+    def __init__(self, channel: discord.abc.Messageable, initial_text: str | None = None, persist_header: str | None = None, edit_interval: float = DISCORD_STREAM_EDIT_INTERVAL_SEC, interaction_callback: Callable[[str, discord.Interaction], Awaitable[None]] | None = None):
         self.channel = channel
         self.interaction_callback = interaction_callback
         self.formatter = DiscordFormatter()
@@ -27,7 +33,7 @@ class DiscordStreamer:
     async def start(self) -> None:
         """Send the initial placeholder message to indicate thinking state."""
         try:
-            msg = await asyncio.wait_for(self.channel.send(self.initial_text), timeout=10.0)
+            msg = await asyncio.wait_for(self.channel.send(self.initial_text), timeout=DISCORD_API_TIMEOUT_SEC)
             self.messages.append(msg)
             self.last_edit_time = time.time()
         except asyncio.TimeoutError:
@@ -143,11 +149,9 @@ class DiscordStreamer:
     
             files_to_attach = []
             if final and metadata and metadata.get("artifact_files"):
-                # Discord free tier attachment limit is 10MB
-                MAX_SIZE = 10 * 1024 * 1024
                 for filepath in metadata["artifact_files"]:
                     if os.path.isfile(filepath):
-                        if os.path.getsize(filepath) <= MAX_SIZE:
+                        if os.path.getsize(filepath) <= DISCORD_MAX_ATTACHMENT_BYTES:
                             files_to_attach.append(discord.File(filepath))
                         else:
                             logger.warning("Artifact too large to attach to Discord", file=filepath, size=os.path.getsize(filepath))

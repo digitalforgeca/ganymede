@@ -11,6 +11,12 @@ from ganymede.core.models import PlatformMessage
 from ganymede.config import AppConfig
 from ganymede.core.model_registry import ModelRegistry
 
+from ganymede.core.constants import (
+    DEFAULT_FALLBACK_MODEL,
+    DISCORD_THINKING_INTERVAL_SEC,
+)
+from ganymede.core.transcript import TranscriptParser
+
 logger = structlog.get_logger()
 
 class Router:
@@ -23,54 +29,6 @@ class Router:
         self._locks: dict[ContextKey, asyncio.Lock] = {}
         self._autonomous_msgs: dict[str, dict] = {}
         self._main_agent_ids: dict[str, str] = {}
-
-    def _parse_transcript_from_path(self, transcript_path: str) -> tuple[str, list]:
-        """Parses an agent JSONL transcript to extract the latest turn's text and artifacts."""
-        final_text = ""
-        artifacts_created = []
-        try:
-            with open(transcript_path, 'r') as f:
-                lines = f.readlines()
-                
-            start_idx = 0
-            for i in range(len(lines) - 1, -1, -1):
-                try:
-                    data = json.loads(lines[i])
-                    if data.get("type") in ("USER_INPUT", "SYSTEM_MESSAGE") or data.get("source") in ("USER_EXPLICIT", "SYSTEM") or "<SYSTEM_MESSAGE>" in data.get("content", ""):
-                        start_idx = i
-                        break
-                except Exception:
-                    continue
-                    
-            for i in range(start_idx, len(lines)):
-                try:
-                    data = json.loads(lines[i])
-                    if data.get("type") in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
-                        content = data.get("content", "")
-                        if content:
-                            final_text = content
-                    if data.get("tool_calls"):
-                        for t in data.get("tool_calls"):
-                            t_name = t.get("name", "")
-                            t_args = t.get("args", {})
-                            if isinstance(t_args, str):
-                                try:
-                                    t_args = json.loads(t_args)
-                                except Exception:
-                                    t_args = {}
-                            if t_name in ("write_to_file", "replace_file_content", "multi_replace_file_content"):
-                                meta = t_args.get("ArtifactMetadata", {})
-                                if meta and (meta.get("UserFacing") or meta.get("RequestFeedback")):
-                                    tf = t_args.get("TargetFile")
-                                    summary = meta.get("Summary", "")
-                                    if tf and not any(a["file"] == tf for a in artifacts_created):
-                                        artifacts_created.append({"file": tf, "summary": summary})
-                except Exception:
-                    continue
-        except Exception as e:
-            logger.error("Failed to parse transcript file", error=str(e), path=transcript_path)
-            
-        return final_text, artifacts_created
 
     async def global_telemetry_listener(self, data: dict) -> None:
         """Global listener that permanently streams subagent and background goal telemetry into the channel."""
@@ -153,10 +111,7 @@ class Router:
                             f"~/.gemini/antigravity-cli/brain/{managed_agent.sdk_conversation_id}/.system_generated/logs/transcript.jsonl"
                         )
 
-            final_text = ""
-            artifacts_created = []
-            if transcript_path and os.path.exists(transcript_path):
-                final_text, artifacts_created = self._parse_transcript_from_path(transcript_path)
+            final_text, artifacts_created, _ = TranscriptParser.parse_transcript(transcript_path) if transcript_path else ("", [], [])
 
             # Merge any globally captured artifacts from telemetry
             if self.agent_manager:
@@ -168,27 +123,14 @@ class Router:
                             artifacts_created.append(art)
                     managed_agent._artifacts_this_turn = []
 
-            # Format artifact review section if artifacts were created
+            # Sync artifacts to central channel brain dir
+            channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{context.ganymede_conv_id}")
+            TranscriptParser.sync_artifacts(artifacts_created, channel_brain_dir)
+
             if artifacts_created:
                 port = getattr(self.config.agent, "dashboard_port", 8180)
-                dash_url = f"http://127.0.0.1:{port}"
-                art_text = "**📄 Artifacts Requiring Review:**\n"
-                channel_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{context.ganymede_conv_id}")
-                os.makedirs(channel_brain_dir, exist_ok=True)
-                import shutil
-                for art in artifacts_created:
-                    target_file = art["file"]
-                    name = os.path.basename(target_file)
-                    if os.path.exists(target_file):
-                        dest_file = os.path.join(channel_brain_dir, name)
-                        if target_file != dest_file:
-                            try:
-                                shutil.copy2(target_file, dest_file)
-                            except Exception:
-                                pass
-                    art_text += f"- **{name}**: {art['summary']}\n"
-                art_text += f"\n👉 [Open Ganymede Dashboard to review]({dash_url})"
-                final_text = (final_text + "\n\n" + art_text) if final_text else art_text.strip()
+                review_block = TranscriptParser.format_artifact_review_text(artifacts_created, dashboard_port=port)
+                final_text = (final_text + "\n\n" + review_block) if final_text else review_block
 
             if not final_text:
                 final_text = "\n\n".join(state["lines"]) if state["lines"] else "🏁 *Autonomous task finished.*"
@@ -738,10 +680,4 @@ class Router:
         return response_text
 
     def _extract_artifact_files(self, response: Any, response_text: str) -> list[str]:
-        artifact_files = list(getattr(response, "artifact_files", [])) if response else []
-        file_links = re.findall(r'\[.*?\]\(file://(.*?)\)|`?file://(.*?)`?', response_text)
-        for match in file_links:
-            path = match[0] or match[1]
-            if path and path not in artifact_files and os.path.isabs(path) and os.path.isfile(path):
-                artifact_files.append(path)
-        return artifact_files
+        return TranscriptParser.extract_artifact_files(response, response_text)

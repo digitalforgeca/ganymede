@@ -569,3 +569,70 @@ discord:
         result_chunks = await asyncio.wait_for(read_task, timeout=2.0)
         self.assertIn("🛑 *Execution stopped by user.*", result_chunks)
 
+    async def test_transcript_parser_and_artifact_extraction(self):
+        """Tests TranscriptParser parses JSONL transcripts and extracts artifact metadata accurately."""
+        import tempfile
+        import json
+        from ganymede.core.transcript import TranscriptParser
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            f.write(json.dumps({"type": "USER_INPUT", "content": "Generate a plan"}) + "\n")
+            f.write(json.dumps({
+                "type": "PLANNER_RESPONSE",
+                "content": "I have created the plan.",
+                "tool_calls": [{
+                    "name": "write_to_file",
+                    "args": {
+                        "TargetFile": "/tmp/test_plan.md",
+                        "ArtifactMetadata": {"Summary": "Project Plan", "UserFacing": True}
+                    }
+                }]
+            }) + "\n")
+            temp_path = f.name
+
+        try:
+            text, artifacts, interactive = TranscriptParser.parse_transcript(temp_path)
+            self.assertEqual(text, "I have created the plan.")
+            self.assertEqual(len(artifacts), 1)
+            self.assertEqual(artifacts[0]["file"], "/tmp/test_plan.md")
+            self.assertEqual(artifacts[0]["summary"], "Project Plan")
+            self.assertEqual(len(interactive), 0)
+
+            # Test formatting
+            review_text = TranscriptParser.format_artifact_review_text(artifacts, dashboard_port=8080)
+            self.assertIn("test_plan.md", review_text)
+            self.assertIn("Project Plan", review_text)
+            self.assertIn("http://127.0.0.1:8080", review_text)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    async def test_tmux_session_lifecycle(self):
+        """Tests TmuxSession creation, query, paste and graceful termination."""
+        from ganymede.core.tmux import TmuxSession
+        session_name = f"test-tmux-unit-{int(time.time())}"
+        session = TmuxSession(session_name)
+
+        try:
+            # Initially not alive
+            self.assertFalse(await session.is_alive())
+
+            # Create session
+            await session.create(cwd="/tmp", cmd="sleep 30")
+            self.assertTrue(await session.is_alive())
+
+            # Get PID
+            pid = await session.get_pane_pid()
+            self.assertIsNotNone(pid)
+            self.assertGreater(pid, 0)
+
+            # Capture pane
+            text = await session.capture_pane()
+            self.assertIsInstance(text, str)
+
+            # Graceful terminate
+            await session.graceful_terminate()
+            self.assertFalse(await session.is_alive())
+        finally:
+            await session.kill()
+
