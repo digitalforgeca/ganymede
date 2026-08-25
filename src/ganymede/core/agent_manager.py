@@ -112,14 +112,15 @@ class CliResponse:
             while attempts < max_attempts:
                 attempts += 1
                 
-                # Clear the event and queue before we wait
-                while not self.agent.chunk_queue.empty():
-                    try:
-                        self.agent.chunk_queue.get_nowait()
-                    except asyncio.QueueEmpty:
-                        break
-                self.agent.turn_completed_event.clear()
-                self.agent.aborted = False
+                # Only clear on retry attempts (chat() already cleared prior to prompt submission)
+                if attempts > 1:
+                    while not self.agent.chunk_queue.empty():
+                        try:
+                            self.agent.chunk_queue.get_nowait()
+                        except asyncio.QueueEmpty:
+                            break
+                    self.agent.turn_completed_event.clear()
+                    self.agent.aborted = False
                 
                 try:
                     # Wait for Chalice to fire the Stop hook signaling generation is done.
@@ -131,6 +132,8 @@ class CliResponse:
                     
                     while True:
                         if self.agent.aborted:
+                            break
+                        if self.agent.turn_completed_event.is_set() and self.agent.chunk_queue.empty():
                             break
 
                         try:
@@ -144,6 +147,8 @@ class CliResponse:
                             pass
 
                         if self.agent.aborted:
+                            break
+                        if self.agent.turn_completed_event.is_set() and self.agent.chunk_queue.empty():
                             break
                             
                         # Periodically verify the tmux session is still alive
@@ -165,11 +170,15 @@ class CliResponse:
                                     return
                                 # Watchdog: if 3s have elapsed and agy is still idle at ? for shortcuts without Working/Thinking, retry Enter
                                 now_check = time.time()
-                                if (now_check - start_wait) > 3.0 and not getattr(self, "_kickstarted_prompt", False):
-                                    if "? for shortcuts" in res_pane.stdout and "Working..." not in res_pane.stdout and "Thinking" not in res_pane.stdout:
-                                        self._kickstarted_prompt = True
-                                        logger.info("Watchdog detected idle prompt after paste, sending Enter retry", conversation_id=self.agent.conversation_id)
-                                        await async_run("tmux", "send-keys", "-t", self.agent.tmux_session_name, "Enter")
+                                if (now_check - start_wait) > 3.0:
+                                    if "? for shortcuts" in res_pane.stdout and "Working..." not in res_pane.stdout and "Thinking" not in res_pane.stdout and "Generating..." not in res_pane.stdout:
+                                        if not getattr(self, "_kickstarted_prompt", False):
+                                            self._kickstarted_prompt = True
+                                            logger.info("Watchdog detected idle prompt after paste, sending Enter retry", conversation_id=self.agent.conversation_id)
+                                            await async_run("tmux", "send-keys", "-t", self.agent.tmux_session_name, "Enter")
+                                        elif (now_check - start_wait) > 6.0 and getattr(self.agent, "_chalice_transcript_path", None):
+                                            logger.info("Watchdog detected agy completed turn at prompt", conversation_id=self.agent.conversation_id)
+                                            break
 
                         now = time.time()
                         
@@ -675,7 +684,9 @@ class ManagedAgent:
             await async_run("tmux", "load-buffer", "-b", buf_name, "-", input=final_prompt)
             
             session_target = f"ganymede-{self.sdk_conversation_id}"
-            await async_run("tmux", "paste-buffer", "-p", "-r", "-b", buf_name, "-t", session_target)
+            # Clear any stale text from the TUI prompt line before pasting
+            await async_run("tmux", "send-keys", "-t", session_target, "C-u")
+            await async_run("tmux", "paste-buffer", "-p", "-b", buf_name, "-t", session_target)
             await async_run("tmux", "delete-buffer", "-b", buf_name)
             # Give PTY/bubbletea event loop 150ms to swallow the pasted buffer before sending Enter
             await asyncio.sleep(0.15)
