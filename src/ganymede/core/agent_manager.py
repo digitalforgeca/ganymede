@@ -701,6 +701,13 @@ class AgentManager:
             managed.last_active = time.time()
             return managed
 
+        # Enforce max_contexts bound via LRU eviction to prevent unbounded memory growth
+        max_ctx = getattr(self.config.agent, "max_contexts", 20)
+        if len(self._agents) >= max_ctx:
+            oldest_ctx, _ = min(self._agents.items(), key=lambda item: item[1].last_active)
+            logger.info("Evicting least recently used agent session to preserve memory bounds", evicted_context=oldest_ctx, max_contexts=max_ctx)
+            await self.destroy(oldest_ctx)
+
         if self.quota_tracker:
             allowed = await self.quota_tracker.check_budget(context)
             if not allowed:

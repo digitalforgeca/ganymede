@@ -636,3 +636,25 @@ discord:
         finally:
             await session.kill()
 
+    async def test_max_contexts_lru_eviction(self):
+        """Tests that reaching max_contexts evicts the least recently used session to bound memory."""
+        self.config.agent.max_contexts = 2
+
+        ctx1 = ContextKey("discord", "chan_1", None)
+        ctx2 = ContextKey("discord", "chan_2", None)
+        ctx3 = ContextKey("discord", "chan_3", None)
+
+        agent1 = await self.agent_manager.get_or_create(ctx1)
+        agent1.last_active = 100.0  # Oldest
+
+        agent2 = await self.agent_manager.get_or_create(ctx2)
+        agent2.last_active = 200.0
+
+        # Creating 3rd should evict ctx1
+        agent3 = await self.agent_manager.get_or_create(ctx3)
+
+        self.assertNotIn(ctx1, self.agent_manager._agents)
+        self.assertIn(ctx2, self.agent_manager._agents)
+        self.assertIn(ctx3, self.agent_manager._agents)
+        self.assertEqual(len(self.agent_manager._agents), 2)
+
