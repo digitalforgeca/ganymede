@@ -516,6 +516,10 @@ class Router:
         # Resolve the managed agent's conversation_id for matching against ganymede_conv_id
         managed_agent = self.agent_manager._agents.get(context)
         agent_conv_id = managed_agent.conversation_id if managed_agent else None
+        if agent_conv_id:
+            self._main_agent_ids[agent_conv_id] = None
+        if managed_agent:
+            managed_agent.active_conversation_id = None
 
         async def on_telemetry(data: dict):
             nonlocal status_text
@@ -529,9 +533,18 @@ class Router:
                 payload = {}
                 
             conv_uuid = payload.get("conversationId")
+            if not conv_uuid:
+                return
+
             main_id = self._main_agent_ids.get(ganymede_conv_id)
+            if not main_id:
+                self._main_agent_ids[ganymede_conv_id] = conv_uuid
+                if managed_agent:
+                    managed_agent.active_conversation_id = conv_uuid
+                main_id = conv_uuid
+
             # If main_id is known, and this event belongs to a different conversationId, it's a subagent!
-            if main_id and conv_uuid != main_id:
+            if conv_uuid != main_id:
                 return
                 
             event = data.get("event")
@@ -569,7 +582,7 @@ class Router:
             if (now - last_edit_time[0]) >= EDIT_THROTTLE_SECS:
                 last_edit_time[0] = now
                 try:
-                    await self.adapter.edit_streaming(context, msg_id, response_text + status_text)
+                    await self.adapter.edit_streaming(context, msg_id, get_display_content())
                 except Exception:
                     pass
 
