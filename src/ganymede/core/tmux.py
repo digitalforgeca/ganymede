@@ -8,6 +8,7 @@ from ganymede.core.constants import (
     TMUX_PASTE_ABSORB_DELAY_SEC,
     TMUX_TERMINATE_MAX_RETRIES,
     TMUX_TERMINATE_POLL_INTERVAL_SEC,
+    SUBPROCESS_DEFAULT_TIMEOUT_SEC,
 )
 
 logger = structlog.get_logger()
@@ -20,8 +21,8 @@ class TmuxResult:
         self.stderr = stderr or ""
 
 
-async def async_run(*args: str, capture_output: bool = False, text: bool = True, check: bool = False, env: dict | None = None, input: str | None = None) -> TmuxResult:
-    """Helper to run a subprocess asynchronously with input/output handling."""
+async def async_run(*args: str, capture_output: bool = False, text: bool = True, check: bool = False, env: dict | None = None, input: str | None = None, timeout: float = SUBPROCESS_DEFAULT_TIMEOUT_SEC) -> TmuxResult:
+    """Helper to run a subprocess asynchronously with timeout, input/output handling."""
     proc = await asyncio.create_subprocess_exec(
         *args,
         stdout=asyncio.subprocess.PIPE if capture_output else None,
@@ -29,10 +30,20 @@ async def async_run(*args: str, capture_output: bool = False, text: bool = True,
         stdin=asyncio.subprocess.PIPE if input is not None else asyncio.subprocess.DEVNULL,
         env=env
     )
-    if input is not None:
-        stdout_bytes, stderr_bytes = await proc.communicate(input=input.encode("utf-8") if text else input)
-    else:
-        stdout_bytes, stderr_bytes = await proc.communicate()
+    input_bytes = input.encode("utf-8") if (text and input is not None) else (input if input is not None else None)
+    
+    try:
+        if timeout:
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(proc.communicate(input=input_bytes), timeout=timeout)
+        else:
+            stdout_bytes, stderr_bytes = await proc.communicate(input=input_bytes)
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+            await proc.wait()
+        except Exception:
+            pass
+        raise TimeoutError(f"Subprocess command '{' '.join(args)}' timed out after {timeout}s")
 
     stdout = stdout_bytes.decode("utf-8") if (text and stdout_bytes is not None) else stdout_bytes
     stderr = stderr_bytes.decode("utf-8") if (text and stderr_bytes is not None) else stderr_bytes

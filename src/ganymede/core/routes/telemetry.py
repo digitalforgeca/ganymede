@@ -23,7 +23,7 @@ async def handle_telemetry_ws(websocket: WebSocket):
                 logger.debug("Chalice Telemetry", payload=data)
                 
                 # Broadcast to all connected dashboard clients
-                for client in server.dashboard_clients:
+                for client in list(server.dashboard_clients):
                     if client.client_state.name == "CONNECTED":
                         await client.send_json(data)
                             

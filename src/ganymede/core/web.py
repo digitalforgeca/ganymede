@@ -158,14 +158,15 @@ class DashboardServer:
                     
             wrapped_app = MCPAuthMiddleware(starlette_app)
             
-            cfg = uvicorn.Config(wrapped_app, host="0.0.0.0", port=8081, log_level="warning", log_config=None)
+            mcp_port = getattr(self.config.agent, "mcp_port", DEFAULT_MCP_PORT)
+            cfg = uvicorn.Config(wrapped_app, host="0.0.0.0", port=mcp_port, log_level="warning", log_config=None)
             self.mcp_uvicorn_server = uvicorn.Server(cfg)
             await self.mcp_uvicorn_server.serve()
         except Exception as e:
             logger.error("FastMCP SSE server crashed", error=str(e))
 
     async def start(self):
-        port = getattr(self.config.agent, "dashboard_port", 8180)
+        port = getattr(self.config.agent, "dashboard_port", DEFAULT_DASHBOARD_PORT)
         
         cfg = uvicorn.Config(self.app, host="0.0.0.0", port=port, log_level="warning", log_config=None)
         self.uvicorn_server = uvicorn.Server(cfg)
@@ -175,7 +176,7 @@ class DashboardServer:
         
         logger.info(f"Dashboard started on port {port}", url=f"http://localhost:{port}")
         
-        # Start SSE MCP server on 8081 natively
+        # Start SSE MCP server natively
         self.mcp_task = asyncio.create_task(self.start_mcp_server())
 
     async def stop(self):

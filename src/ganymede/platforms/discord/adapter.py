@@ -13,6 +13,11 @@ from ganymede.platforms.base import PlatformAdapter
 from ganymede.platforms.discord.streamer import DiscordStreamer
 from ganymede.config import AppConfig
 from ganymede.platforms.discord.config import DiscordConfig
+from ganymede.core.constants import (
+    DISCORD_STREAM_EDIT_INTERVAL_SEC,
+    DOWNLOAD_CHUNK_SIZE_BYTES,
+    HTTP_DOWNLOAD_TIMEOUT_SEC,
+)
 
 logger = structlog.get_logger()
 
@@ -112,7 +117,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         if not channel:
             raise RuntimeError(f"Could not resolve channel {context.channel_id}")
 
-        edit_interval = getattr(self.discord_config, "stream_edit_interval", 1.5)
+        edit_interval = getattr(self.discord_config, "stream_edit_interval", DISCORD_STREAM_EDIT_INTERVAL_SEC)
         streamer = DiscordStreamer(
             channel, 
             initial_text=initial_text, 
@@ -123,7 +128,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         await streamer.start()
         
         # Generate temporary unique transaction key to identify this streamer
-        stream_id = f"{context.channel_id}_{context.thread_id or ''}_{time_ns()}"
+        stream_id = f"{context.channel_id}_{context.thread_id or ''}_{time.time_ns()}"
         self._active_streamers[stream_id] = streamer
         return stream_id
 
@@ -352,7 +357,8 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
     async def download_attachment(self, url: str, absolute_path: str) -> dict[str, Any]:
         try:
             os.makedirs(os.path.dirname(absolute_path), exist_ok=True)
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=HTTP_DOWNLOAD_TIMEOUT_SEC)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(url) as response:
                     if response.status != 200:
                         raise ValueError(f"HTTP {response.status} failed to download {url}")
@@ -362,7 +368,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
                         
                     with open(absolute_path, 'wb') as f:
                         while True:
-                            chunk = await response.content.read(8192)
+                            chunk = await response.content.read(DOWNLOAD_CHUNK_SIZE_BYTES)
                             if not chunk:
                                 break
                             await asyncio.to_thread(_write_chunk, f, chunk)

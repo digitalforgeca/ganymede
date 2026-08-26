@@ -3,6 +3,12 @@ import structlog
 import json
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 
+import aiosqlite
+from ganymede.core.constants import (
+    DEFAULT_DAILY_REQUESTS_LIMIT,
+    DEFAULT_TOKENS_GLOBAL_PER_HOUR,
+)
+
 logger = structlog.get_logger()
 router = APIRouter()
 
@@ -15,8 +21,8 @@ async def handle_status(request: Request):
     active_instances = 0
     tokens_hour = 0
     quota_used = 0
-    quota_limit = getattr(server.config.quota, "max_requests_per_day", 18)
-    token_limit = getattr(server.config.quota, "max_tokens_global_per_hour", 200000)
+    quota_limit = getattr(server.config.quota, "max_requests_per_day", DEFAULT_DAILY_REQUESTS_LIMIT)
+    token_limit = getattr(server.config.quota, "max_tokens_global_per_hour", DEFAULT_TOKENS_GLOBAL_PER_HOUR)
     bot_info = None
     
     try:
@@ -29,22 +35,20 @@ async def handle_status(request: Request):
     if getattr(server, "providers", None):
         for p in server.providers:
             if hasattr(p, "router") and p.router and p.router.agent_manager:
-                import sqlite3
                 db_path = os.path.expanduser("~/.ganymede/data/ganymede.db")
                 if os.path.exists(db_path):
                     try:
-                        with sqlite3.connect(db_path) as conn:
-                            c = conn.cursor()
-                            c.execute("SELECT sum(tokens_total) FROM telemetry WHERE created_at >= datetime('now', '-1 hour')")
-                            row = c.fetchone()
-                            if row and row[0]:
-                                tokens_hour += int(row[0])
-                            c.execute("SELECT count(*) FROM conversations WHERE role = 'assistant' AND created_at >= datetime('now', 'start of day')")
-                            row = c.fetchone()
-                            if row and row[0]:
-                                quota_used += int(row[0])
+                        async with aiosqlite.connect(db_path) as conn:
+                            async with conn.execute("SELECT sum(tokens_total) FROM telemetry WHERE created_at >= datetime('now', '-1 hour')") as c:
+                                row = await c.fetchone()
+                                if row and row[0]:
+                                    tokens_hour += int(row[0])
+                            async with conn.execute("SELECT count(*) FROM conversations WHERE role = 'assistant' AND created_at >= datetime('now', 'start of day')") as c:
+                                row = await c.fetchone()
+                                if row and row[0]:
+                                    quota_used += int(row[0])
                     except Exception as e:
-                        print(f"Error querying DB for metrics: {e}")
+                        logger.error("Error querying DB for metrics", error=str(e))
             adapter = getattr(p, "adapter", None)
             if adapter and hasattr(adapter, "user") and adapter.user:
                 try:

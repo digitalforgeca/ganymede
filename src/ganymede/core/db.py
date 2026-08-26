@@ -19,6 +19,11 @@ class Database:
         self._conn = await aiosqlite.connect(self.db_path)
         self._conn.row_factory = aiosqlite.Row
 
+        # Optimize SQLite concurrency
+        await self._conn.execute("PRAGMA journal_mode = WAL;")
+        await self._conn.execute("PRAGMA busy_timeout = 5000;")
+        await self._conn.execute("PRAGMA synchronous = NORMAL;")
+
         # Telemetry Table
         await self._conn.execute("""
             CREATE TABLE IF NOT EXISTS telemetry (

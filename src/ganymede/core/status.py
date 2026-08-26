@@ -1,5 +1,6 @@
 import random
 from typing import Any, Dict
+from ganymede.core.constants import STATUS_COMMAND_TRUNCATE_LEN
 
 # Map tool names to status emojis
 TOOL_EMOJIS: Dict[str, str] = {
@@ -88,8 +89,8 @@ def format_tool_status(tool_name: str, args: Dict[str, Any]) -> str:
     target = ""
     if base_name == "run_command" and "CommandLine" in args:
         cmd = str(args["CommandLine"])
-        if len(cmd) > 40:
-            cmd = cmd[:37] + "..."
+        if len(cmd) > STATUS_COMMAND_TRUNCATE_LEN:
+            cmd = cmd[:STATUS_COMMAND_TRUNCATE_LEN - 3] + "..."
         target = f" `{cmd}`"
     elif base_name in ("list_dir", "list_directory") and "DirectoryPath" in args:
         path = str(args["DirectoryPath"])

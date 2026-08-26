@@ -5,6 +5,7 @@ from google.antigravity.hooks import PreToolCallDecideHook, HookContext
 from google.antigravity.types import HookResult, ToolCall
 from ganymede.core import ContextKey
 from ganymede.config import AppConfig
+from ganymede.core.constants import APPROVAL_ARGS_TRUNCATE_LEN
 
 logger = structlog.get_logger()
 active_adapter = None
@@ -75,8 +76,8 @@ class ApprovalHook(PreToolCallDecideHook):
 
         # 5. Format parameters desc for approval prompt
         args_str = json.dumps(data.args, indent=2)
-        if len(args_str) > 1500:
-            args_str = args_str[:1500] + "\n... (truncated)"
+        if len(args_str) > APPROVAL_ARGS_TRUNCATE_LEN:
+            args_str = args_str[:APPROVAL_ARGS_TRUNCATE_LEN] + "\n... (truncated)"
         
         original_desc = f"**Tool**: `{tool_name}`\n**Arguments**:\n```json\n{args_str}\n```"
 

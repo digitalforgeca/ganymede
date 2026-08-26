@@ -3,6 +3,7 @@ import json
 import aiohttp
 from ganymede.mcp_server import app
 from ganymede.config import get_default_data_dir
+from ganymede.core.constants import IPC_REQUEST_TIMEOUT_SEC
 
 # Reuse the config fallback logic to resolve rpc_port.txt path
 data_dir = get_default_data_dir()
@@ -30,7 +31,8 @@ async def _post_ipc(endpoint: str, payload: dict) -> dict:
     try:
         base_url = await _get_ipc_base_url()
         url = f"{base_url}{endpoint}"
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=IPC_REQUEST_TIMEOUT_SEC)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(url, json=payload) as response:
                 result = await response.json()
                 if response.status >= 400:

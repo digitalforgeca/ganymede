@@ -214,15 +214,15 @@ async def run(config: AppConfig):
     
     # Auto-register Ganymede SSE MCP server globally for agy CLI clients
     import json
+    from ganymede.core.constants import DEFAULT_MCP_PORT
     mcp_dir = os.path.expanduser("~/.gemini/mcp")
     os.makedirs(mcp_dir, exist_ok=True)
     mcp_config_path = os.path.join(mcp_dir, "ganymede.json")
     try:
-        # We grab the port dynamically from the dashboard configuration
-        port = getattr(config.agent, "dashboard_port", 8180)
+        # We grab the FastMCP SSE port (default 8081)
+        mcp_port = getattr(config.agent, "mcp_port", DEFAULT_MCP_PORT)
         token = getattr(config.agent, "mcp_auth_token", "default_secure_token_123")
-        # FastMCP uses the /mcp endpoint by default for SSE connections
-        sse_url = f"http://127.0.0.1:{port}/mcp"
+        sse_url = f"http://127.0.0.1:{mcp_port}/mcp"
         
         with open(mcp_config_path, "w") as f:
             json.dump({

@@ -1,12 +1,13 @@
 import re
 from ganymede.formatting.base import Formatter
+from ganymede.core.constants import DISCORD_MAX_MESSAGE_LENGTH
 
 class DiscordFormatter(Formatter):
     """Formats raw agent outputs into Discord-friendly Markdown and handles message splitting."""
 
     @property
     def max_message_length(self) -> int:
-        return 2000
+        return DISCORD_MAX_MESSAGE_LENGTH
 
     def format_text(self, content: str) -> str:
         """Strip raw HTML tags while preserving Discord mentions and code blocks.

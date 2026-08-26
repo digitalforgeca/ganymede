@@ -6,6 +6,11 @@ import structlog
 import asyncio
 from ganymede.core import ContextKey
 from ganymede.config import AppConfig
+from ganymede.core.constants import (
+    DEFAULT_DAILY_REQUESTS_LIMIT,
+    DEFAULT_RPM_LIMIT,
+    DEFAULT_TOKENS_GLOBAL_PER_HOUR,
+)
 
 logger = structlog.get_logger()
 
@@ -68,7 +73,7 @@ class QuotaTracker:
                 "Recorded Gemini API turn",
                 context=context,
                 daily_turns=self._count_daily_requests(),
-                daily_limit=getattr(self.config.quota, "max_requests_per_day", 18),
+                daily_limit=getattr(self.config.quota, "max_requests_per_day", DEFAULT_DAILY_REQUESTS_LIMIT),
             )
 
     def _count_daily_requests(self) -> int:
@@ -91,7 +96,7 @@ class QuotaTracker:
             now = time.time()
 
             # ── RPD Check (most critical) ──
-            daily_limit = getattr(self.config.quota, "max_requests_per_day", 18)
+            daily_limit = getattr(self.config.quota, "max_requests_per_day", DEFAULT_DAILY_REQUESTS_LIMIT)
             daily_count = self._count_daily_requests()
             if daily_count >= daily_limit:
                 # Calculate time until midnight PT reset
@@ -115,7 +120,7 @@ class QuotaTracker:
             self._global_request_history = [
                 t for t in self._global_request_history if t >= minute_ago
             ]
-            rpm_limit = getattr(self.config.quota, "max_requests_per_minute", 4)
+            rpm_limit = getattr(self.config.quota, "max_requests_per_minute", DEFAULT_RPM_LIMIT)
             rpm_sleep = 0.0
             if len(self._global_request_history) >= rpm_limit:
                 oldest = self._global_request_history[-rpm_limit]
@@ -174,7 +179,7 @@ class QuotaTracker:
         global_tokens_hour = sum(tok for _, tok in self._global_usage_history)
 
         # ── Daily request budget check ──
-        daily_limit = getattr(self.config.quota, "max_requests_per_day", 18)
+        daily_limit = getattr(self.config.quota, "max_requests_per_day", DEFAULT_DAILY_REQUESTS_LIMIT)
         daily_count = self._count_daily_requests()
         if daily_count >= daily_limit:
             logger.warning(

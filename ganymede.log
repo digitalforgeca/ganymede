@@ -34035,3 +34035,33 @@ can't find pane: ganymede-f2693acb-0cd0-58b8-bb4e-5cb8a4c8763e
 2026-08-26 13:28:44 [WARNING] ganymede.core.agent_manager: 2026-08-26 20:28:44 [warning  ] Telemetry conv_id mismatch — ganymede session not matched [ganymede.core.agent_manager] expected=['ganymede_web_portal-test-1'] received=ganymede_discord_1525376171636822096
 2026-08-26 13:28:46 [WARNING] ganymede.core.agent_manager: 2026-08-26 20:28:46 [warning  ] Telemetry conv_id mismatch — ganymede session not matched [ganymede.core.agent_manager] expected=['ganymede_web_portal-test-1'] received=ganymede_discord_1525376171636822096
 2026-08-26 13:28:51 [WARNING] ganymede.core.agent_manager: 2026-08-26 20:28:51 [warning  ] Telemetry conv_id mismatch — ganymede session not matched [ganymede.core.agent_manager] expected=['ganymede_web_portal-test-1'] received=ganymede_discord_1525376171636822096
+2026-08-26 13:49:14 [INFO] ganymede.cli: 2026-08-26 20:49:14 [info     ] Received shutdown request, cleaning up... [ganymede.cli]
+2026-08-26 13:49:14 [INFO] ganymede.core.web: 2026-08-26 20:49:14 [info     ] Dashboard stopped              [ganymede.core.web]
+2026-08-26 13:49:14 [INFO] ganymede.core.scheduler: 2026-08-26 20:49:14 [info     ] APScheduler stopped.           [ganymede.core.scheduler]
+2026-08-26 13:49:14 [INFO] ganymede.platforms.discord.adapter: 2026-08-26 20:49:14 [info     ] Disconnecting from Discord...  [ganymede.platforms.discord.adapter]
+2026-08-26 13:49:14 [ERROR] uvicorn.error: Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.90/libexec/lib/python3.11/site-packages/starlette/routing.py", line 655, in lifespan
+  File "/opt/homebrew/Cellar/ganymede/0.1.90/libexec/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+  File "/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+2026-08-26 13:49:15 [VALIDATION] Commencing Ganymede environment validation...
+2026-08-26 13:49:15 [VALIDATION] Checking for Antigravity (agy) CLI...
+2026-08-26 13:49:15 [VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+2026-08-26 13:49:15 [VALIDATION] Checking for Chalice telemetry plugin...
+2026-08-26 13:49:15 [VALIDATION]  ✓ Chalice plugin is installed and ready.
+2026-08-26 13:49:15 [VALIDATION] Chain validation complete. Proceeding to boot gateway...
+2026-08-26 13:49:15 [INFO] ganymede.cli: 2026-08-26 20:49:15 [info     ] Initializing ganymede bridge v0.1.91 (build: 8686c1e) [ganymede.cli] log_level=INFO
+2026-08-26 13:49:15 [INFO] ganymede.core.db: 2026-08-26 20:49:15 [info     ] Database initialized successfully [ganymede.core.db] path=/Users/mcdoolz/.ganymede/data/ganymede.db
+2026-08-26 13:49:15 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-08-26 13:49:15 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-08-26 13:49:15 [INFO] ganymede.cli: 2026-08-26 20:49:15 [info     ] Registered Ganymede SSE MCP server globally [ganymede.cli] url=http://127.0.0.1:8180/mcp
+2026-08-26 13:49:15 [INFO] ganymede.core.web: 2026-08-26 20:49:15 [info     ] Dashboard started on port 8180 [ganymede.core.web] url=http://localhost:8180
+2026-08-26 13:49:16 [INFO] ganymede.platforms.web.provider: 2026-08-26 20:49:16 [info     ] Starting WebProvider           [ganymede.platforms.web.provider] platform=web
+2026-08-26 13:49:16 [INFO] ganymede.platforms.web.provider: 2026-08-26 20:49:16 [info     ] WebAdapter started             [ganymede.platforms.web.provider]
+2026-08-26 13:49:16 [INFO] ganymede.platforms.web.provider: 2026-08-26 20:49:16 [info     ] Registered web invoke callback with dashboard instance [ganymede.platforms.web.provider]
+2026-08-26 13:49:16 [INFO] ganymede.core.scheduler: 2026-08-26 20:49:16 [info     ] APScheduler started in background. [ganymede.core.scheduler]
+2026-08-26 13:49:16 [INFO] ganymede.platforms.discord.adapter: 2026-08-26 20:49:16 [info     ] Connecting to Discord...       [ganymede.platforms.discord.adapter]
+2026-08-26 13:49:19 [INFO] ganymede.platforms.discord.adapter: 2026-08-26 20:49:19 [info     ] Bot is ready and connected     [ganymede.platforms.discord.adapter] id=1480323231847158131 user=Icarus#5182
+2026-08-26 13:49:20 [INFO] ganymede.platforms.discord.adapter: 2026-08-26 20:49:20 [info     ] Slash command tree synced successfully. [ganymede.platforms.discord.adapter]
