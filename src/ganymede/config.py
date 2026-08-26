@@ -40,8 +40,8 @@ class AgentConfig:
     elevated_users: list[str] = field(default_factory=list)
     auto_approve_tools: list[str] = field(default_factory=lambda: ["view_file", "grep_search", "list_dir", "search_web", "read_url_content", "finish"])
     mission_statement: str = "to be of help"
+    port: int = 8180
     dashboard_port: int = 8180
-    mcp_port: int = 8081
     mcp_auth_token: str = "default_secure_token_123"
 
 @dataclass

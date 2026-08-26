@@ -8,9 +8,9 @@ ANSI_ESCAPE_PATTERN = re.compile(r'\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\][^\x07
 # Default Models
 DEFAULT_FALLBACK_MODEL = "gemini-3.7-flash-high"
 
-# Default Network Ports
-DEFAULT_DASHBOARD_PORT = 8180
-DEFAULT_MCP_PORT = 8081
+# Default Unified Network Port (One single port across all of Ganymede: Dashboard UI, APIs, WebSockets, & FastMCP)
+DEFAULT_GANYMEDE_PORT = 8180
+DEFAULT_DASHBOARD_PORT = DEFAULT_GANYMEDE_PORT
 
 # Default Quota Limits
 DEFAULT_DAILY_REQUESTS_LIMIT = 1450  # Free tier RPD is 1500; keep 50 as safety margin

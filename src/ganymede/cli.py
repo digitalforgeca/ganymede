@@ -212,17 +212,17 @@ async def run(config: AppConfig):
         except ValueError:
             logger.warning("Web provider platform not found, dashboard bots will be unavailable.")
     
-    # Auto-register Ganymede SSE MCP server globally for agy CLI clients
+    # Auto-register Ganymede SSE MCP server globally for agy CLI clients on unified port
     import json
-    from ganymede.core.constants import DEFAULT_MCP_PORT
+    from ganymede.core.constants import DEFAULT_GANYMEDE_PORT
     mcp_dir = os.path.expanduser("~/.gemini/mcp")
     os.makedirs(mcp_dir, exist_ok=True)
     mcp_config_path = os.path.join(mcp_dir, "ganymede.json")
     try:
-        # We grab the FastMCP SSE port (default 8081)
-        mcp_port = getattr(config.agent, "mcp_port", DEFAULT_MCP_PORT)
+        # We use the unified Ganymede port
+        port = getattr(config.agent, "port", None) or getattr(config.agent, "dashboard_port", DEFAULT_GANYMEDE_PORT)
         token = getattr(config.agent, "mcp_auth_token", "default_secure_token_123")
-        sse_url = f"http://127.0.0.1:{mcp_port}/mcp"
+        sse_url = f"http://127.0.0.1:{port}/mcp"
         
         with open(mcp_config_path, "w") as f:
             json.dump({

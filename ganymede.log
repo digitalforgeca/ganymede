@@ -34065,3 +34065,46 @@ asyncio.exceptions.CancelledError
 2026-08-26 13:49:16 [INFO] ganymede.platforms.discord.adapter: 2026-08-26 20:49:16 [info     ] Connecting to Discord...       [ganymede.platforms.discord.adapter]
 2026-08-26 13:49:19 [INFO] ganymede.platforms.discord.adapter: 2026-08-26 20:49:19 [info     ] Bot is ready and connected     [ganymede.platforms.discord.adapter] id=1480323231847158131 user=Icarus#5182
 2026-08-26 13:49:20 [INFO] ganymede.platforms.discord.adapter: 2026-08-26 20:49:20 [info     ] Slash command tree synced successfully. [ganymede.platforms.discord.adapter]
+2026-08-26 14:02:37 [INFO] ganymede.cli: 2026-08-26 21:02:37 [info     ] Received shutdown request, cleaning up... [ganymede.cli]
+2026-08-26 14:02:38 [INFO] ganymede.core.web: 2026-08-26 21:02:38 [info     ] Dashboard stopped              [ganymede.core.web]
+2026-08-26 14:02:38 [INFO] ganymede.core.scheduler: 2026-08-26 21:02:38 [info     ] APScheduler stopped.           [ganymede.core.scheduler]
+2026-08-26 14:02:38 [INFO] ganymede.platforms.discord.adapter: 2026-08-26 21:02:38 [info     ] Disconnecting from Discord...  [ganymede.platforms.discord.adapter]
+2026-08-26 14:02:38 [ERROR] uvicorn.error: Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/ganymede/0.1.91/libexec/lib/python3.11/site-packages/starlette/routing.py", line 655, in lifespan
+  File "/opt/homebrew/Cellar/ganymede/0.1.91/libexec/lib/python3.11/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+  File "/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+2026-08-26 14:02:39 [VALIDATION] Commencing Ganymede environment validation...
+2026-08-26 14:02:39 [VALIDATION] Checking for Antigravity (agy) CLI...
+2026-08-26 14:02:39 [VALIDATION]  ✓ Found agy binary at: /Users/mcdoolz/.local/bin/agy
+2026-08-26 14:02:39 [VALIDATION] Checking for Chalice telemetry plugin...
+2026-08-26 14:02:39 [VALIDATION]  ✓ Chalice plugin is installed and ready.
+2026-08-26 14:02:39 [VALIDATION] Chain validation complete. Proceeding to boot gateway...
+2026-08-26 14:02:39 [INFO] ganymede.cli: 2026-08-26 21:02:39 [info     ] Initializing ganymede bridge v0.1.92 (build: b86ed76) [ganymede.cli] log_level=INFO
+2026-08-26 14:02:39 [INFO] ganymede.core.db: 2026-08-26 21:02:39 [info     ] Database initialized successfully [ganymede.core.db] path=/Users/mcdoolz/.ganymede/data/ganymede.db
+2026-08-26 14:02:40 [WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+2026-08-26 14:02:40 [WARNING] discord.client: davey is not installed, voice will NOT be supported
+2026-08-26 14:02:40 [INFO] ganymede.cli: 2026-08-26 21:02:40 [info     ] Registered Ganymede SSE MCP server globally [ganymede.cli] url=http://127.0.0.1:8081/mcp
+Traceback (most recent call last):
+  File "/opt/homebrew/bin/ganymede", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.92/libexec/lib/python3.11/site-packages/ganymede/cli.py", line 669, in main
+    asyncio.run(run(config))
+  File "/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.11/3.11.16/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/ganymede/0.1.92/libexec/lib/python3.11/site-packages/ganymede/cli.py", line 298, in run
+    await dashboard.start()
+  File "/opt/homebrew/Cellar/ganymede/0.1.92/libexec/lib/python3.11/site-packages/ganymede/core/web.py", line 169, in start
+    port = getattr(self.config.agent, "dashboard_port", DEFAULT_DASHBOARD_PORT)
+                                                        ^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'DEFAULT_DASHBOARD_PORT' is not defined

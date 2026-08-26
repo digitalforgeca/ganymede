@@ -6,12 +6,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from ganymede.config import AppConfig
+from ganymede.core.constants import DEFAULT_GANYMEDE_PORT
 import uvicorn
 import shutil
 
 logger = structlog.get_logger()
 
 dashboard_instance = None
+
 
 class DashboardServer:
     def __init__(self, config: AppConfig, db=None):
@@ -47,6 +49,30 @@ class DashboardServer:
         # Track connected frontend clients
         self.dashboard_clients = set()
         self.telemetry_listeners = []
+
+        # Mount FastMCP SSE Server directly onto unified FastAPI app (Unified Single Port)
+        try:
+            from ganymede.mcp_server import app as mcp_app
+            if hasattr(mcp_app, "sse_app"):
+                mcp_subapp = mcp_app.sse_app("/mcp")
+            else:
+                mcp_subapp = mcp_app.http_app(path="/mcp", transport="sse")
+            
+            token = getattr(self.config.agent, "mcp_auth_token", "default_secure_token_123")
+
+            @self.app.middleware("http")
+            async def mcp_auth_middleware(request: Request, call_next):
+                if request.url.path in ("/mcp", "/messages") or request.url.path.startswith("/mcp"):
+                    auth_header = request.headers.get("authorization", "")
+                    if not auth_header or auth_header != f"Bearer {token}":
+                        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+                return await call_next(request)
+
+            for route in mcp_subapp.routes:
+                self.app.routes.append(route)
+            logger.info("FastMCP SSE routes registered natively on unified port")
+        except Exception as e:
+            logger.error("Failed to register FastMCP routes onto FastAPI app", error=str(e))
         
         # Static Dashboard Routes
         embedded_web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web')
@@ -80,7 +106,7 @@ class DashboardServer:
         @self.app.exception_handler(StarletteHTTPException)
         async def catch_all_handler(request: Request, exc: StarletteHTTPException):
             if exc.status_code == 404:
-                if request.url.path.startswith("/api/") or request.url.path.startswith("/ws/") or request.url.path.startswith("/mcp/"):
+                if request.url.path.startswith("/api/") or request.url.path.startswith("/ws/") or request.url.path.startswith("/mcp") or request.url.path == "/messages":
                     return JSONResponse({"error": "Not found"}, status_code=404)
                 
                 index_path = os.path.join(self.web_dir, "index.html")
@@ -93,7 +119,6 @@ class DashboardServer:
         self.site = None
         self.web_invoke_callback = None
         self.platform_states = {}
-        self.mcp_task = None
 
     def set_platform_status(self, platform: str, is_connected: bool) -> None:
         self.platform_states[platform] = is_connected
@@ -132,60 +157,20 @@ class DashboardServer:
                 return adapter
         return None
 
-    async def start_mcp_server(self):
-        try:
-            from ganymede.mcp_server import app as mcp_app
-            if hasattr(mcp_app, "sse_app"):
-                starlette_app = mcp_app.sse_app("/mcp")
-            else:
-                starlette_app = mcp_app.http_app(path="/mcp", transport="sse")
-            
-            # Simple ASGI middleware for Auth
-            token = getattr(self.config.agent, "mcp_auth_token", "default_secure_token_123")
-            class MCPAuthMiddleware:
-                def __init__(self, app):
-                    self.app = app
-                async def __call__(self, scope, receive, send):
-                    if scope["type"] != "http":
-                        return await self.app(scope, receive, send)
-                    headers = dict(scope.get("headers", []))
-                    auth = headers.get(b"authorization", b"").decode("utf-8")
-                    if not auth or auth != f"Bearer {token}":
-                        await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"application/json")]})
-                        await send({"type": "http.response.body", "body": b'{"error": "Unauthorized"}'})
-                        return
-                    return await self.app(scope, receive, send)
-                    
-            wrapped_app = MCPAuthMiddleware(starlette_app)
-            
-            mcp_port = getattr(self.config.agent, "mcp_port", DEFAULT_MCP_PORT)
-            cfg = uvicorn.Config(wrapped_app, host="0.0.0.0", port=mcp_port, log_level="warning", log_config=None)
-            self.mcp_uvicorn_server = uvicorn.Server(cfg)
-            await self.mcp_uvicorn_server.serve()
-        except Exception as e:
-            logger.error("FastMCP SSE server crashed", error=str(e))
-
     async def start(self):
-        port = getattr(self.config.agent, "dashboard_port", DEFAULT_DASHBOARD_PORT)
+        port = getattr(self.config.agent, "port", None) or getattr(self.config.agent, "dashboard_port", DEFAULT_GANYMEDE_PORT)
         
         cfg = uvicorn.Config(self.app, host="0.0.0.0", port=port, log_level="warning", log_config=None)
         self.uvicorn_server = uvicorn.Server(cfg)
         
-        # Start dashboard server
+        # Start unified server
         self.server_task = asyncio.create_task(self.uvicorn_server.serve())
         
-        logger.info(f"Dashboard started on port {port}", url=f"http://localhost:{port}")
-        
-        # Start SSE MCP server natively
-        self.mcp_task = asyncio.create_task(self.start_mcp_server())
+        logger.info(f"Ganymede unified server started on port {port}", url=f"http://localhost:{port}", mcp_url=f"http://127.0.0.1:{port}/mcp")
 
     async def stop(self):
-        if getattr(self, 'mcp_task', None):
-            self.mcp_task.cancel()
-        if getattr(self, 'mcp_uvicorn_server', None):
-            self.mcp_uvicorn_server.should_exit = True
         if getattr(self, 'uvicorn_server', None):
             self.uvicorn_server.should_exit = True
             if hasattr(self, 'server_task'):
                 await self.server_task
-        logger.info("Dashboard stopped")
+        logger.info("Ganymede unified server stopped")

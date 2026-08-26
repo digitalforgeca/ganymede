@@ -6,7 +6,7 @@ import re
 import shutil
 import structlog
 from typing import Any
-from ganymede.core.constants import DEFAULT_DASHBOARD_PORT
+from ganymede.core.constants import DEFAULT_GANYMEDE_PORT
 
 logger = structlog.get_logger()
 
@@ -116,7 +116,7 @@ class TranscriptParser:
         return synced_paths
 
     @staticmethod
-    def format_artifact_review_text(artifacts_created: list[dict], dashboard_port: int = DEFAULT_DASHBOARD_PORT) -> str:
+    def format_artifact_review_text(artifacts_created: list[dict], dashboard_port: int = DEFAULT_GANYMEDE_PORT) -> str:
         """Formats the markdown block presenting created artifacts for user review."""
         if not artifacts_created:
             return ""
