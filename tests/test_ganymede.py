@@ -419,7 +419,7 @@ discord:
 
         try:
             conv_uuid = "test-autonomous-uuid-123"
-            channel_id = "1525376171636822096"
+            channel_id = "test_chan_auto_999001"
             ganymede_conv_id = f"ganymede_discord_{channel_id}"
             
             # Ensure managed agent exists in agent manager
@@ -509,7 +509,7 @@ discord:
         mock_adapter.send_streaming_start = AsyncMock()
         router.set_adapter(mock_adapter)
 
-        channel_id = "1539870389780348977"
+        channel_id = "test_chan_interactive_999002"
         ganymede_conv_id = f"ganymede_discord_{channel_id}"
         conv_uuid = "32da8dfc-9826-4c3e-ba20-16b4e128a046"
 
@@ -543,7 +543,7 @@ discord:
         """Tests that terminating a managed agent immediately unblocks CliResponse with an abort message."""
         from ganymede.core.agent_manager import CliResponse
 
-        channel_id = "1539870389780348977"
+        channel_id = "test_chan_abort_999003"
         ctx = ContextKey("discord", channel_id, None)
         managed_agent = await self.agent_manager.get_or_create(ctx)
 

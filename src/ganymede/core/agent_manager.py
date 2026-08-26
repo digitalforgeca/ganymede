@@ -571,9 +571,9 @@ class AgentManager:
         if not has_match:
             if ganymede_conv_id.startswith("ganymede_"):
                 expected = [a.conversation_id for a in self._agents.values()]
-                logger.warning("Telemetry conv_id mismatch — ganymede session not matched",
-                               received=ganymede_conv_id,
-                               expected=expected)
+                logger.debug("Telemetry conv_id not matched for this manager instance",
+                             received=ganymede_conv_id,
+                             expected=expected)
             return
 
         for agent in self._agents.values():

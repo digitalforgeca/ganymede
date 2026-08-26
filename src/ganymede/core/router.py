@@ -54,15 +54,23 @@ class Router:
         if event not in ("PreToolUse", "PostToolUse", "Stop"):
             return
 
-        parts = ganymede_conv_id.split("_")
-        if len(parts) >= 3 and parts[0] == "ganymede":
-            platform = parts[1]
-            channel_id = parts[2]
-            thread_id = parts[3] if len(parts) > 3 else None
-            context = ContextKey(platform, channel_id, thread_id)
-        else:
-            return
-        
+        # Robust context resolution from ganymede_conv_id
+        context = None
+        if self.agent_manager:
+            for c in self.agent_manager._agents.keys():
+                if c.ganymede_conv_id == ganymede_conv_id:
+                    context = c
+                    break
+
+        if not context:
+            parts = ganymede_conv_id.split("_")
+            if len(parts) >= 3 and parts[0] == "ganymede":
+                platform = parts[1]
+                channel_id = "_".join(parts[2:])
+                context = ContextKey(platform, channel_id, None)
+            else:
+                return
+
         # Only process telemetry for contexts managed by this router's agent_manager
         if not self.agent_manager or context not in self.agent_manager._agents:
             return
