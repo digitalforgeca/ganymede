@@ -57,6 +57,7 @@ class QuotaConfig:
 @dataclass
 class AuthConfig:
     enabled: bool = False
+    allow_localhost: bool = True
     google_client_id: str = ""
     google_client_secret: str = ""
     allowed_emails: list[str] = field(default_factory=list)
@@ -335,6 +336,7 @@ def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
     if "auth" in data:
         au = data["auth"]
         config.auth.enabled = au.get("enabled", config.auth.enabled)
+        config.auth.allow_localhost = au.get("allow_localhost", config.auth.allow_localhost)
         config.auth.google_client_id = au.get("google_client_id", config.auth.google_client_id)
         config.auth.google_client_secret = au.get("google_client_secret", config.auth.google_client_secret)
         config.auth.allowed_emails = au.get("allowed_emails", config.auth.allowed_emails)

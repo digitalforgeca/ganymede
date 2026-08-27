@@ -136,7 +136,7 @@ class Router:
             TranscriptParser.sync_artifacts(artifacts_created, channel_brain_dir)
 
             if artifacts_created:
-                port = getattr(self.config.agent, "dashboard_port", 8180)
+                port = getattr(self.config, "dashboard_port", None) or getattr(self.config.agent, "dashboard_port", 8180)
                 review_block = TranscriptParser.format_artifact_review_text(artifacts_created, dashboard_port=port)
                 final_text = (final_text + "\n\n" + review_block) if final_text else review_block
 

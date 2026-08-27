@@ -120,7 +120,7 @@ class TranscriptParser:
         """Formats the markdown block presenting created artifacts for user review."""
         if not artifacts_created:
             return ""
-        dash_url = f"http://127.0.0.1:{dashboard_port}"
+        dash_url = f"http://localhost:{dashboard_port}"
         lines = ["**📄 Artifacts Requiring Review:**"]
         for art in artifacts_created:
             name = os.path.basename(art.get("file", "Unknown File"))

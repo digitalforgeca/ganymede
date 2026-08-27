@@ -602,7 +602,7 @@ discord:
             review_text = TranscriptParser.format_artifact_review_text(artifacts, dashboard_port=8080)
             self.assertIn("test_plan.md", review_text)
             self.assertIn("Project Plan", review_text)
-            self.assertIn("http://127.0.0.1:8080", review_text)
+            self.assertIn("http://localhost:8080", review_text)
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
