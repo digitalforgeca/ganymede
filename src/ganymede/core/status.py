@@ -120,7 +120,64 @@ def format_tool_status(tool_name: str, args: Dict[str, Any]) -> str:
         target = f" for `\"{args['Query']}\"`"
     elif base_name == "search_web" and "query" in args:
         target = f" for `\"{args['query']}\"`"
-    elif base_name == "read_url_content" and "Url" in args:
-        target = f" `{args['Url']}`"
-
     return f"{emoji} *{action}*{target}"
+
+
+def get_agent_live_summary(managed_agent: Any) -> Dict[str, Any]:
+    """Extracts a rich real-time summary of the agent's active execution, last tool, and recent thoughts."""
+    if not managed_agent or not getattr(managed_agent, "tmux", None):
+        return {"status": "offline", "message": "No active agent session found."}
+
+    import os
+    import json
+    import time
+
+    model_display = managed_agent.get_current_display_model() if hasattr(managed_agent, "get_current_display_model") else getattr(managed_agent, "active_model", "Unknown")
+    is_running = getattr(managed_agent, "is_interactive_turn", False)
+
+    app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+    transcript_path = getattr(managed_agent, "_chalice_transcript_path", None)
+    if not transcript_path and hasattr(managed_agent, "sdk_conversation_id"):
+        transcript_path = os.path.join(app_data, "brain", managed_agent.sdk_conversation_id, ".system_generated", "logs", "transcript.jsonl")
+
+    steps_count = 0
+    last_tool = None
+    last_action = None
+    last_thought = None
+
+    if transcript_path and os.path.exists(transcript_path):
+        try:
+            with open(transcript_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+                steps_count = len(lines)
+                for line in reversed(lines):
+                    try:
+                        data = json.loads(line)
+                        if not last_thought and data.get("thinking"):
+                            last_thought = data.get("thinking").strip()
+                        if not last_thought and data.get("content") and data.get("type") == "PLANNER_RESPONSE":
+                            last_thought = data.get("content").strip()
+                        if not last_tool and data.get("tool_calls"):
+                            tc = data["tool_calls"][0]
+                            last_tool = tc.get("name")
+                            args = tc.get("args", {})
+                            if isinstance(args, str):
+                                try:
+                                    args = json.loads(args)
+                                except Exception:
+                                    args = {}
+                            last_action = args.get("toolAction") or args.get("toolSummary")
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+    return {
+        "status": "busy" if is_running else "idle",
+        "model": model_display,
+        "steps_count": steps_count,
+        "last_tool": last_tool,
+        "last_action": last_action,
+        "last_thought": last_thought,
+        "last_active": getattr(managed_agent, "last_active", time.time()),
+    }

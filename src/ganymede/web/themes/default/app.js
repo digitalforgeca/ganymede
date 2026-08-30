@@ -3,11 +3,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
         const response = await originalFetch(...args);
+        const loginOverlay = document.getElementById('login-overlay');
         if (response.status === 401) {
-            const loginOverlay = document.getElementById('login-overlay');
             if (loginOverlay) {
                 loginOverlay.style.setProperty('display', 'flex', 'important');
             }
+        } else if (response.ok && loginOverlay) {
+            loginOverlay.style.setProperty('display', 'none', 'important');
         }
         return response;
     };
@@ -328,6 +330,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         window.addEventListener('hashchange', handleRoute);
+        
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                const target = item.getAttribute('data-target') || item.getAttribute('href');
+                if (target && target.startsWith('#')) {
+                    window.location.hash = target;
+                } else if (target) {
+                    window.location.hash = `#${target}`;
+                }
+                setTimeout(handleRoute, 10);
+            });
+        });
         
         // Initial route handling
         handleRoute();

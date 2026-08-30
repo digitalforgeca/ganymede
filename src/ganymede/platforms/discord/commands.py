@@ -388,7 +388,7 @@ def setup_commands(adapter: discord.Client):
     async def sessions_cmd(interaction: discord.Interaction, session_id: str | None = None):
         await _handle_session(interaction, session_id)
 
-    @tree.command(name="stop", description="Abruptly terminate the active agent execution in this channel")
+    @tree.command(name="stop", description="Interrupt the active agent turn without wiping session history")
     async def stop(interaction: discord.Interaction):
         # Construct ContextKey
         thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
@@ -398,14 +398,58 @@ def setup_commands(adapter: discord.Client):
         agent_manager = adapter.router.agent_manager
         if agent_manager:
             managed_agent = agent_manager._agents.get(context)
-            if managed_agent:
-                await managed_agent.terminate()
-                await agent_manager.destroy(context)
-                await interaction.response.send_message("🛑 *Active agent execution aborted and session cleared successfully.*", ephemeral=False)
+            if managed_agent and getattr(managed_agent, "tmux", None):
+                managed_agent.aborted = True
+                try:
+                    await managed_agent.tmux.send_keys("Escape")
+                except Exception as e:
+                    logger.warning("Failed to send Escape key to tmux session", error=str(e))
+                await interaction.response.send_message("🛑 *Active agent turn interrupted. Session and conversation context preserved.*", ephemeral=False)
             else:
-                await interaction.response.send_message("❌ *No active agent execution found for this channel.*", ephemeral=True)
+                await interaction.response.send_message("❌ *No active agent execution running in this channel.*", ephemeral=True)
         else:
             await interaction.response.send_message("❌ *Agent manager not configured.*", ephemeral=True)
+
+    @tree.command(name="btw", description="Check what the agent is currently working on or thinking without interrupting it")
+    @app_commands.describe(query="Optional question or topic to inspect")
+    async def btw(interaction: discord.Interaction, query: str | None = None):
+        thread_id = str(interaction.channel.id) if isinstance(interaction.channel, discord.Thread) else None
+        channel_id = str(interaction.channel.parent_id) if thread_id else str(interaction.channel.id)
+        context = ContextKey(platform="discord", channel_id=channel_id, thread_id=thread_id)
+
+        agent_manager = adapter.router.agent_manager
+        if not agent_manager:
+            await interaction.response.send_message("❌ Agent manager not configured.", ephemeral=True)
+            return
+
+        managed_agent = agent_manager._agents.get(context)
+        if not managed_agent:
+            await interaction.response.send_message("💤 *Agent is currently idle / no active session in this channel.*", ephemeral=True)
+            return
+
+        from ganymede.core.status import get_agent_live_summary
+        summary = get_agent_live_summary(managed_agent)
+
+        status_emoji = "⚙️" if summary["status"] == "busy" else "🟢"
+        embed = discord.Embed(
+            title=f"{status_emoji} Agent Activity Status",
+            color=discord.Color.gold() if summary["status"] == "busy" else discord.Color.green()
+        )
+        embed.add_field(name="🤖 Model", value=f"`{summary['model']}`", inline=True)
+        embed.add_field(name="📊 State", value=f"**{summary['status'].upper()}** (Step #{summary['steps_count']})", inline=True)
+
+        if summary.get("last_tool"):
+            action_desc = f" — *{summary['last_action']}*" if summary.get("last_action") else ""
+            embed.add_field(name="🛠️ Last Tool Executed", value=f"`{summary['last_tool']}`{action_desc}", inline=False)
+
+        if summary.get("last_thought"):
+            thought_snippet = summary["last_thought"][:600] + ("..." if len(summary["last_thought"]) > 600 else "")
+            embed.add_field(name="💭 Current Focus / Thought", value=f"> {thought_snippet}", inline=False)
+
+        if query:
+            embed.set_footer(text=f"Query: {query}")
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @tree.command(name="new", description="Wipe the active conversation history and start a fresh session")
     async def new_session(interaction: discord.Interaction):

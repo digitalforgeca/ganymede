@@ -258,9 +258,30 @@ class Router:
             del self._autonomous_msgs[context]
 
     async def handle_message(self, message: PlatformMessage) -> None:
-        # Check for stop command
-        if message.content.strip().lower() in ("/stop", "!stop"):
-            logger.info("Received user stop command", context=message.context)
+        content_stripped = message.content.strip()
+        content_lower = content_stripped.lower()
+
+        # Check for stop / cancel command (interrupt active turn non-destructively)
+        if content_lower in ("/stop", "!stop", "/cancel", "!cancel"):
+            logger.info("Received user stop/cancel command", context=message.context)
+            if self.agent_manager:
+                managed_agent = self.agent_manager._agents.get(message.context)
+                if managed_agent and getattr(managed_agent, "tmux", None):
+                    managed_agent.aborted = True
+                    try:
+                        await managed_agent.tmux.send_keys("Escape")
+                    except Exception as e:
+                        logger.warning("Failed to send Escape key to tmux session", error=str(e))
+                    if self.adapter:
+                        await self.adapter.send_response(message.context, "🛑 *Active turn interrupted. Conversation session preserved.*", {})
+                else:
+                    if self.adapter:
+                        await self.adapter.send_response(message.context, "❌ *No active agent execution running in this channel.*", {})
+            return
+
+        # Check for reset / clear / new command (destructive session wipe)
+        if content_lower in ("/reset", "!reset", "/clear", "!clear", "/new"):
+            logger.info("Received user reset/clear command", context=message.context)
             if self.agent_manager:
                 managed_agent = self.agent_manager._agents.get(message.context)
                 if managed_agent:
@@ -268,10 +289,35 @@ class Router:
                     await self.agent_manager.destroy(message.context)
                     self.cleanup_context(message.context)
                     if self.adapter:
-                        await self.adapter.send_response(message.context, "🛑 *Active agent execution aborted and session cleared successfully.*", {})
+                        await self.adapter.send_response(message.context, "🧹 *Conversation memory wiped and fresh session started.*", {})
                 else:
                     if self.adapter:
-                        await self.adapter.send_response(message.context, "❌ *No active agent execution found for this channel.*", {})
+                        await self.adapter.send_response(message.context, "🧹 *Session is clean.*", {})
+            return
+
+        # Check for /btw or !btw command (non-intrusive progress/status check)
+        if content_lower.startswith(("/btw", "!btw")):
+            query = content_stripped[4:].strip() if len(content_stripped) > 4 else ""
+            if self.agent_manager:
+                managed_agent = self.agent_manager._agents.get(message.context)
+                if managed_agent:
+                    from ganymede.core.status import get_agent_live_summary
+                    summary = get_agent_live_summary(managed_agent)
+                    status_emoji = "⚙️" if summary["status"] == "busy" else "🟢"
+                    status_text = f"{status_emoji} **Agent Status**: `{summary['status'].upper()}` (Step #{summary['steps_count']})\n🤖 **Model**: `{summary['model']}`"
+                    if summary.get("last_tool"):
+                        action = f" — *{summary['last_action']}*" if summary.get("last_action") else ""
+                        status_text += f"\n🛠️ **Last Tool**: `{summary['last_tool']}`{action}"
+                    if summary.get("last_thought"):
+                        thought_snippet = summary["last_thought"][:400] + ("..." if len(summary["last_thought"]) > 400 else "")
+                        status_text += f"\n💭 **Current Focus**: {thought_snippet}"
+                    if query:
+                        status_text += f"\n*(Query: {query})*"
+                    if self.adapter:
+                        await self.adapter.send_response(message.context, status_text, {})
+                else:
+                    if self.adapter:
+                        await self.adapter.send_response(message.context, "💤 *Agent is currently idle / no active session in this channel.*", {})
             return
 
         # Step 1: Check activation strategy
