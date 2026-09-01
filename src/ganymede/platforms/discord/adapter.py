@@ -51,10 +51,31 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
     # --- PlatformAdapter Protocol Methods ---
 
     async def start(self) -> None:
-        """Start the bot connection (non-blocking runs inside event loop)."""
+        """Start the bot connection with resilient auto-reconnect and bounded backoff."""
         logger.info("Connecting to Discord...")
-        # Since Client.start() is blocking inside the task, we run it
-        await discord.Client.start(self, self.discord_config.token)
+        retry_delay = 2.0
+        max_retry_delay = 30.0  # Never wait more than 30s to attempt a reconnection!
+
+        while not self.is_closed():
+            try:
+                # Use reconnect=False so discord.py's internal exponential backoff does not lock us in 1000s sleeps
+                await discord.Client.start(self, self.discord_config.token, reconnect=False)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                if self.is_closed():
+                    break
+                logger.warning(
+                    "Discord gateway connection dropped or handshake failed", 
+                    error=str(e), 
+                    retry_in_sec=round(retry_delay, 1)
+                )
+                if self._status_callback:
+                    self._status_callback("discord", False)
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(max_retry_delay, retry_delay * 1.5)
+            else:
+                retry_delay = 2.0
 
     async def stop(self) -> None:
         """Gracefully close the bot connection."""
