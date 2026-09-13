@@ -1,2 +1,2 @@
-__version__ = "0.1.97"
+__version__ = "0.1.98"
 __git_hash__ = "dev"

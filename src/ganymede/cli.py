@@ -275,8 +275,7 @@ async def run(config: AppConfig):
                 logger.warning("Failed to remove lock file", error=str(e))
                 
         logger.info("Shutdown completed.")
-        import sys
-        sys.exit(0)        
+        os._exit(0)        
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
             loop.add_signal_handler(sig, lambda: asyncio.create_task(shutdown()))
@@ -395,8 +394,26 @@ def print_status(config):
             pass
         except Exception:
             pass
-            
-    print(f"Daemon State : {'🟢 ONLINE' if is_running else '🔴 OFFLINE'}")
+
+    # Check HTTP responsiveness if process is running
+    is_healthy = False
+    if is_running:
+        try:
+            port = getattr(config, "dashboard_port", None) or getattr(config.agent, "port", None) or 8180
+            import urllib.request
+            req = urllib.request.Request(f"http://127.0.0.1:{port}/api/status")
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                if resp.status == 200:
+                    is_healthy = True
+        except Exception:
+            is_healthy = False
+
+    if is_running and is_healthy:
+        print(f"Daemon State : 🟢 ONLINE")
+    elif is_running and not is_healthy:
+        print(f"Daemon State : ⚠️ UNRESPONSIVE (Process running but not responding on port)")
+    else:
+        print(f"Daemon State : 🔴 OFFLINE")
     if is_running:
         print(f"Daemon PID   : {pid}")
     
