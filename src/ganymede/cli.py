@@ -296,8 +296,10 @@ async def run(config: AppConfig):
             
     await dashboard.start()
     
-    # Start platform provider services concurrently
+    # Start platform provider services and dashboard concurrently
     tasks = []
+    if hasattr(dashboard, "server_task") and dashboard.server_task:
+        tasks.append(dashboard.server_task)
     for provider in providers:
         if hasattr(provider, "adapter") and provider.adapter:
             if hasattr(provider.adapter, "register_status_callback"):
@@ -308,6 +310,7 @@ async def run(config: AppConfig):
         await asyncio.gather(*tasks)
     except Exception as e:
         logger.error("Error during platform execution", error=str(e))
+    finally:
         await shutdown()
 
 def stop_daemon(config):

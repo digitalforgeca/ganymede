@@ -19,6 +19,14 @@ from ganymede.core.constants import (
     HTTP_DOWNLOAD_TIMEOUT_SEC,
 )
 
+import discord.backoff
+# Cap Discord gateway exponential backoff to max 32 seconds (2^5) so gateway hiccups never stall for 1000s
+_orig_backoff_init = discord.backoff.ExponentialBackoff.__init__
+def _capped_backoff_init(self, base=1, *, integral=False):
+    _orig_backoff_init(self, base, integral=integral)
+    self._max = 5  # 2^5 = 32s ceiling instead of default 10 (1024s)
+discord.backoff.ExponentialBackoff.__init__ = _capped_backoff_init
+
 logger = structlog.get_logger()
 
 class DiscordAdapter(discord.Client, PlatformAdapter):
@@ -39,6 +47,7 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         self.router.set_adapter(self)
         self.tree = app_commands.CommandTree(self)
         
+        self._should_run = True
         self._on_message_callback: Callable[[PlatformMessage], Awaitable[None]] | None = None
         self._active_streamers: dict[str, DiscordStreamer] = {}
         self.ipc_server = None
@@ -51,34 +60,35 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
     # --- PlatformAdapter Protocol Methods ---
 
     async def start(self) -> None:
-        """Start the bot connection with resilient auto-reconnect and bounded backoff."""
+        """Start the bot connection with capped backoff and automatic loop supervision."""
         logger.info("Connecting to Discord...")
-        retry_delay = 2.0
-        max_retry_delay = 30.0  # Never wait more than 30s to attempt a reconnection!
-
-        while not self.is_closed():
+        self._should_run = True
+        while self._should_run:
             try:
-                # Use reconnect=False so discord.py's internal exponential backoff does not lock us in 1000s sleeps
-                await discord.Client.start(self, self.discord_config.token, reconnect=False)
+                # With ExponentialBackoff._max = 5, discord.Client.start handles reconnections
+                # with resume support without ever sleeping more than 32 seconds.
+                await discord.Client.start(self, self.discord_config.token, reconnect=True)
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                if self.is_closed():
+                if not self._should_run:
                     break
                 logger.warning(
-                    "Discord gateway connection dropped or handshake failed", 
-                    error=str(e), 
-                    retry_in_sec=round(retry_delay, 1)
+                    "Discord connection terminated unexpectedly, restarting connection in 5s", 
+                    error=str(e)
                 )
                 if self._status_callback:
                     self._status_callback("discord", False)
-                await asyncio.sleep(retry_delay)
-                retry_delay = min(max_retry_delay, retry_delay * 1.5)
+                await asyncio.sleep(5.0)
             else:
-                retry_delay = 2.0
+                if not self._should_run:
+                    break
+                logger.warning("Discord client exited normally, restarting connection in 5s")
+                await asyncio.sleep(5.0)
 
     async def stop(self) -> None:
         """Gracefully close the bot connection."""
+        self._should_run = False
         logger.info("Disconnecting from Discord...")
         await discord.Client.close(self)
 
