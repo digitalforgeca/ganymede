@@ -32,8 +32,51 @@ class DiscordFormatter(Formatter):
                 # Outside code blocks: strip remaining HTML-style tags
                 # but preserve Discord syntax: <@id>, <#id>, <:name:id>, <a:name:id>
                 clean = re.sub(r'</?[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?\s*/?>', '', clean)
+
+                # Sanitize raw LaTeX math notation (e.g. $< 0.18\text{s}$, $\rightarrow$) into clean text/Unicode
+                clean = self._clean_latex(clean)
                 result.append(clean)
         return ''.join(result)
+
+    def _clean_latex(self, text: str) -> str:
+        """Convert LaTeX math notation and symbols into clean Discord-friendly text and Unicode."""
+        replacements = [
+            (r'\\rightarrow|\\to', '→'),
+            (r'\\leftarrow', '←'),
+            (r'\\leftrightarrow', '↔'),
+            (r'\\Rightarrow|\\implies', '⇒'),
+            (r'\\Leftarrow', '⇐'),
+            (r'\\Leftrightarrow|\\iff', '⇔'),
+            (r'\\ge\b|\\geq\b', '≥'),
+            (r'\\le\b|\\leq\b', '≤'),
+            (r'\\ne\b|\\neq\b', '≠'),
+            (r'\\approx\b', '≈'),
+            (r'\\pm\b', '±'),
+            (r'\\times\b', '×'),
+            (r'\\cdot\b', '·'),
+            (r'\\degree\b|\\circ\b', '°'),
+            (r'\\infty\b', '∞'),
+            (r'\\quad|\\qquad', ' '),
+        ]
+        for pattern, repl in replacements:
+            text = re.sub(pattern, repl, text)
+
+        # Unwrap text formatting macros: \text{...}, \mathrm{...}, etc.
+        text = re.sub(r'\\(?:text|mathrm|mathbf|mathit|textsf|texttt)\{([^}]*)\}', r'\1', text)
+        # Convert fractions \frac{a}{b} -> a/b
+        text = re.sub(r'\\frac\{([^}]*)\}\{([^}]*)\}', r'\1/\2', text)
+        # Block math $$...$$ -> ...
+        text = re.sub(r'\$\$(.*?)\$\$', r'\1', text, flags=re.DOTALL)
+
+        # Clean inline math $...$ while preserving standard currency amounts (e.g. "$50" or "$10.99")
+        def clean_inline_math(match):
+            content = match.group(1)
+            if re.match(r'^\d+(?:\.\d+)?$', content.strip()):
+                return match.group(0)
+            return content
+
+        text = re.sub(r'(?<![\w\\])\$(?!\s)([^\$\n]+?)(?<!\s)\$(?!\d)', clean_inline_math, text)
+        return text
 
     def format_code_block(self, code: str, language: str) -> str:
         return f"```{language}\n{code}\n```"

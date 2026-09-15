@@ -658,3 +658,27 @@ discord:
         self.assertIn(ctx3, self.agent_manager._agents)
         self.assertEqual(len(self.agent_manager._agents), 2)
 
+    def test_discord_formatter_latex_sanitization(self):
+        """Tests that LaTeX math expressions and symbols are cleanly converted for Discord."""
+        from ganymede.platforms.discord.formatter import DiscordFormatter
+        formatter = DiscordFormatter()
+
+        raw_text = (
+            "Tap ($< 0.18\\text{s}$): Executes the normal 3-hit light combo chain (attack1 $\\rightarrow$ attack2 $\\rightarrow$ attack3).\n"
+            "Hold ($\\ge 0.18\\text{s}$): Enters states.charging. Tier 1 triggers at $0.35\\text{s}$; Tier 2 triggers at $0.70\\text{s}$."
+        )
+        cleaned = formatter.format_text(raw_text)
+
+        self.assertNotIn("\\text", cleaned)
+        self.assertNotIn("\\rightarrow", cleaned)
+        self.assertNotIn("\\ge", cleaned)
+        self.assertIn("Tap (< 0.18s):", cleaned)
+        self.assertIn("attack1 → attack2 → attack3", cleaned)
+        self.assertIn("Hold (≥ 0.18s):", cleaned)
+        self.assertIn("Tier 1 triggers at 0.35s", cleaned)
+        self.assertIn("Tier 2 triggers at 0.70s", cleaned)
+
+        # Ensure currency amounts like "$50" or "$100" are preserved
+        currency_text = "The price is $50 and upgrades are $100."
+        self.assertEqual(formatter.format_text(currency_text), currency_text)
+
