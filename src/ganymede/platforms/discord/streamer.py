@@ -155,6 +155,11 @@ class DiscordStreamer:
                             files_to_attach.append(discord.File(filepath))
                         else:
                             logger.warning("Artifact too large to attach to Discord", file=filepath, size=os.path.getsize(filepath))
+                if len(files_to_attach) > 10:
+                    logger.warning("Capping Discord attachments to 10 files", total=len(files_to_attach))
+                    for extra in files_to_attach[10:]:
+                        extra.close()
+                    files_to_attach = files_to_attach[:10]
     
             try:
                 for i, chunk in enumerate(chunks):
@@ -187,6 +192,15 @@ class DiscordStreamer:
                 logger.warning("Timeout while updating message on Discord")
             except discord.errors.HTTPException as e:
                 logger.error("HTTP error during message update", error=str(e))
+                # Fallback to text-only edit if attachments triggered a 400 rejection
+                if files_to_attach:
+                    try:
+                        for i, chunk in enumerate(chunks):
+                            if i < len(self.messages):
+                                balanced_chunk = self._balance_code_fences(chunk)
+                                await asyncio.wait_for(self.messages[i].edit(content=balanced_chunk, attachments=[]), timeout=5.0)
+                    except Exception as fallback_err:
+                        logger.warning("Fallback message edit without attachments also failed", error=str(fallback_err))
             finally:
                 for f in files_to_attach:
                     f.close()
