@@ -320,6 +320,34 @@ class Router:
                         await self.adapter.send_response(message.context, "💤 *Agent is currently idle / no active session in this channel.*", {})
             return
 
+        # Check for /model or !model command (switch active model via text message)
+        if content_lower.startswith(("/model ", "!model ")):
+            model_arg = content_stripped[7:].strip().strip("\"'")
+            if model_arg and self.agent_manager:
+                import uuid
+                conv_id = message.context.ganymede_conv_id
+                sdk_conv_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, conv_id))
+                app_data = os.path.expanduser("~/.gemini/antigravity-cli")
+                sdk_brain_dir = os.path.join(app_data, "brain", sdk_conv_id)
+                os.makedirs(sdk_brain_dir, exist_ok=True)
+                with open(os.path.join(sdk_brain_dir, "model.txt"), "w") as f:
+                    f.write(model_arg)
+
+                from ganymede.core.agent_manager import async_run
+                tmux_name = f"ganymede-{sdk_conv_id}"
+                await async_run("tmux", "kill-session", "-t", tmux_name, capture_output=True, check=False)
+                managed_agent = self.agent_manager._agents.get(message.context)
+                if managed_agent:
+                    await managed_agent.terminate()
+
+                if self.adapter:
+                    await self.adapter.send_response(
+                        message.context,
+                        f"✅ Model successfully switched to `{model_arg}` for this channel.\n*(It will take effect on your next message)*",
+                        {}
+                    )
+            return
+
         # Step 1: Check activation strategy
         if self.activation_check and not self.activation_check.should_respond(message):
             logger.debug("Message ignored by activation rules", context=message.context)

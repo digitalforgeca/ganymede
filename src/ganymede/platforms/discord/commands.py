@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 import asyncio
+import os
 import uuid
 import structlog
 from ganymede.core import ContextKey
