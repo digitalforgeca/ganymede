@@ -682,3 +682,43 @@ discord:
         currency_text = "The price is $50 and upgrades are $100."
         self.assertEqual(formatter.format_text(currency_text), currency_text)
 
+    def test_discord_formatter_headers_and_file_links(self):
+        """Tests that deep Markdown headers and file:/// links are sanitized cleanly for Discord."""
+        from ganymede.platforms.discord.formatter import DiscordFormatter
+        formatter = DiscordFormatter()
+
+        raw_text = (
+            "#### 4. Unified Combat Resolution & Riposte Mechanics\n"
+            "##### Sub-details\n"
+            "Damage Interception in [player.gd](file:///Users/mcdoolz/dev/warden/characters/player.gd):\n"
+            "Hook in [`check_parry()`](file:///Users/mcdoolz/dev/warden/characters/npc.gd#L1844-L1850):\n"
+            "Riposte Scaling in [initialization.gd](file:///Users/mcdoolz/dev/warden/sys/initialization.gd#L50-L60):\n"
+            "Overview in [combat overview](file:///Users/mcdoolz/dev/warden/docs/combat.md):\n"
+            "Web link: [`Antigravity Docs`](https://example.com/docs)\n\n"
+            "```python\n"
+            "#### 4. Header inside code block should NOT be altered\n"
+            "# [code_file.gd](file:///path/to/code_file.gd)\n"
+            "```"
+        )
+        cleaned = formatter.format_text(raw_text)
+
+        # Headers capped to H3 (###) outside code blocks
+        self.assertIn("### 4. Unified Combat Resolution & Riposte Mechanics", cleaned)
+        self.assertIn("### Sub-details", cleaned)
+        self.assertNotIn("#### 4.", cleaned.split("```python")[0])
+
+        # file:/// links sanitized
+        self.assertIn("Damage Interception in `player.gd`:", cleaned)
+        self.assertIn("Hook in `check_parry()` (`npc.gd:1844-1850`):", cleaned)
+        self.assertIn("Riposte Scaling in `initialization.gd:50-60`:", cleaned)
+        self.assertIn("Overview in combat overview (`combat.md`):", cleaned)
+        self.assertNotIn("file://", cleaned.split("```python")[0])
+
+        # Web links unwrapped
+        self.assertIn("[Antigravity Docs](https://example.com/docs)", cleaned)
+
+        # Code block contents preserved
+        code_part = cleaned.split("```python")[1]
+        self.assertIn("#### 4. Header inside code block should NOT be altered", code_part)
+        self.assertIn("[code_file.gd](file:///path/to/code_file.gd)", code_part)
+

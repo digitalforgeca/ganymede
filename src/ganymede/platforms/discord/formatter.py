@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 from ganymede.formatting.base import Formatter
 from ganymede.core.constants import DISCORD_MAX_MESSAGE_LENGTH
 
@@ -35,8 +36,75 @@ class DiscordFormatter(Formatter):
 
                 # Sanitize raw LaTeX math notation (e.g. $< 0.18\text{s}$, $\rightarrow$) into clean text/Unicode
                 clean = self._clean_latex(clean)
+
+                # Cap deep Markdown headings (Discord only supports H1-H3: #, ##, ###)
+                clean = re.sub(r'^(#{4,})\s+', '### ', clean, flags=re.MULTILINE)
+
+                # Unwrap backticks inside web markdown links so Discord renders them properly
+                clean = re.sub(r'\[`+([^`\]]+)`+\]\((https?://[^\)]+)\)', r'[\1](\2)', clean)
+
+                # Convert unclickable file:/// links into clean inline code references
+                clean = self._clean_file_links(clean)
+
                 result.append(clean)
         return ''.join(result)
+
+    def _clean_file_links(self, text: str) -> str:
+        """Transform local file:/// markdown links into clean inline code references.
+
+        Discord markdown restricts clickable hyperlinks to http:// and https:// schemes.
+        Local file:/// links render as broken, noisy raw text and expose local paths.
+        This helper parses file links and renders them cleanly (e.g. `file.py`, `func()` (`file.py:10-20`)).
+        """
+        def replace_file_link(match):
+            raw_label = match.group(1).strip()
+            url = match.group(2).strip()
+            had_backticks = raw_label.startswith('`') and raw_label.endswith('`')
+            label = re.sub(r'^`+|`+$', '', raw_label).strip()
+
+            fragment = ""
+            if '#' in url:
+                url_base, fragment = url.split('#', 1)
+            else:
+                url_base = url
+
+            path = re.sub(r'^file:///?', '', url_base)
+            path = path.split('?')[0]
+            filename = urllib.parse.unquote(path.rstrip('/').split('/')[-1]) if path else ""
+
+            line_ref = ""
+            if fragment:
+                line_match = re.match(r'^L?(\d+)(?:-L?(\d+))?$', fragment)
+                if line_match:
+                    start = line_match.group(1)
+                    end = line_match.group(2)
+                    line_ref = f"{start}-{end}" if end else start
+                else:
+                    line_ref = fragment.lstrip('L')
+
+            if not label:
+                label = filename
+
+            # If label is a full path, reduce it to filename
+            if label.startswith('file://') or label.startswith('/'):
+                label = urllib.parse.unquote(label.rstrip('/').split('/')[-1])
+
+            clean_label_base = re.sub(r'[:#]L?\d+(?:-L?\d+)?$', '', label)
+            label_is_file = (clean_label_base == filename or clean_label_base.endswith('/' + filename))
+
+            if label_is_file:
+                target = clean_label_base or filename
+                return f"`{target}:{line_ref}`" if line_ref else f"`{target}`"
+            else:
+                formatted_label = f"`{label}`" if (had_backticks or (' ' not in label)) else label
+                file_loc = f"{filename}:{line_ref}" if line_ref else filename
+                if file_loc:
+                    return f"{formatted_label} (`{file_loc}`)"
+                else:
+                    return formatted_label
+
+        pattern = r'\[([^\]]*)\]\((file://[^\)]+)\)'
+        return re.sub(pattern, replace_file_link, text)
 
     def _clean_latex(self, text: str) -> str:
         """Convert LaTeX math notation and symbols into clean Discord-friendly text and Unicode."""
