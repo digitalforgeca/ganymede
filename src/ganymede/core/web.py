@@ -80,12 +80,10 @@ class DashboardServer:
         
         active_theme = getattr(self.config, "theme", "default")
         
-        # If the user directory doesn't exist, we copy the embedded one over to populate themes/default.
-        if not os.path.exists(user_web_dir) or not os.path.exists(os.path.join(user_web_dir, 'themes', 'default')):
-            logger.info("Initializing user web directory with default assets", dest=user_web_dir)
-            os.makedirs(user_web_dir, exist_ok=True)
-            if os.path.exists(embedded_web_dir):
-                shutil.copytree(embedded_web_dir, user_web_dir, dirs_exist_ok=True)
+        # Synchronize embedded theme assets into user_web_dir so upgrades take effect
+        os.makedirs(user_web_dir, exist_ok=True)
+        if os.path.exists(embedded_web_dir):
+            shutil.copytree(embedded_web_dir, user_web_dir, dirs_exist_ok=True)
                 
         # Resolve the active theme directory
         theme_dir = os.path.join(user_web_dir, 'themes', active_theme)
