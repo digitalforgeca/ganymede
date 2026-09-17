@@ -146,15 +146,27 @@
                             </div>
                         </div>
 
-                        <!-- Right Column: Telemetry -->
+                        <!-- Right Column: Telemetry & Subagents -->
                         <div class="column is-two-thirds">
                             <div class="box facet is-flex is-flex-direction-column" style="height: calc(100vh - 150px);">
-                                <div class="is-flex is-justify-content-space-between is-align-items-center facet-title">
-                                    <h2 class="title is-4 cinzel mb-0" style="border-bottom: none; padding-bottom: 0;">Chalice Telemetry</h2>
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                                    <div class="tabs is-boxed mb-0" id="dashboard-center-tabs">
+                                        <ul>
+                                            <li class="is-active" data-tab="tab-telemetry"><a><span class="icon is-small mr-2"><i class="ph ph-terminal-window"></i></span>Chalice Telemetry</a></li>
+                                            <li data-tab="tab-subagents"><a><span class="icon is-small mr-2"><i class="ph ph-git-fork"></i></span>Subagents & Active Tasks</a></li>
+                                        </ul>
+                                    </div>
                                     <button class="button is-small is-outlined is-info" id="btn-export-telemetry">Export JSON</button>
                                 </div>
-                                <div class="log-container flex-grow-1" id="log-container">
+                                <div id="tab-telemetry-content" class="log-container flex-grow-1">
                                     <div class="log-entry system">Waiting for agent telemetry stream...</div>
+                                </div>
+                                <div id="tab-subagents-content" class="is-hidden flex-grow-1 p-3" style="overflow-y: auto;">
+                                    <div class="has-text-centered has-text-grey mt-5" id="subagents-empty-state">
+                                        <span class="icon is-large mb-2"><i class="ph ph-robot fa-2x"></i></span>
+                                        <p>No active subagents or background tasks running.</p>
+                                    </div>
+                                    <div id="subagents-list"></div>
                                 </div>
                             </div>
                         </div>
@@ -301,22 +313,67 @@
                     </div>
                 </main>
 
-                <!-- Artifacts Modal -->
+                <!-- Antigravity-Style Artifact Inspector Modal -->
                 <div class="modal" id="modal-artifacts">
                     <div class="modal-background" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')"></div>
-                    <div class="modal-card">
-                        <header class="modal-card-head">
-                            <p class="modal-card-title cinzel">Project Artifacts</p>
+                    <div class="modal-card" style="width: 85vw; max-width: 1200px; height: 85vh;">
+                        <header class="modal-card-head" style="background-color: var(--bg-alabaster); border-bottom: 1px solid var(--border-marble);">
+                            <div class="is-flex is-align-items-center">
+                                <span class="icon is-medium mr-2" style="color: var(--accent-gold);"><i class="ph ph-file-text fa-lg"></i></span>
+                                <div>
+                                    <p class="modal-card-title cinzel mb-0" style="font-size: 1.15rem;">Antigravity Artifact Inspector</p>
+                                    <p class="is-size-7 has-text-grey" id="artifacts-subtitle">Project Artifacts & Generated Files</p>
+                                </div>
+                            </div>
                             <button class="delete" aria-label="close" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')"></button>
                         </header>
-                        <section class="modal-card-body">
-                            <p class="is-size-7 has-text-grey mb-3" id="artifacts-subtitle">Select a project to view files.</p>
-                            <ul class="file-list" id="file-list" style="list-style: none; margin: 0; font-size: 0.9rem;">
-                                <!-- Files will go here -->
-                            </ul>
+                        <section class="modal-card-body is-paddingless is-flex" style="height: calc(85vh - 120px); overflow: hidden;">
+                            <!-- Left: File List -->
+                            <div style="width: 320px; border-right: 1px solid var(--border-marble); overflow-y: auto; background-color: #fafafa; padding: 12px;">
+                                <div class="field mb-3">
+                                    <div class="control has-icons-left">
+                                        <input class="input is-small" type="text" id="artifact-filter" placeholder="Filter files...">
+                                        <span class="icon is-small is-left"><i class="ph ph-funnel"></i></span>
+                                    </div>
+                                </div>
+                                <ul class="file-list" id="file-list" style="list-style: none; margin: 0; padding: 0;">
+                                    <li class="has-text-grey is-size-7 p-3 text-center">Loading artifacts...</li>
+                                </ul>
+                            </div>
+                            <!-- Right: Preview Pane -->
+                            <div class="is-flex-grow-1 is-flex is-flex-direction-column" style="overflow: hidden; background-color: #ffffff;">
+                                <div class="is-flex is-justify-content-space-between is-align-items-center px-4 py-2 border-bottom" style="background-color: var(--bg-alabaster); min-height: 40px;">
+                                    <div class="is-flex is-align-items-center">
+                                        <span class="icon is-small mr-2 text-info"><i class="ph ph-article"></i></span>
+                                        <strong id="preview-filename" class="is-size-7 font-mono">Select a file to preview</strong>
+                                        <span id="preview-size" class="tag is-light is-small ml-2">--</span>
+                                    </div>
+                                    <div class="buttons is-right mb-0">
+                                        <button class="button is-small is-light" id="btn-open-local-artifact" title="Open in local editor">
+                                            <span class="icon is-small"><i class="ph ph-arrow-square-out"></i></span>
+                                            <span>Open</span>
+                                        </button>
+                                        <button class="button is-small is-light" id="btn-copy-artifact" title="Copy file contents">
+                                            <span class="icon is-small"><i class="ph ph-copy"></i></span>
+                                            <span>Copy</span>
+                                        </button>
+                                        <button class="button is-small is-info is-outlined" id="btn-download-artifact" title="Download file">
+                                            <span class="icon is-small"><i class="ph ph-download"></i></span>
+                                            <span>Download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="artifact-preview-content" class="content p-4" style="flex: 1; overflow-y: auto; font-size: 0.9rem;">
+                                    <div class="has-text-centered has-text-grey mt-6">
+                                        <span class="icon is-large mb-2"><i class="ph ph-browsers fa-2x"></i></span>
+                                        <p>Select an artifact on the left to preview its rendered contents.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </section>
-                        <footer class="modal-card-foot">
-                            <button class="button" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')">Close</button>
+                        <footer class="modal-card-foot is-justify-content-space-between" style="padding: 10px 20px;">
+                            <span class="is-size-7 has-text-grey" id="artifacts-footer-info">Artifacts generated by Antigravity agent</span>
+                            <button class="button is-small" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')">Close</button>
                         </footer>
                     </div>
                 </div>

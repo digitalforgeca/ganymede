@@ -38,6 +38,41 @@ document.addEventListener("DOMContentLoaded", () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
     
+    // Antigravity formatting: GitHub-style alerts and tool accordions
+    function formatAgentMarkdown(content) {
+        if (!content) return "";
+        let text = content;
+
+        // 1. Process GitHub/Antigravity style alerts: > [!NOTE], > [!TIP], etc.
+        text = text.replace(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*\n((?:^>.*$\n?)*)/gim, (match, alertType, bodyLines) => {
+            const typeLower = alertType.toLowerCase();
+            const cleanBody = bodyLines.replace(/^>[ \t]?/gm, '').trim();
+            const iconMap = {
+                note: 'ph-info',
+                tip: 'ph-lightbulb',
+                important: 'ph-warning-circle',
+                warning: 'ph-warning',
+                caution: 'ph-shield-warning'
+            };
+            const icon = iconMap[typeLower] || 'ph-info';
+            const title = alertType.charAt(0).toUpperCase() + alertType.slice(1).toLowerCase();
+            return `\n<div class="antigravity-alert antigravity-alert-${typeLower}"><div class="antigravity-alert-header"><i class="ph ${icon}"></i> ${title}</div><div class="antigravity-alert-body">${cleanBody}</div></div>\n`;
+        });
+
+        // 2. Parse tool execution lines into interactive accordion cards
+        text = text.replace(/`?(?:Calling tool|Tool:|Executing tool)\s+([a-zA-Z0-9_\-]+)`?[\s\S]*?(?=\n\n|$)/gi, (match, toolName) => {
+            const cleanMatch = match.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `\n<details class="tool-call-card"><summary class="tool-call-summary"><span class="tag is-info is-light mr-2">Tool Call</span><strong>${toolName}</strong></summary><pre><code>${cleanMatch}</code></pre></details>\n`;
+        });
+
+        // 3. Render markdown via marked
+        if (window.marked) {
+            return marked.parse(text);
+        } else {
+            return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        }
+    }
+    
     function getAgentHeaderHtml() {
         if (botInfo) {
             const avatarHtml = botInfo.avatar_url ? `<img src="${botInfo.avatar_url}" referrerpolicy="no-referrer" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : '';
@@ -192,6 +227,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.payload) message += ` - ${JSON.stringify(data.payload)}`;
                 
                 appendLog(message, style);
+                // Track active subagents & tasks for Antigravity-style visualization
+                if (data.event === "PreToolUse") {
+                    const payload = data.payload || {};
+                    const convId = payload.conversationId || data.ganymede_conv_id || "agent-main";
+                    const toolCall = payload.toolCall || {};
+                    const args = toolCall.args || {};
+                    activeSubagents.set(convId, {
+                        role: args.toolSummary || toolCall.name || "Worker Agent",
+                        status: "running",
+                        model: "Gemini 3.7 Flash",
+                        lastTool: toolCall.name || "Tool",
+                        actionSummary: args.toolAction || args.CommandLine || JSON.stringify(args).slice(0, 100)
+                    });
+                    updateSubagentUI();
+                } else if (data.event === "Stop") {
+                    const convId = data.payload?.conversationId || data.ganymede_conv_id;
+                    if (convId && activeSubagents.has(convId)) {
+                        const existing = activeSubagents.get(convId);
+                        existing.status = "idle";
+                        existing.lastTool = "Completed";
+                        activeSubagents.set(convId, existing);
+                        updateSubagentUI();
+                    }
+                }
                 
                 // Handle streaming to active chat
                 if (data.context && data.context === currentChatId) {
@@ -200,8 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         msgDiv.className = 'box has-background-light mb-3';
                         msgDiv.id = data.payload.msg_id;
                         let safeContent = data.payload.content || "⏳ *Thinking...*";
-                        if (window.marked) safeContent = marked.parse(safeContent);
-                        else safeContent = safeContent.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                        safeContent = formatAgentMarkdown(safeContent);
                         msgDiv.innerHTML = `${getAgentHeaderHtml()}${safeContent}`;
                         
                         if (document.getElementById('chat-history').querySelector('.has-text-grey')) {
@@ -213,8 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const msgDiv = document.getElementById(data.payload.msg_id);
                         if (msgDiv) {
                             let safeContent = data.payload.content;
-                            if (window.marked) safeContent = marked.parse(safeContent);
-                            else safeContent = safeContent.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                            safeContent = formatAgentMarkdown(safeContent);
                             msgDiv.innerHTML = `${getAgentHeaderHtml()}${safeContent}`;
                             document.getElementById('chat-history').scrollTop = document.getElementById('chat-history').scrollHeight;
                         }
@@ -633,13 +690,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     const msgDiv = document.createElement('div');
                     msgDiv.className = `box mb-3 ${msg.role === 'assistant' ? 'has-background-light' : 'has-background-white'}`;
                     
-                    // Convert markdown to HTML using marked.js
-                    let safeContent = "";
-                    if (window.marked) {
-                        safeContent = marked.parse(msg.content);
-                    } else {
-                        safeContent = msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                    }
+                    // Convert markdown to HTML using formatAgentMarkdown
+                    const safeContent = formatAgentMarkdown(msg.content);
                     
                     const roleLabel = msg.role === 'assistant' ? getAgentHeaderHtml() : getUserHeaderHtml();
                     msgDiv.innerHTML = `${roleLabel}${safeContent}`;
@@ -1059,16 +1111,253 @@ document.addEventListener("DOMContentLoaded", () => {
         loadConfig();
     }
 
+    // Live Subagents & Active Tasks Tracker
+    const activeSubagents = new Map();
+
+    function updateSubagentUI() {
+        const container = document.getElementById('subagents-list');
+        const emptyState = document.getElementById('subagents-empty-state');
+        if (!container || !emptyState) return;
+
+        if (activeSubagents.size === 0) {
+            emptyState.classList.remove('is-hidden');
+            container.innerHTML = '';
+            return;
+        }
+
+        emptyState.classList.add('is-hidden');
+        container.innerHTML = '';
+
+        activeSubagents.forEach((subagent, id) => {
+            const card = document.createElement('div');
+            card.className = 'subagent-card';
+            const isRunning = subagent.status === 'running';
+            const statusBadgeClass = isRunning ? 'subagent-status-running' : 'subagent-status-idle';
+            const statusIcon = isRunning ? '🟢' : '⚪';
+
+            card.innerHTML = `
+                <div class="subagent-header">
+                    <div>
+                        <strong class="is-size-6 cinzel">${subagent.role || 'Subagent'}</strong>
+                        <span class="has-text-grey ml-2 is-size-7 font-mono">${id.slice(0, 14)}</span>
+                    </div>
+                    <span class="subagent-status-badge ${statusBadgeClass}">
+                        ${statusIcon} ${subagent.status.toUpperCase()}
+                    </span>
+                </div>
+                <div class="is-size-7 mb-2">
+                    <span class="has-text-grey">Model:</span> <strong>${subagent.model || 'Gemini 3.7 Flash'}</strong>
+                    <span class="has-text-grey ml-3">Current Action:</span> <span class="tag is-small is-light">${subagent.lastTool || 'None'}</span>
+                </div>
+                ${subagent.actionSummary ? `<p class="is-size-7 has-text-dark mb-0 font-mono" style="background: #f9f9fa; padding: 6px; border-radius: 4px;">↳ ${subagent.actionSummary}</p>` : ''}
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function setupDashboardCenterTabs() {
+        const tabs = document.querySelectorAll('#dashboard-center-tabs li');
+        const telemetryContent = document.getElementById('tab-telemetry-content');
+        const subagentsContent = document.getElementById('tab-subagents-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('is-active'));
+                tab.classList.add('is-active');
+                const target = tab.getAttribute('data-tab');
+                if (target === 'tab-telemetry') {
+                    telemetryContent?.classList.remove('is-hidden');
+                    subagentsContent?.classList.add('is-hidden');
+                } else if (target === 'tab-subagents') {
+                    telemetryContent?.classList.add('is-hidden');
+                    subagentsContent?.classList.remove('is-hidden');
+                    updateSubagentUI();
+                }
+            });
+        });
+    }
+
+    let currentArtifactsList = [];
+    let selectedArtifactPath = null;
+    let selectedArtifactContent = "";
+
     function setupArtifactsModal() {
         const btnViewArtifacts = document.getElementById('btn-view-artifacts');
+        const modal = document.getElementById('modal-artifacts');
+        const fileListEl = document.getElementById('file-list');
+        const filterInput = document.getElementById('artifact-filter');
+        const previewContent = document.getElementById('artifact-preview-content');
+        const previewFilename = document.getElementById('preview-filename');
+        const previewSize = document.getElementById('preview-size');
+        const btnOpen = document.getElementById('btn-open-local-artifact');
+        const btnCopy = document.getElementById('btn-copy-artifact');
+        const btnDownload = document.getElementById('btn-download-artifact');
+
+        async function loadArtifacts() {
+            if (!currentChatId) return;
+            fileListEl.innerHTML = '<li class="has-text-grey is-size-7 p-3 text-center">Loading artifacts...</li>';
+            try {
+                const res = await fetch(`/api/chats/${currentChatId}/files`);
+                if (!res.ok) throw new Error("Failed to load artifacts");
+                const data = await res.json();
+                currentArtifactsList = data.files || [];
+                renderArtifactList(currentArtifactsList);
+            } catch (err) {
+                fileListEl.innerHTML = `<li class="has-text-danger is-size-7 p-3">Error: ${err.message}</li>`;
+            }
+        }
+
+        function renderArtifactList(files) {
+            fileListEl.innerHTML = '';
+            if (files.length === 0) {
+                fileListEl.innerHTML = '<li class="has-text-grey is-size-7 p-3 text-center">No artifacts found in this project.</li>';
+                previewFilename.textContent = "No files";
+                previewSize.textContent = "--";
+                previewContent.innerHTML = '<div class="has-text-centered has-text-grey mt-6"><p>No generated artifacts found.</p></div>';
+                return;
+            }
+
+            files.forEach(file => {
+                const li = document.createElement('li');
+                li.className = `artifact-item ${file.path === selectedArtifactPath ? 'is-selected' : ''}`;
+                
+                const isMd = file.name.endsWith('.md');
+                const isCode = file.name.endsWith('.py') || file.name.endsWith('.json') || file.name.endsWith('.gd') || file.name.endsWith('.swift');
+                const iconClass = isMd ? 'ph-file-text' : (isCode ? 'ph-file-code' : 'ph-file');
+
+                li.innerHTML = `
+                    <div class="is-flex is-align-items-center" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span class="icon is-small mr-2 text-grey"><i class="ph ${iconClass}"></i></span>
+                        <span class="is-size-7 font-mono">${file.name}</span>
+                    </div>
+                    <span class="tag is-light is-small ml-1">${formatBytes(file.size)}</span>
+                `;
+
+                li.addEventListener('click', () => {
+                    selectArtifact(file);
+                });
+
+                fileListEl.appendChild(li);
+            });
+
+            // If nothing is selected or current selection not in list, select the first
+            const hasSelected = files.some(f => f.path === selectedArtifactPath);
+            if (!hasSelected && files.length > 0) {
+                selectArtifact(files[0]);
+            }
+        }
+
+        async function selectArtifact(file) {
+            selectedArtifactPath = file.path;
+            
+            // Update highlights
+            Array.from(fileListEl.querySelectorAll('.artifact-item')).forEach((el, i) => {
+                if (currentArtifactsList[i] && currentArtifactsList[i].path === file.path) {
+                    el.classList.add('is-selected');
+                } else {
+                    el.classList.remove('is-selected');
+                }
+            });
+
+            previewFilename.textContent = file.name;
+            previewSize.textContent = formatBytes(file.size);
+            previewContent.innerHTML = '<div class="has-text-centered has-text-grey mt-6"><span class="icon is-medium ph-spin"><i class="ph ph-spinner fa-lg"></i></span><p>Loading file content...</p></div>';
+
+            try {
+                const res = await fetch(`/api/chats/${currentChatId}/file_content?path=${encodeURIComponent(file.path)}`);
+                if (!res.ok) throw new Error("Failed to read file content");
+                const data = await res.json();
+                selectedArtifactContent = data.content;
+                selectedArtifactAbsolutePath = data.absolute_path || null;
+
+                if (file.name.endsWith('.md')) {
+                    previewContent.innerHTML = formatAgentMarkdown(data.content);
+                } else {
+                    previewContent.innerHTML = `<pre style="background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 6px; font-size: 0.82rem; max-height: 100%; overflow-y: auto;"><code>${data.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`;
+                }
+            } catch (err) {
+                previewContent.innerHTML = `<div class="notification is-danger is-light">${err.message}</div>`;
+            }
+        }
+
+        if (filterInput) {
+            filterInput.addEventListener('input', (e) => {
+                const q = e.target.value.toLowerCase();
+                const filtered = currentArtifactsList.filter(f => f.name.toLowerCase().includes(q) || f.path.toLowerCase().includes(q));
+                renderArtifactList(filtered);
+            });
+        }
+
+        if (btnOpen) {
+            btnOpen.addEventListener('click', async () => {
+                if (selectedArtifactAbsolutePath) {
+                    try {
+                        const res = await fetch('/api/open_file', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: selectedArtifactAbsolutePath })
+                        });
+                        if (res.ok) {
+                            const orig = btnOpen.innerHTML;
+                            btnOpen.innerHTML = '<span class="icon is-small has-text-success"><i class="ph ph-check"></i></span><span>Opened</span>';
+                            setTimeout(() => { btnOpen.innerHTML = orig; }, 1500);
+                        }
+                    } catch (err) {
+                        console.error("Failed to open file:", err);
+                    }
+                }
+            });
+        }
+
+        if (btnCopy) {
+            btnCopy.addEventListener('click', () => {
+                if (selectedArtifactContent) {
+                    navigator.clipboard.writeText(selectedArtifactContent).then(() => {
+                        const originalText = btnCopy.innerHTML;
+                        btnCopy.innerHTML = '<span class="icon is-small"><i class="ph ph-check"></i></span><span>Copied!</span>';
+                        setTimeout(() => { btnCopy.innerHTML = originalText; }, 1500);
+                    });
+                }
+            });
+        }
+
+        if (btnDownload) {
+            btnDownload.addEventListener('click', () => {
+                if (selectedArtifactContent && selectedArtifactPath) {
+                    const blob = new Blob([selectedArtifactContent], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = previewFilename.textContent || 'artifact.txt';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            });
+        }
+
         if (btnViewArtifacts) {
             btnViewArtifacts.addEventListener('click', () => {
                 if (currentChatId) {
-                    document.getElementById('modal-artifacts').classList.add('is-active');
+                    modal.classList.add('is-active');
+                    loadArtifacts();
                 }
             });
         }
     }
+
+    // Intercept clicking on any file:/// links to trigger opening in native macOS editor/IDE
+    document.addEventListener('click', (e) => {
+        const fileLink = e.target.closest('a[href^="file://"]');
+        if (fileLink) {
+            e.preventDefault();
+            const filePath = fileLink.getAttribute('href');
+            fetch('/api/open_file', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: filePath })
+            }).catch(err => console.error("Failed to open file link:", err));
+        }
+    });
 
     // Initialize
     async function fetchUserInfo() {
@@ -1105,6 +1394,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupChatTabs();
     setupSettingsTabs();
     setupArtifactsModal();
+    setupDashboardCenterTabs();
     setupChatExport();
     setupProjectSettings();
     setupRulesEditor();

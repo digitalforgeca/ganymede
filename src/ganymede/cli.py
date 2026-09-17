@@ -622,12 +622,41 @@ def manage_sessions(config, action: str, targets: list[str] = None):
         print("  Available actions: list, kill")
         sys.exit(1)
 
+def launch_desktop_app():
+    import subprocess
+    possible_paths = [
+        os.path.expanduser("~/Applications/Ganymede.app"),
+        "/Applications/Ganymede.app",
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "dist", "Ganymede.app")),
+        os.path.abspath(os.path.join(sys.prefix, "..", "Ganymede.app")),
+        os.path.join(sys.prefix, "share", "ganymede", "Ganymede.app"),
+        os.path.join(sys.prefix, "Ganymede.app"),
+        "/opt/homebrew/opt/ganymede/Ganymede.app",
+    ]
+    app_path = next((p for p in possible_paths if os.path.exists(p)), None)
+    if not app_path:
+        build_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "desktop", "mac", "build.sh"))
+        if os.path.exists(build_script):
+            print("Building Ganymede Desktop App...")
+            subprocess.run(["/bin/bash", build_script], check=True)
+            dist_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "dist", "Ganymede.app"))
+            if os.path.exists(dist_path):
+                app_path = dist_path
+
+    if not app_path or not os.path.exists(app_path):
+        print("Error: Ganymede.app bundle not found.")
+        print("Please build it with: ./src/ganymede/desktop/mac/build.sh")
+        sys.exit(1)
+
+    print(f"Launching Ganymede Desktop Application ({app_path})...")
+    subprocess.run(["open", app_path])
+
 def main():
     # Load .env file if present
     load_dotenv()
     
     parser = argparse.ArgumentParser(prog="ganymede")
-    parser.add_argument("command", nargs="?", default=None, help="Action to perform: stop, restart, status, sessions, mcp")
+    parser.add_argument("command", nargs="?", default=None, help="Action to perform: stop, restart, status, sessions, mcp, app")
     parser.add_argument("subargs", nargs="*", help="Sub-arguments for commands like 'sessions kill <name>'")
     parser.add_argument("--config", default=None, help="Path to YAML configuration file")
     parser.add_argument("--workspace", default=None, help="Target workspace path for the agent")
@@ -637,6 +666,10 @@ def main():
     
     args = parser.parse_args()
     
+    if args.command in ("app", "desktop"):
+        launch_desktop_app()
+        sys.exit(0)
+        
     if args.command == "mcp":
         from ganymede.mcp_server.__main__ import main as mcp_main
         mcp_main()

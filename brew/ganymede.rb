@@ -2,7 +2,7 @@ class Ganymede < Formula
   desc "Discord communications and productivity gateway for Antigravity"
   homepage "https://github.com/digitalforgeca/ganymede"
   url "file:///Users/mcdoolz/dev/ganymede", using: :git, branch: "master"
-  version "0.1.103"
+  version "0.1.104"
 
   depends_on "python@3.11"
 
@@ -26,6 +26,12 @@ class Ganymede < Formula
     (libexec/"plugins").install "plugins/chalice"
     (libexec/"plugins").install "plugins/medea"
 
+    # Build and install the native macOS desktop application wrapper
+    if OS.mac?
+      system "bash", "src/ganymede/desktop/mac/build.sh"
+      prefix.install "dist/Ganymede.app"
+    end
+
     # Symlink the generated executable into the Homebrew bin directory
     bin.install_symlink libexec/"bin/ganymede"
   end
@@ -39,6 +45,9 @@ class Ganymede < Formula
       
       To start the gateway, run:
         ganymede
+        
+      To launch the native macOS desktop control panel, run:
+        ganymede app
         
       The user configuration file will automatically be created on first run at:
         ~/.ganymede/config.yaml

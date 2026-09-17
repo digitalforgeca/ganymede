@@ -293,6 +293,84 @@ async def handle_chat_files(request: Request):
     return {"files": files_data, "workspace": agy_brain_dir}
 
 
+@router.get('/api/chats/{id}/file_content')
+async def handle_chat_file_content(request: Request):
+    server = request.app.state.server
+    context_id = request.path_params.get('id', '')
+    rel_path = request.query_params.get('path', '')
+    if not rel_path:
+        return JSONResponse({"error": "Missing path parameter"}, status_code=400)
+        
+    parts = context_id.split('_')
+    if len(parts) < 3:
+        return JSONResponse({"error": "Invalid context ID format"}, status_code=400)
+        
+    platform = parts[0]
+    channel_id = parts[1]
+    thread_id = parts[2] if parts[2] != 'main' else None
+    
+    db_path = os.path.join(server.config.data_dir, "ganymede.db")
+    conversation_id = f"ganymede-{platform}-{channel_id}"
+    if thread_id:
+        conversation_id += f"-{thread_id}"
+        
+    if os.path.exists(db_path):
+        import aiosqlite
+        async with aiosqlite.connect(db_path) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute(
+                "SELECT conversation_id FROM conversation_mappings WHERE platform = ? AND channel_id = ? AND (thread_id = ? OR (thread_id IS NULL AND ? IS NULL))",
+                (platform, channel_id, thread_id, thread_id)
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row and row["conversation_id"]:
+                    conversation_id = row["conversation_id"]
+                    
+    agy_brain_dir = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation_id}")
+    full_path = os.path.abspath(os.path.join(agy_brain_dir, rel_path))
+    
+    # Security: prevent path traversal outside brain directory
+    if not full_path.startswith(os.path.abspath(agy_brain_dir)):
+        return JSONResponse({"error": "Access denied"}, status_code=403)
+        
+    if not os.path.exists(full_path) or not os.path.isfile(full_path):
+        return JSONResponse({"error": "File not found"}, status_code=404)
+        
+    try:
+        with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read(500000) # Cap at 500KB for preview
+        return {"path": rel_path, "content": content, "size": os.path.getsize(full_path), "absolute_path": full_path}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@router.post('/api/open_file')
+async def handle_open_file(request: Request):
+    """Open a local file in the system default application (IDE/Editor)"""
+    try:
+        data = await request.json()
+        target_path = data.get('path', '')
+        if not target_path:
+            return JSONResponse({"error": "Missing path parameter"}, status_code=400)
+            
+        if target_path.startswith("file://"):
+            target_path = target_path[7:]
+            
+        target_path = os.path.expanduser(target_path)
+        if not os.path.exists(target_path):
+            return JSONResponse({"error": f"File does not exist: {target_path}"}, status_code=404)
+            
+        import sys
+        import subprocess
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", target_path])
+        elif sys.platform.startswith("linux"):
+            subprocess.Popen(["xdg-open", target_path])
+        return {"status": "ok", "path": target_path}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @router.post('/api/chats/{id}/merge')
 async def handle_chat_merge(request: Request):
     server = request.app.state.server
