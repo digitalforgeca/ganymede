@@ -405,28 +405,98 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function setupPanes() {
-        const toggleBtn = document.getElementById('btn-toggle-channels');
+        // 1. Channels Pane (Projects View)
+        const toggleChannelsBtn = document.getElementById('btn-toggle-channels');
+        const toggleChannelsText = document.getElementById('btn-toggle-channels-text');
         const channelsPane = document.getElementById('channels-pane');
         const handleChannels = document.getElementById('handle-channels');
         
-        if (toggleBtn && channelsPane) {
-            toggleBtn.addEventListener('click', () => {
+        // Restore saved channels pane width & state
+        const savedChannelsWidth = localStorage.getItem('ganymede_channels_width');
+        if (savedChannelsWidth && channelsPane) {
+            channelsPane.style.width = `${savedChannelsWidth}px`;
+        }
+        const savedChannelsCollapsed = localStorage.getItem('ganymede_channels_collapsed') === 'true';
+        if (savedChannelsCollapsed && channelsPane) {
+            channelsPane.classList.add('is-hidden');
+            if (toggleChannelsText) toggleChannelsText.textContent = 'Show Channels';
+            if (toggleChannelsBtn) toggleChannelsBtn.classList.add('is-active-toggle');
+        }
+
+        if (toggleChannelsBtn && channelsPane) {
+            toggleChannelsBtn.addEventListener('click', () => {
                 channelsPane.classList.toggle('is-hidden');
+                const isHidden = channelsPane.classList.contains('is-hidden');
+                if (toggleChannelsText) {
+                    toggleChannelsText.textContent = isHidden ? 'Show Channels' : 'Hide Channels';
+                }
+                toggleChannelsBtn.classList.toggle('is-active-toggle', isHidden);
+                localStorage.setItem('ganymede_channels_collapsed', isHidden);
             });
         }
         
+        // 2. Main Sidebar Navigation
         const mainToggleBtn = document.getElementById('main-sidebar-toggle');
         const olympusSidebar = document.querySelector('.olympus-sidebar');
         const mainContent = document.querySelector('.main-content');
         const handleMain = document.getElementById('handle-main');
         
+        // Restore saved sidebar width & state
+        const savedSidebarWidth = localStorage.getItem('ganymede_sidebar_width');
+        if (savedSidebarWidth && olympusSidebar) {
+            olympusSidebar.style.width = `${savedSidebarWidth}px`;
+        }
+        const savedSidebarCollapsed = localStorage.getItem('ganymede_sidebar_collapsed') === 'true';
+        if (savedSidebarCollapsed && olympusSidebar) {
+            olympusSidebar.classList.add('is-hidden');
+            if (mainToggleBtn) mainToggleBtn.classList.add('is-active-toggle');
+        }
+
         if (mainToggleBtn && olympusSidebar && mainContent) {
             mainToggleBtn.addEventListener('click', () => {
                 olympusSidebar.classList.toggle('is-hidden');
+                const isHidden = olympusSidebar.classList.contains('is-hidden');
+                mainToggleBtn.classList.toggle('is-active-toggle', isHidden);
+                localStorage.setItem('ganymede_sidebar_collapsed', isHidden);
             });
         }
+
+        // 3. Dashboard Metrics Pane
+        const btnToggleMetrics = document.getElementById('btn-toggle-metrics');
+        const btnExpandMetrics = document.getElementById('btn-expand-metrics');
+        const metricsPane = document.getElementById('dashboard-metrics-pane');
+        const telemetryPane = document.getElementById('dashboard-telemetry-pane');
+
+        function setMetricsCollapsed(collapsed) {
+            if (!metricsPane || !telemetryPane) return;
+            if (collapsed) {
+                metricsPane.classList.add('is-hidden');
+                telemetryPane.classList.remove('is-two-thirds');
+                telemetryPane.classList.add('is-full');
+                if (btnExpandMetrics) btnExpandMetrics.classList.remove('is-hidden');
+            } else {
+                metricsPane.classList.remove('is-hidden');
+                telemetryPane.classList.remove('is-full');
+                telemetryPane.classList.add('is-two-thirds');
+                if (btnExpandMetrics) btnExpandMetrics.classList.add('is-hidden');
+            }
+            localStorage.setItem('ganymede_metrics_collapsed', collapsed ? 'true' : 'false');
+        }
+
+        if (btnToggleMetrics) {
+            btnToggleMetrics.addEventListener('click', () => setMetricsCollapsed(true));
+        }
+        if (btnExpandMetrics) {
+            btnExpandMetrics.addEventListener('click', () => setMetricsCollapsed(false));
+        }
+
+        // Restore saved metrics collapsed state
+        if (localStorage.getItem('ganymede_metrics_collapsed') === 'true') {
+            setMetricsCollapsed(true);
+        }
         
-        function makeResizable(pane, handle) {
+        // 4. Resizable Split Panes
+        function makeResizable(pane, handle, storageKey) {
             if (!pane || !handle) return;
             let isResizing = false;
             let startX = 0;
@@ -443,7 +513,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             document.addEventListener('mousemove', (e) => {
                 if (!isResizing) return;
-                const newWidth = startWidth + (e.clientX - startX);
+                const newWidth = Math.max(160, startWidth + (e.clientX - startX));
                 pane.style.width = `${newWidth}px`;
             });
             
@@ -452,12 +522,37 @@ document.addEventListener("DOMContentLoaded", () => {
                     isResizing = false;
                     handle.classList.remove('is-dragging');
                     document.body.style.cursor = '';
+                    if (storageKey) {
+                        localStorage.setItem(storageKey, pane.offsetWidth);
+                    }
                 }
             });
         }
         
-        makeResizable(channelsPane, handleChannels);
-        makeResizable(olympusSidebar, handleMain);
+        makeResizable(channelsPane, handleChannels, 'ganymede_channels_width');
+        makeResizable(olympusSidebar, handleMain, 'ganymede_sidebar_width');
+
+        // 5. Global Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Cmd+B / Ctrl+B: Toggle Sidebar
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b' && !e.shiftKey) {
+                e.preventDefault();
+                if (mainToggleBtn) mainToggleBtn.click();
+            }
+            // Cmd+E / Ctrl+E: Toggle Channels Pane in Projects view
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e' && !e.shiftKey) {
+                const viewChats = document.getElementById('view-chats');
+                if (viewChats && !viewChats.classList.contains('is-hidden') && toggleChannelsBtn) {
+                    e.preventDefault();
+                    toggleChannelsBtn.click();
+                }
+            }
+            // Escape: Close modals
+            if (e.key === 'Escape') {
+                const activeModals = document.querySelectorAll('.modal.is-active');
+                activeModals.forEach(m => m.classList.remove('is-active'));
+            }
+        });
     }
     
     window.selectChatTab = function(target) {
@@ -583,6 +678,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('btn-fork-chat').classList.remove('is-hidden');
         document.getElementById('btn-view-artifacts').classList.remove('is-hidden');
         document.getElementById('btn-merge-context').classList.remove('is-hidden');
+        const chatTabs = document.getElementById('chat-tabs-container');
+        if (chatTabs) chatTabs.classList.remove('is-hidden');
         loadChatHistory(targetChat.id);
         fetchChatFiles(targetChat.id);
         fetchChatSettings(targetChat.id);
@@ -1335,6 +1432,21 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        const btnToggleArtifactSidebar = document.getElementById('btn-toggle-artifact-sidebar');
+        const btnToggleArtifactSidebarText = document.getElementById('btn-toggle-artifact-sidebar-text');
+        const artifactSidebarPane = document.getElementById('artifact-sidebar-pane');
+
+        if (btnToggleArtifactSidebar && artifactSidebarPane) {
+            btnToggleArtifactSidebar.addEventListener('click', () => {
+                artifactSidebarPane.classList.toggle('is-hidden');
+                const isHidden = artifactSidebarPane.classList.contains('is-hidden');
+                if (btnToggleArtifactSidebarText) {
+                    btnToggleArtifactSidebarText.textContent = isHidden ? 'Show List' : 'Hide List';
+                }
+                btnToggleArtifactSidebar.classList.toggle('is-active-toggle', isHidden);
+            });
+        }
+
         if (btnViewArtifacts) {
             btnViewArtifacts.addEventListener('click', () => {
                 if (currentChatId) {
@@ -1540,17 +1652,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 30000);
     setInterval(fetchChats, 10000);
     
-    // Hamburger menu toggle for mobile
-    const mainToggleBtn = document.getElementById('main-sidebar-toggle');
-    const olympusSidebar = document.querySelector('.olympus-sidebar');
-    if (mainToggleBtn && olympusSidebar) {
-        mainToggleBtn.addEventListener('click', () => {
-            olympusSidebar.classList.toggle('is-mobile-active');
-            if (olympusSidebar.style.display === 'none' || olympusSidebar.style.display === '') {
-                olympusSidebar.style.display = 'block';
-            } else {
-                olympusSidebar.style.display = 'none';
-            }
     // ==========================================
     // AGENTS & CHANNEL ROUTING CONTROLLERS
     // ==========================================

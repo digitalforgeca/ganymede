@@ -310,6 +310,20 @@ body {
     font-size: 0.85rem;
     font-weight: 500;
 }
+.tool-call-summary::-webkit-details-marker {
+    display: none;
+}
+.tool-call-summary::before {
+    content: "▶";
+    font-size: 0.65rem;
+    margin-right: 8px;
+    color: var(--accent-gold, #cfa85e);
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
+.tool-call-card[open] > .tool-call-summary::before {
+    transform: rotate(90deg);
+}
 .tool-call-summary:hover {
     background-color: #f3f4f6;
 }
@@ -322,6 +336,17 @@ body {
     font-size: 0.8rem;
     max-height: 350px;
     overflow-y: auto;
+}
+
+/* Inner Panes & Resizing */
+#channels-pane, #dashboard-metrics-pane, #artifact-sidebar-pane, .olympus-sidebar {
+    transition: width 0.15s ease;
+}
+
+.button.is-active-toggle {
+    background-color: rgba(207, 168, 94, 0.15) !important;
+    border-color: var(--accent-gold, #cfa85e) !important;
+    color: var(--accent-gold, #cfa85e) !important;
 }
 
 /* Subagent & Task Visualization */

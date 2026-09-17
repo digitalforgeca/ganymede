@@ -114,11 +114,16 @@
             <div class="view-container">
                 <!-- Dashboard View -->
                 <main class="section view-section pt-5" id="view-dashboard">
-                    <div class="columns">
+                    <div class="columns" id="dashboard-columns">
                         <!-- Left Column: Metrics -->
-                        <div class="column is-one-third">
+                        <div class="column is-one-third" id="dashboard-metrics-pane">
                             <div class="box facet mb-4">
-                                <h2 class="title is-5 cinzel facet-title mb-3" style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">System Metrics</h2>
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-3" style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                                    <h2 class="title is-5 cinzel facet-title mb-0">System Metrics</h2>
+                                    <button class="button is-small is-ghost" id="btn-toggle-metrics" title="Collapse Metrics">
+                                        <span class="icon is-small"><i class="ph ph-caret-left"></i></span>
+                                    </button>
+                                </div>
                                 
                                 <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
                                     <span class="has-text-grey">Active Instances</span>
@@ -147,14 +152,20 @@
                         </div>
 
                         <!-- Right Column: Telemetry & Subagents -->
-                        <div class="column is-two-thirds">
+                        <div class="column is-two-thirds" id="dashboard-telemetry-pane">
                             <div class="box facet is-flex is-flex-direction-column" style="height: calc(100vh - 150px);">
                                 <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
-                                    <div class="tabs is-boxed mb-0" id="dashboard-center-tabs">
-                                        <ul>
-                                            <li class="is-active" data-tab="tab-telemetry"><a><span class="icon is-small mr-2"><i class="ph ph-terminal-window"></i></span>Chalice Telemetry</a></li>
-                                            <li data-tab="tab-subagents"><a><span class="icon is-small mr-2"><i class="ph ph-git-fork"></i></span>Subagents & Active Tasks</a></li>
-                                        </ul>
+                                    <div class="is-flex is-align-items-center">
+                                        <button class="button is-small is-light mr-2 is-hidden" id="btn-expand-metrics" title="Show System Metrics">
+                                            <span class="icon is-small"><i class="ph ph-chart-bar"></i></span>
+                                            <span>Metrics</span>
+                                        </button>
+                                        <div class="tabs is-boxed mb-0" id="dashboard-center-tabs">
+                                            <ul>
+                                                <li class="is-active" data-tab="tab-telemetry"><a><span class="icon is-small mr-2"><i class="ph ph-terminal-window"></i></span>Chalice Telemetry</a></li>
+                                                <li data-tab="tab-subagents"><a><span class="icon is-small mr-2"><i class="ph ph-git-fork"></i></span>Subagents & Active Tasks</a></li>
+                                            </ul>
+                                        </div>
                                     </div>
                                     <button class="button is-small is-outlined is-info" id="btn-export-telemetry">Export JSON</button>
                                 </div>
@@ -176,24 +187,25 @@
                 <!-- Projects View (formerly Chats) -->
                 <main class="section view-section is-hidden pt-5" id="view-chats">
                     <div class="box facet">
-                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
                             <h2 class="title is-3 cinzel facet-title mb-0" style="border:none;">Projects</h2>
-                            <button class="button is-small is-outlined" id="btn-toggle-channels">
-                                <span>Toggle Channels</span>
+                            <button class="button is-small is-outlined" id="btn-toggle-channels" title="Collapse / Expand Channels (Cmd+E)">
+                                <span class="icon is-small"><i class="ph ph-sidebar-simple"></i></span>
+                                <span id="btn-toggle-channels-text">Hide Channels</span>
                             </button>
                         </div>
-                        <div class="field">
-                            <div class="control has-icons-left">
-                                <input class="input" type="text" id="project-search" placeholder="Search channels by name, thread, or context...">
-                                <span class="icon is-small is-left">
-                                    <i class="ph ph-magnifying-glass"></i>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="columns mt-4 is-variable is-2">
+                        <div class="columns is-variable is-2">
                             <!-- Left: Project List & Artifacts -->
-                            <div id="channels-pane" style="width: 330px; max-width: 50%; min-width: 200px; overflow-y: auto; overflow-x: hidden; padding-right: 15px; border-right: 1px solid #eee; height: calc(100vh - 250px); flex-shrink: 0;">
+                            <div id="channels-pane" style="width: 330px; max-width: 50%; min-width: 200px; overflow-y: auto; overflow-x: hidden; padding-right: 15px; border-right: 1px solid #eee; height: calc(100vh - 210px); flex-shrink: 0; position: relative;">
                                 <div class="drag-handle" id="handle-channels"></div>
+                                <div class="field mb-3">
+                                    <div class="control has-icons-left">
+                                        <input class="input is-small" type="text" id="project-search" placeholder="Search channels...">
+                                        <span class="icon is-small is-left">
+                                            <i class="ph ph-magnifying-glass"></i>
+                                        </span>
+                                    </div>
+                                </div>
                                 <div class="menu mb-5">
                                     <p class="menu-label">Channels</p>
                                     <div class="tabs is-small is-toggle is-fullwidth mb-3">
@@ -208,7 +220,7 @@
                             </div>
                             <!-- Right: Chat Interface -->
                             <div class="column" id="chat-pane" style="flex: 1; min-width: 0;">
-                                <div class="box is-flex is-flex-direction-column" style="height: calc(100vh - 250px); background-color: #fafafa; overflow: hidden;">
+                                <div class="box is-flex is-flex-direction-column" style="height: calc(100vh - 210px); background-color: #fafafa; overflow: hidden;">
                                     <div class="chat-header pb-3 mb-3 border-bottom is-flex is-justify-content-space-between is-align-items-center">
                                         <div>
                                             <h3 class="title is-5 mb-0" id="chat-title">Select or start a chat</h3>
@@ -325,11 +337,17 @@
                                     <p class="is-size-7 has-text-grey" id="artifacts-subtitle">Project Artifacts & Generated Files</p>
                                 </div>
                             </div>
-                            <button class="delete" aria-label="close" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')"></button>
+                            <div class="is-flex is-align-items-center">
+                                <button class="button is-small is-light mr-3" id="btn-toggle-artifact-sidebar" title="Toggle file list">
+                                    <span class="icon is-small"><i class="ph ph-sidebar-simple"></i></span>
+                                    <span id="btn-toggle-artifact-sidebar-text">Hide List</span>
+                                </button>
+                                <button class="delete" aria-label="close" onclick="document.getElementById('modal-artifacts').classList.remove('is-active')"></button>
+                            </div>
                         </header>
                         <section class="modal-card-body is-paddingless is-flex" style="height: calc(85vh - 120px); overflow: hidden;">
                             <!-- Left: File List -->
-                            <div style="width: 320px; border-right: 1px solid var(--border-marble); overflow-y: auto; background-color: #fafafa; padding: 12px;">
+                            <div id="artifact-sidebar-pane" style="width: 320px; border-right: 1px solid var(--border-marble); overflow-y: auto; background-color: #fafafa; padding: 12px; flex-shrink: 0;">
                                 <div class="field mb-3">
                                     <div class="control has-icons-left">
                                         <input class="input is-small" type="text" id="artifact-filter" placeholder="Filter files...">

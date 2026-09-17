@@ -14,16 +14,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let rect = NSRect(x: 0, y: 0, width: 1280, height: 820)
         window = NSWindow(
             contentRect: rect,
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.center()
         window.minSize = NSSize(width: 900, height: 600)
         window.title = "Ganymede Gateway"
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
-        window.isMovableByWindowBackground = true
+        window.titleVisibility = .visible
+        window.titlebarAppearsTransparent = false
         window.backgroundColor = NSColor(red: 0.08, green: 0.09, blue: 0.11, alpha: 1.0)
 
         webViewController = WebViewController()
