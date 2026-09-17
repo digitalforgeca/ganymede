@@ -147,6 +147,19 @@ async def handle_chat_history(request: Request):
     channel_id = parts[1]
     thread_id = parts[2] if parts[2] != 'main' else None
     
+    # Pagination parameters: default to most recent 40 messages
+    try:
+        limit = int(request.query_params.get("limit", 40))
+        limit = max(1, min(limit, 200))
+    except (ValueError, TypeError):
+        limit = 40
+
+    try:
+        offset = int(request.query_params.get("offset", 0))
+        offset = max(0, offset)
+    except (ValueError, TypeError):
+        offset = 0
+    
     actual_conv_id = channel_id if platform == "cli" else None
     
     if platform != "cli":
@@ -164,56 +177,92 @@ async def handle_chat_history(request: Request):
                         actual_conv_id = row["conversation_id"]
 
     history = []
+    has_more = False
+
     if actual_conv_id:
-        transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{actual_conv_id}/.system_generated/logs/transcript_full.jsonl")
+        transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{actual_conv_id}/.system_generated/logs/transcript.jsonl")
         if not os.path.exists(transcript_path):
-            transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{actual_conv_id}/.system_generated/logs/transcript.jsonl")
+            transcript_path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{actual_conv_id}/.system_generated/logs/transcript_full.jsonl")
         
         if os.path.exists(transcript_path):
             import json
             try:
-                with open(transcript_path, 'r') as f:
-                    for line in f:
-                        if not line.strip():
-                            continue
-                        try:
-                            data = json.loads(line)
-                        except Exception:
-                            continue
-                        if data.get("type") == "USER_INPUT":
-                            history.append({
-                                "author_id": "User",
-                                "role": "user",
-                                "content": data.get("content", ""),
-                                "created_at": data.get("created_at", "")
-                            })
-                        elif data.get("type") == "PLANNER_RESPONSE" or data.get("type") == "TEXT_RESPONSE":
-                            content = data.get("content", "")
-                            tool_calls = data.get("tool_calls", [])
-                            if tool_calls:
-                                tool_text = "\n\n*⚒️ Tools Used:*\n"
-                                for t in tool_calls:
-                                    t_name = t.get('name') or t.get('function', {}).get('name') or 'tool'
-                                    args = t.get('args') or t.get('function', {}).get('arguments') or {}
-                                    try:
-                                        if isinstance(args, str):
-                                            args_formatted = json.dumps(json.loads(args), indent=2)
-                                        else:
-                                            args_formatted = json.dumps(args, indent=2)
-                                    except Exception:
-                                        args_formatted = str(args)
-                                        
-                                    tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
+                # Fast reverse-block line reader to avoid locking memory/CPU on large transcript logs
+                with open(transcript_path, 'rb') as f:
+                    f.seek(0, os.SEEK_END)
+                    file_size = f.tell()
+                    buffer = bytearray()
+                    block_size = 64 * 1024
+                    position = file_size
+                    matched_count = 0
+
+                    while position > 0:
+                        read_size = min(block_size, position)
+                        position -= read_size
+                        f.seek(position)
+                        chunk = f.read(read_size)
+                        buffer = chunk + buffer
+
+                        while b'\n' in buffer:
+                            idx = buffer.rfind(b'\n')
+                            line = buffer[idx + 1:]
+                            buffer = buffer[:idx]
+                            decoded = line.decode('utf-8', errors='ignore').strip()
+                            if not decoded:
+                                continue
+                            try:
+                                data = json.loads(decoded)
+                            except Exception:
+                                continue
+
+                            msg_type = data.get("type")
+                            if msg_type == "USER_INPUT":
+                                if matched_count >= offset and len(history) < limit:
+                                    history.append({
+                                        "author_id": "User",
+                                        "role": "user",
+                                        "content": data.get("content", ""),
+                                        "created_at": data.get("created_at", "")
+                                    })
+                                elif matched_count >= offset + limit:
+                                    has_more = True
+                                    break
+                                matched_count += 1
+                            elif msg_type in ("PLANNER_RESPONSE", "TEXT_RESPONSE"):
+                                content = data.get("content", "")
+                                tool_calls = data.get("tool_calls", [])
+                                if tool_calls:
+                                    tool_text = "\n\n*⚒️ Tools Used:*\n"
+                                    for t in tool_calls:
+                                        t_name = t.get('name') or t.get('function', {}).get('name') or 'tool'
+                                        args = t.get('args') or t.get('function', {}).get('arguments') or {}
+                                        try:
+                                            if isinstance(args, str):
+                                                args_formatted = json.dumps(json.loads(args), indent=2)
+                                            else:
+                                                args_formatted = json.dumps(args, indent=2)
+                                        except Exception:
+                                            args_formatted = str(args)
+                                        tool_text += f"<details><summary><code>{t_name}</code></summary>\n\n```json\n{args_formatted}\n```\n\n</details>\n"
+                                    content = (content + tool_text) if content else tool_text.strip()
                                 
-                                content = (content + tool_text) if content else tool_text.strip()
-                            
-                            if content:
-                                history.append({
-                                    "author_id": "Antigravity",
-                                    "role": "assistant",
-                                    "content": content,
-                                    "created_at": data.get("created_at", "")
-                                })
+                                if content:
+                                    if matched_count >= offset and len(history) < limit:
+                                        history.append({
+                                            "author_id": "Antigravity",
+                                            "role": "assistant",
+                                            "content": content,
+                                            "created_at": data.get("created_at", "")
+                                        })
+                                    elif matched_count >= offset + limit:
+                                        has_more = True
+                                        break
+                                    matched_count += 1
+                        if has_more:
+                            break
+
+                # Reverse chunk so returned slice is chronological (oldest to newest)
+                history.reverse()
             except Exception as e:
                 print(f"Error reading transcript: {e}")
 
@@ -224,13 +273,29 @@ async def handle_chat_history(request: Request):
             import aiosqlite
             async with aiosqlite.connect(db_path) as conn:
                 conn.row_factory = aiosqlite.Row
-                query = """
-                    SELECT author_id, role, content, tokens, created_at
+                count_query = """
+                    SELECT COUNT(*) as total
                     FROM conversations
                     WHERE context_platform = ? AND context_channel = ? AND (context_thread = ? OR (context_thread IS NULL AND ? IS NULL))
+                """
+                async with conn.execute(count_query, (platform, channel_id, thread_id, thread_id)) as cursor:
+                    crow = await cursor.fetchone()
+                    total_in_db = crow["total"] if crow else 0
+
+                has_more = (offset + limit) < total_in_db
+
+                query = """
+                    SELECT author_id, role, content, tokens, created_at
+                    FROM (
+                        SELECT author_id, role, content, tokens, created_at
+                        FROM conversations
+                        WHERE context_platform = ? AND context_channel = ? AND (context_thread = ? OR (context_thread IS NULL AND ? IS NULL))
+                        ORDER BY created_at DESC
+                        LIMIT ? OFFSET ?
+                    )
                     ORDER BY created_at ASC
                 """
-                async with conn.execute(query, (platform, channel_id, thread_id, thread_id)) as cursor:
+                async with conn.execute(query, (platform, channel_id, thread_id, thread_id, limit, offset)) as cursor:
                     rows = await cursor.fetchall()
                     for r in rows:
                         history.append({
@@ -240,7 +305,12 @@ async def handle_chat_history(request: Request):
                             "created_at": r["created_at"]
                         })
                         
-    return {"messages": history}
+    return {
+        "messages": history,
+        "has_more": has_more,
+        "limit": limit,
+        "offset": offset
+    }
 
 
 @router.get('/api/chats/{id}/files')

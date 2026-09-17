@@ -1,7 +1,7 @@
 import Cocoa
 import WebKit
 
-final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate {
+final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
     var webView: WKWebView!
     private var loadingOverlay: NSView!
     private var statusLabel: NSTextField!
@@ -24,6 +24,27 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         config.defaultWebpagePreferences.allowsContentJavaScript = true
 
+        let ucc = WKUserContentController()
+        ucc.add(self, name: "logging")
+        let scriptSource = """
+        window.addEventListener('error', (e) => {
+            window.webkit.messageHandlers.logging.postMessage('JS ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno);
+        });
+        const origLog = console.log;
+        console.log = (...args) => {
+            origLog.apply(console, args);
+            try { window.webkit.messageHandlers.logging.postMessage('JS LOG: ' + args.join(' ')); } catch(e){}
+        };
+        const origErr = console.error;
+        console.error = (...args) => {
+            origErr.apply(console, args);
+            try { window.webkit.messageHandlers.logging.postMessage('JS ERROR: ' + args.join(' ')); } catch(e){}
+        };
+        """
+        let userScript = WKUserScript(source: scriptSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        ucc.addUserScript(userScript)
+        config.userContentController = ucc
+
         webView = WKWebView(frame: view.bounds, configuration: config)
         webView.autoresizingMask = [.width, .height]
         webView.navigationDelegate = self
@@ -38,6 +59,13 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         }
 
         view.addSubview(webView)
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "logging" {
+            print("\(message.body)")
+            fflush(stdout)
+        }
     }
 
     private func setupLoadingOverlay() {
@@ -125,8 +153,15 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
     func loadDashboard() {
         let url = DaemonSupervisor.shared.dashboardURL
-        let request = URLRequest(url: url)
-        webView.load(request)
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        // Clear WebKit disk and memory caches so updated frontend code is immediately loaded
+        WKWebsiteDataStore.default().removeData(ofTypes: [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache], modifiedSince: Date.distantPast) { [weak self] in
+            DispatchQueue.main.async {
+                self?.webView.load(request)
+            }
+        }
     }
 
     func reload() {
@@ -167,8 +202,22 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
             return
         }
 
-        // Allow in-page anchors, about:blank, or scheme-less navigations
-        if url.scheme == nil || url.scheme == "about" || url.host == nil {
+        print("[WKWebView Nav] Action: \(url.absoluteString) | scheme=\(url.scheme ?? "nil") | host=\(url.host ?? "nil")")
+        fflush(stdout)
+
+        // 1. Open file:// URLs in macOS default editor / IDE
+        if url.scheme == "file" {
+            print("[WKWebView Nav] -> Open in default macOS handler (file://)")
+            fflush(stdout)
+            NSWorkspace.shared.open(url)
+            decisionHandler(.cancel)
+            return
+        }
+
+        // 2. Allow in-page anchors, about:blank, or scheme-less navigations
+        if url.scheme == nil || url.scheme == "about" || url.host == nil || url.host?.isEmpty == true {
+            print("[WKWebView Nav] -> Allow (in-page anchor/scheme-less)")
+            fflush(stdout)
             decisionHandler(.allow)
             return
         }
@@ -176,16 +225,20 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         let host = url.host?.lowercased() ?? ""
         let isLocalhost = host == "127.0.0.1" || host == "localhost"
         
-        // Allow Google OAuth & Cerberus Keycloak domains in the webview
+        // 3. Allow Google OAuth & Cerberus Keycloak domains in the webview
         let isAuthHost = host.contains("google.com")
             || host.contains("gstatic.com")
             || host.contains("technocraftonline.com")
             || host.contains("dforge.ca")
 
         if isLocalhost || isAuthHost {
+            print("[WKWebView Nav] -> Allow (localhost/auth host)")
+            fflush(stdout)
             decisionHandler(.allow)
         } else {
             // External links (e.g. Patreon, docs, GitHub) open in default system handler
+            print("[WKWebView Nav] -> Cancel and open in external browser (\(url.absoluteString))")
+            fflush(stdout)
             NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
         }

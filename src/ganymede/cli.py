@@ -85,7 +85,7 @@ def setup_logging(level_name: str, log_file: str = "ganymede_live.log"):
             handler.addFilter(UglyErrorFilter())
         # If they propagate to root, root's handler will filter them too.
         
-def acquire_instance_lock(data_dir: str):
+def acquire_instance_lock(data_dir: str, port: int = 8180):
     global _lock_file
     lock_path = os.path.join(data_dir, "ganymede.lock")
     if fcntl is None:
@@ -105,6 +105,7 @@ def acquire_instance_lock(data_dir: str):
         from datetime import datetime, timezone
         lock_data = {
             "pid": os.getpid(),
+            "port": port,
             "started_at": datetime.now(timezone.utc).isoformat(),
             "_comment": "Ganymede Lock. If this file exists without the process, the gateway crashed."
         }
@@ -385,11 +386,13 @@ def print_status(config):
     lock_path = os.path.join(config.data_dir, "ganymede.lock")
     is_running = False
     pid = None
+    lock_port = None
     if os.path.exists(lock_path):
         try:
             with open(lock_path, "r") as f:
                 data = json.load(f)
                 pid = data.get("pid")
+                lock_port = data.get("port")
             if pid:
                 os.kill(int(pid), 0)
                 is_running = True
@@ -400,9 +403,9 @@ def print_status(config):
 
     # Check HTTP responsiveness if process is running
     is_healthy = False
+    port = lock_port or getattr(config, "dashboard_port", None) or getattr(config.agent, "port", None) or 8180
     if is_running:
         try:
-            port = getattr(config, "dashboard_port", None) or getattr(config.agent, "port", None) or 8180
             import urllib.request
             req = urllib.request.Request(f"http://127.0.0.1:{port}/api/status")
             with urllib.request.urlopen(req, timeout=1.0) as resp:
@@ -412,9 +415,9 @@ def print_status(config):
             is_healthy = False
 
     if is_running and is_healthy:
-        print(f"Daemon State : 🟢 ONLINE")
+        print(f"Daemon State : 🟢 ONLINE (Port {port})")
     elif is_running and not is_healthy:
-        print(f"Daemon State : ⚠️ UNRESPONSIVE (Process running but not responding on port)")
+        print(f"Daemon State : ⚠️ UNRESPONSIVE (Process running but not responding on port {port})")
     else:
         print(f"Daemon State : 🔴 OFFLINE")
     if is_running:
@@ -663,6 +666,7 @@ def main():
     parser.add_argument("--model", default=None, help="Force a specific model string, bypassing any config mappings")
     parser.add_argument("--log-level", default=None, help="Logging level")
     parser.add_argument("--platform", default=None, help="Target platform (discord, console)")
+    parser.add_argument("--port", type=int, default=None, help="Port to run the gateway on (default: 8180)")
     
     args = parser.parse_args()
     
@@ -707,6 +711,16 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    # Check port availability and prompt if busy
+    from ganymede.core.port import prompt_and_resolve_port
+    target_port = getattr(config, "dashboard_port", None) or getattr(config.agent, "port", None) or 8180
+    resolved_port = prompt_and_resolve_port(target_port)
+    if resolved_port != config.dashboard_port:
+        config.dashboard_port = resolved_port
+        config.agent.port = resolved_port
+        config.agent.dashboard_port = resolved_port
+        os.environ["GANYMEDE_PORT"] = str(resolved_port)
+
     # Override log level from config
     structlog.configure(
         wrapper_class=structlog.make_filtering_bound_logger(
@@ -717,7 +731,7 @@ def main():
     validate_environment()
     
     # Ensure only one instance of the daemon runs at a time
-    acquire_instance_lock(config.data_dir)
+    acquire_instance_lock(config.data_dir, port=config.dashboard_port)
     
     asyncio.run(run(config))
 

@@ -127,6 +127,11 @@ class AppConfig:
                 }
             }
 
+        # Keep agent port configurations aligned with dashboard_port
+        if self.dashboard_port:
+            self.agent.port = self.dashboard_port
+            self.agent.dashboard_port = self.dashboard_port
+
     def get_agent_profile(self, agent_id: str = "default") -> dict[str, Any]:
         """Retrieve full agent profile dict with fallbacks to global defaults."""
         profile = self.agents.get(agent_id) or self.agents.get("default") or {}
@@ -235,7 +240,10 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
     env_port = os.environ.get("GANYMEDE_PORT")
     if env_port:
         try:
-            config.dashboard_port = int(env_port)
+            port_val = int(env_port)
+            config.dashboard_port = port_val
+            config.agent.port = port_val
+            config.agent.dashboard_port = port_val
         except ValueError:
             pass
 
@@ -249,6 +257,11 @@ def load_config(args: argparse.Namespace = None) -> AppConfig:
             config.log_level = args.log_level
         if getattr(args, "model", None):
             config.agent.raw_model_string = args.model
+        if getattr(args, "port", None):
+            port_val = int(args.port)
+            config.dashboard_port = port_val
+            config.agent.port = port_val
+            config.agent.dashboard_port = port_val
 
     # Final expansions & setup
     config.agent.workspace = os.path.expanduser(config.agent.workspace)
@@ -341,4 +354,13 @@ def _merge_dict_into_config(config: AppConfig, data: dict[str, Any]):
         config.auth.google_client_secret = au.get("google_client_secret", config.auth.google_client_secret)
         config.auth.allowed_emails = au.get("allowed_emails", config.auth.allowed_emails)
     config.log_level = data.get("log_level", config.log_level)
-    config.dashboard_port = data.get("dashboard_port", config.dashboard_port)
+    if "dashboard_port" in data:
+        port_val = int(data["dashboard_port"])
+        config.dashboard_port = port_val
+        config.agent.port = port_val
+        config.agent.dashboard_port = port_val
+    elif "port" in data:
+        port_val = int(data["port"])
+        config.dashboard_port = port_val
+        config.agent.port = port_val
+        config.agent.dashboard_port = port_val

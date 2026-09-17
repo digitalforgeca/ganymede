@@ -1,13 +1,464 @@
 /* 
- * Ganymede Custom Theme 
- * Override CSS variables here to customize the aesthetic.
+ * Ganymede Olympus Design System & Theme Tokens
+ * Built on Bulma 1.0.0 variable architecture with WCAG AAA/AA accessible contrast ratios.
  */
-:root {
-    /* --bg-alabaster: #f9f9fa; */
-    /* --text-obsidian: #111827; */
-    /* --text-slate: #4b5563; */
-    /* --accent-azure: #0ea5e9; */
-    /* --accent-gold: #d97706; */
-    /* --border-marble: #e5e7eb; */
-    /* --header-gold: #926315; */
+
+:root, [data-theme="light"] {
+    /* Canvas & Surfaces */
+    --bg-canvas: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-alt: #f1f5f9;
+    --bg-sidebar: #ffffff;
+    --bg-header: #926315;
+    --bg-modal: #ffffff;
+    
+    /* Legacy aliases for backwards compatibility */
+    --bg-alabaster: var(--bg-canvas);
+    --bg-primary: var(--bg-canvas);
+    --sidebar-bg: var(--bg-sidebar);
+
+    /* Borders */
+    --border-subtle: #e2e8f0;
+    --border-highlight: #cbd5e1;
+    --border-marble: var(--border-subtle);
+    --border-color: var(--border-subtle);
+    --border-gold: #c0a062;
+
+    /* Typography / Contrast Hierarchy */
+    --text-main: #0f172a;       /* Slate 900: Crisp 15:1 contrast on white */
+    --text-secondary: #334155;  /* Slate 700: High-contrast body copy 9:1 */
+    --text-muted: #475569;      /* Slate 600: Accessible captions 6:1 (never washed out) */
+    --text-inverse: #ffffff;    /* For colored buttons / badges */
+
+    --text-obsidian: var(--text-main);
+    --text-slate: var(--text-secondary);
+
+    /* Brand & Semantic Accents */
+    --accent-gold: #d97706;     /* Accessible Olympus Gold */
+    --accent-gold-hover: #b45309;
+    --accent-gold-bg: rgba(217, 119, 6, 0.1);
+    
+    --accent-azure: #0284c7;    /* Sky 600: Accessible link blue (4.6:1) */
+    --accent-azure-hover: #0369a1;
+    --accent-azure-bg: rgba(2, 132, 199, 0.1);
+
+    --accent-emerald: #059669;  /* Online status & confirm */
+    --accent-ruby: #dc2626;     /* Errors & destructive actions */
+
+    /* Chat Elements */
+    --chat-user-bg: #ffffff;
+    --chat-user-border: #e2e8f0;
+    --chat-user-text: var(--text-main);
+    --chat-agent-bg: #f8fafc;
+    --chat-agent-border: #0284c7;
+    --chat-agent-text: var(--text-main);
+
+    /* Bulma 1.0 System Overrides (Light Mode) */
+    --bulma-body-background-color: var(--bg-canvas);
+    --bulma-body-color: var(--text-main);
+    --bulma-text: var(--text-main);
+    --bulma-text-weak: var(--text-muted);
+    --bulma-text-strong: var(--text-main);
+    --bulma-scheme-main: var(--bg-surface);
+    --bulma-scheme-main-bis: var(--bg-surface-alt);
+    --bulma-border: var(--border-subtle);
+    --bulma-border-weak: var(--border-subtle);
+    --bulma-box-background-color: var(--bg-surface);
+    --bulma-box-color: var(--text-main);
+    --bulma-card-background-color: var(--bg-surface);
+    --bulma-card-color: var(--text-main);
+    --bulma-menu-item-color: var(--text-secondary);
+    --bulma-menu-item-hover-color: var(--text-main);
+    --bulma-menu-item-hover-background-color: var(--bg-surface-alt);
+    --bulma-menu-label-color: var(--text-muted);
+    --bulma-table-background-color: var(--bg-surface);
+    --bulma-table-color: var(--text-main);
+    --bulma-input-background-color: var(--bg-surface);
+    --bulma-input-color: var(--text-main);
+    --bulma-input-border-color: var(--border-subtle);
+    --bulma-textarea-background-color: var(--bg-surface);
+    --bulma-textarea-color: var(--text-main);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        /* Canvas & Surfaces (Obsidian & Elevated Slate) */
+        --bg-canvas: #0b0f17;
+        --bg-surface: #131924;
+        --bg-surface-alt: #1a2232;
+        --bg-sidebar: #0f1520;
+        --bg-header: #6b4709;
+        --bg-modal: #131924;
+
+        --bg-alabaster: var(--bg-canvas);
+        --bg-primary: var(--bg-canvas);
+        --sidebar-bg: var(--bg-sidebar);
+
+        /* Borders */
+        --border-subtle: #242f42;
+        --border-highlight: #33435c;
+        --border-marble: var(--border-subtle);
+        --border-color: var(--border-subtle);
+        --border-gold: #c0a062;
+
+        /* Typography / Contrast Hierarchy (Dark Mode) */
+        --text-main: #f8fafc;       /* Slate 50: Crisp 16:1 contrast on dark surface */
+        --text-secondary: #cbd5e1;  /* Slate 300: High-contrast body copy 10:1 */
+        --text-muted: #94a3b8;      /* Slate 400: Accessible captions 6:1 (never black on black) */
+        --text-inverse: #0b0f17;
+
+        --text-obsidian: var(--text-main);
+        --text-slate: var(--text-secondary);
+
+        /* Brand & Semantic Accents */
+        --accent-gold: #f59e0b;
+        --accent-gold-hover: #fbbf24;
+        --accent-gold-bg: rgba(245, 158, 11, 0.15);
+
+        --accent-azure: #38bdf8;
+        --accent-azure-hover: #7dd3fc;
+        --accent-azure-bg: rgba(56, 189, 248, 0.15);
+
+        --accent-emerald: #10b981;
+        --accent-ruby: #f87171;
+
+        /* Chat Elements */
+        --chat-user-bg: #1a2232;
+        --chat-user-border: #33435c;
+        --chat-user-text: var(--text-main);
+        --chat-agent-bg: #131924;
+        --chat-agent-border: #38bdf8;
+        --chat-agent-text: var(--text-main);
+
+        /* Bulma 1.0 System Overrides (Dark Mode) */
+        --bulma-body-background-color: var(--bg-canvas);
+        --bulma-body-color: var(--text-main);
+        --bulma-text: var(--text-main);
+        --bulma-text-weak: var(--text-muted);
+        --bulma-text-strong: var(--text-main);
+        --bulma-scheme-main: var(--bg-surface);
+        --bulma-scheme-main-bis: var(--bg-surface-alt);
+        --bulma-border: var(--border-subtle);
+        --bulma-border-weak: var(--border-subtle);
+        --bulma-box-background-color: var(--bg-surface);
+        --bulma-box-color: var(--text-main);
+        --bulma-card-background-color: var(--bg-surface);
+        --bulma-card-color: var(--text-main);
+        --bulma-menu-item-color: var(--text-secondary);
+        --bulma-menu-item-hover-color: var(--text-main);
+        --bulma-menu-item-hover-background-color: var(--bg-surface-alt);
+        --bulma-menu-label-color: var(--text-muted);
+        --bulma-table-background-color: var(--bg-surface);
+        --bulma-table-color: var(--text-main);
+        --bulma-input-background-color: var(--bg-surface-alt);
+        --bulma-input-color: var(--text-main);
+        --bulma-input-border-color: var(--border-subtle);
+        --bulma-textarea-background-color: var(--bg-surface-alt);
+        --bulma-textarea-color: var(--text-main);
+    }
+}
+
+/* Explicit Dark Theme Support */
+[data-theme="dark"] {
+    --bg-canvas: #0b0f17;
+    --bg-surface: #131924;
+    --bg-surface-alt: #1a2232;
+    --bg-sidebar: #0f1520;
+    --bg-header: #6b4709;
+    --bg-modal: #131924;
+
+    --bg-alabaster: var(--bg-canvas);
+    --bg-primary: var(--bg-canvas);
+    --sidebar-bg: var(--bg-sidebar);
+
+    --border-subtle: #242f42;
+    --border-highlight: #33435c;
+    --border-marble: var(--border-subtle);
+    --border-color: var(--border-subtle);
+    --border-gold: #c0a062;
+
+    --text-main: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-inverse: #0b0f17;
+
+    --text-obsidian: var(--text-main);
+    --text-slate: var(--text-secondary);
+
+    --accent-gold: #f59e0b;
+    --accent-gold-hover: #fbbf24;
+    --accent-gold-bg: rgba(245, 158, 11, 0.15);
+
+    --accent-azure: #38bdf8;
+    --accent-azure-hover: #7dd3fc;
+    --accent-azure-bg: rgba(56, 189, 248, 0.15);
+
+    --accent-emerald: #10b981;
+    --accent-ruby: #f87171;
+
+    --chat-user-bg: #1a2232;
+    --chat-user-border: #33435c;
+    --chat-user-text: var(--text-main);
+    --chat-agent-bg: #131924;
+    --chat-agent-border: #38bdf8;
+    --chat-agent-text: var(--text-main);
+
+    --bulma-body-background-color: var(--bg-canvas);
+    --bulma-body-color: var(--text-main);
+    --bulma-text: var(--text-main);
+    --bulma-text-weak: var(--text-muted);
+    --bulma-text-strong: var(--text-main);
+    --bulma-scheme-main: var(--bg-surface);
+    --bulma-scheme-main-bis: var(--bg-surface-alt);
+    --bulma-border: var(--border-subtle);
+    --bulma-border-weak: var(--border-subtle);
+    --bulma-box-background-color: var(--bg-surface);
+    --bulma-box-color: var(--text-main);
+    --bulma-card-background-color: var(--bg-surface);
+    --bulma-card-color: var(--text-main);
+    --bulma-menu-item-color: var(--text-secondary);
+    --bulma-menu-item-hover-color: var(--text-main);
+    --bulma-menu-item-hover-background-color: var(--bg-surface-alt);
+    --bulma-menu-label-color: var(--text-muted);
+    --bulma-table-background-color: var(--bg-surface);
+    --bulma-table-color: var(--text-main);
+    --bulma-input-background-color: var(--bg-surface-alt);
+    --bulma-input-color: var(--text-main);
+    --bulma-input-border-color: var(--border-subtle);
+    --bulma-textarea-background-color: var(--bg-surface-alt);
+    --bulma-textarea-color: var(--text-main);
+}
+
+/* Accessibility & Contrast Normalization */
+.has-text-grey,
+.has-text-grey-dark,
+.has-text-grey-light,
+.has-text-muted {
+    color: var(--text-muted) !important;
+}
+
+.has-text-dark {
+    color: var(--text-main) !important;
+}
+
+.has-background-light {
+    background-color: var(--bg-surface-alt) !important;
+    color: var(--text-main) !important;
+}
+
+.has-background-white {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-main) !important;
+}
+
+/* Square Buttons */
+.button.is-square {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.btn-back-nav {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-main);
+}
+
+.btn-back-nav:hover {
+    background-color: var(--bg-surface-alt);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    transform: translateX(-2px);
+}
+
+/* Chat Message Bubbles */
+.chat-bubble-user {
+    background-color: var(--chat-user-bg) !important;
+    color: var(--chat-user-text) !important;
+    border: 1px solid var(--chat-user-border) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.chat-bubble-agent {
+    background-color: var(--chat-agent-bg) !important;
+    color: var(--chat-agent-text) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-left: 3px solid var(--chat-agent-border) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Compact Action Icon Buttons */
+.button.is-square.is-small,
+.btn-action-icon {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 6px !important;
+    background-color: var(--bg-surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    color: var(--text-secondary) !important;
+    font-size: 1.05rem !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer;
+}
+
+.btn-action-icon:hover {
+    background-color: var(--bg-surface-alt) !important;
+    border-color: var(--accent-azure) !important;
+    color: var(--accent-azure) !important;
+    transform: translateY(-1px);
+}
+
+.btn-action-icon.is-warning-subtle:hover {
+    border-color: var(--accent-gold) !important;
+    color: var(--accent-gold) !important;
+}
+
+.btn-action-icon.is-active-toggle {
+    background-color: var(--accent-azure-bg) !important;
+    border-color: var(--accent-azure) !important;
+    color: var(--accent-azure) !important;
+}
+
+/* ==========================================================================
+   Floating Tooltips ([data-tooltip])
+   ========================================================================== */
+[data-tooltip] {
+    position: relative;
+}
+
+[data-tooltip]:hover,
+[data-tooltip]:focus-within {
+    z-index: 9999999 !important;
+}
+
+[data-tooltip]::before,
+[data-tooltip]::after {
+    position: absolute;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 99999999 !important;
+}
+
+/* Tooltip Bubble */
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    background-color: var(--bg-surface-alt);
+    color: var(--text-main);
+    border: 1px solid var(--border-highlight);
+    font-size: 0.72rem;
+    font-weight: 500;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1;
+    padding: 6px 9px;
+    border-radius: 5px;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* Tooltip Arrow */
+[data-tooltip]::before {
+    content: '';
+    border: 4px solid transparent;
+}
+
+/* Position: Bottom (default) */
+[data-tooltip]:not([data-tooltip-pos])::after,
+[data-tooltip][data-tooltip-pos="bottom"]::after {
+    top: calc(100% + 7px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-3px);
+}
+
+[data-tooltip]:not([data-tooltip-pos])::before,
+[data-tooltip][data-tooltip-pos="bottom"]::before {
+    top: calc(100% - 1px);
+    left: 50%;
+    transform: translateX(-50%);
+    border-bottom-color: var(--border-highlight);
+}
+
+/* Position: Top */
+[data-tooltip][data-tooltip-pos="top"]::after {
+    bottom: calc(100% + 7px);
+    left: 50%;
+    transform: translateX(-50%) translateY(3px);
+}
+
+[data-tooltip][data-tooltip-pos="top"]::before {
+    bottom: calc(100% - 1px);
+    left: 50%;
+    transform: translateX(-50%);
+    border-top-color: var(--border-highlight);
+}
+
+/* Position: Left */
+[data-tooltip][data-tooltip-pos="left"]::after {
+    right: calc(100% + 7px);
+    top: 50%;
+    transform: translateY(-50%) translateX(3px);
+}
+
+[data-tooltip][data-tooltip-pos="left"]::before {
+    right: calc(100% - 1px);
+    top: 50%;
+    transform: translateY(-50%);
+    border-left-color: var(--border-highlight);
+}
+
+/* Position: Right */
+[data-tooltip][data-tooltip-pos="right"]::after {
+    left: calc(100% + 7px);
+    top: 50%;
+    transform: translateY(-50%) translateX(-3px);
+}
+
+[data-tooltip][data-tooltip-pos="right"]::before {
+    left: calc(100% - 1px);
+    top: 50%;
+    transform: translateY(-50%);
+    border-right-color: var(--border-highlight);
+}
+
+/* Hover and Focus-visible Triggers */
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::before,
+[data-tooltip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+[data-tooltip]:not([data-tooltip-pos]):hover::after,
+[data-tooltip][data-tooltip-pos="bottom"]:hover::after,
+[data-tooltip]:not([data-tooltip-pos]):focus-visible::after,
+[data-tooltip][data-tooltip-pos="bottom"]:focus-visible::after {
+    transform: translateX(-50%) translateY(0);
+}
+
+[data-tooltip][data-tooltip-pos="top"]:hover::after,
+[data-tooltip][data-tooltip-pos="top"]:focus-visible::after {
+    transform: translateX(-50%) translateY(0);
+}
+
+[data-tooltip][data-tooltip-pos="left"]:hover::after,
+[data-tooltip][data-tooltip-pos="left"]:focus-visible::after {
+    transform: translateY(-50%) translateX(0);
+}
+
+[data-tooltip][data-tooltip-pos="right"]:hover::after,
+[data-tooltip][data-tooltip-pos="right"]:focus-visible::after {
+    transform: translateY(-50%) translateX(0);
 }

@@ -156,7 +156,7 @@ class DashboardServer:
         return None
 
     async def start(self):
-        port = getattr(self.config.agent, "port", None) or getattr(self.config.agent, "dashboard_port", DEFAULT_GANYMEDE_PORT)
+        port = getattr(self.config, "dashboard_port", None) or getattr(self.config.agent, "port", None) or getattr(self.config.agent, "dashboard_port", DEFAULT_GANYMEDE_PORT)
         
         cfg = uvicorn.Config(self.app, host="0.0.0.0", port=port, log_level="warning", log_config=None)
         self.uvicorn_server = uvicorn.Server(cfg)

@@ -722,3 +722,89 @@ discord:
         self.assertIn("#### 4. Header inside code block should NOT be altered", code_part)
         self.assertIn("[code_file.gd](file:///path/to/code_file.gd)", code_part)
 
+
+class TestPortConfigurationAndResolution(unittest.TestCase):
+    def test_default_port(self):
+        from ganymede.config import AppConfig
+        cfg = AppConfig()
+        self.assertEqual(cfg.dashboard_port, 8180)
+        self.assertEqual(cfg.agent.port, 8180)
+        self.assertEqual(cfg.agent.dashboard_port, 8180)
+
+    def test_cli_port_override(self):
+        import argparse
+        from ganymede.config import load_config
+        args = argparse.Namespace(
+            command=None,
+            subargs=[],
+            config=None,
+            workspace=None,
+            model=None,
+            log_level=None,
+            platform=None,
+            port=9200
+        )
+        cfg = load_config(args)
+        self.assertEqual(cfg.dashboard_port, 9200)
+        self.assertEqual(cfg.agent.port, 9200)
+        self.assertEqual(cfg.agent.dashboard_port, 9200)
+
+    def test_env_port_override(self):
+        import argparse
+        from ganymede.config import load_config
+        old_env = os.environ.get("GANYMEDE_PORT")
+        try:
+            os.environ["GANYMEDE_PORT"] = "9300"
+            args = argparse.Namespace(
+                command=None,
+                subargs=[],
+                config=None,
+                workspace=None,
+                model=None,
+                log_level=None,
+                platform=None,
+                port=None
+            )
+            cfg = load_config(args)
+            self.assertEqual(cfg.dashboard_port, 9300)
+            self.assertEqual(cfg.agent.port, 9300)
+            self.assertEqual(cfg.agent.dashboard_port, 9300)
+        finally:
+            if old_env is not None:
+                os.environ["GANYMEDE_PORT"] = old_env
+            else:
+                os.environ.pop("GANYMEDE_PORT", None)
+
+    def test_prompt_and_resolve_port_when_free(self):
+        from ganymede.core.port import prompt_and_resolve_port
+        with unittest.mock.patch("ganymede.core.port.is_port_busy", return_value=False):
+            port = prompt_and_resolve_port(8180, interactive=True)
+            self.assertEqual(port, 8180)
+
+    def test_prompt_and_resolve_port_user_accepts(self):
+        from ganymede.core.port import prompt_and_resolve_port
+        def mock_is_busy(p, host="0.0.0.0"):
+            return p == 8180
+
+        with unittest.mock.patch("ganymede.core.port.is_port_busy", side_effect=mock_is_busy), \
+             unittest.mock.patch("builtins.input", return_value="y") as mock_input:
+            port = prompt_and_resolve_port(8180, interactive=True)
+            self.assertEqual(port, 8181)
+            mock_input.assert_called_once_with("port 8180 is busy.  Start up on port 8181? ")
+
+    def test_prompt_and_resolve_port_user_declines(self):
+        from ganymede.core.port import prompt_and_resolve_port
+        with unittest.mock.patch("ganymede.core.port.is_port_busy", return_value=True), \
+             unittest.mock.patch("builtins.input", return_value="n"), \
+             self.assertRaises(SystemExit) as cm:
+            prompt_and_resolve_port(8180, interactive=True)
+        self.assertEqual(cm.exception.code, 1)
+
+    def test_prompt_and_resolve_port_non_interactive(self):
+        from ganymede.core.port import prompt_and_resolve_port
+        with unittest.mock.patch("ganymede.core.port.is_port_busy", return_value=True), \
+             self.assertRaises(SystemExit) as cm:
+            prompt_and_resolve_port(8180, interactive=False)
+        self.assertEqual(cm.exception.code, 1)
+
+

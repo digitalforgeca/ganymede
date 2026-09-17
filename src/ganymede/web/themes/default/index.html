@@ -11,8 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <!-- Bulma Opinionated Layout Library -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="style.css?v=0.1.106">
+    <link rel="stylesheet" href="theme.css?v=0.1.106">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
@@ -66,7 +66,7 @@
         <aside class="olympus-sidebar" style="width: 250px; min-width: 150px; max-width: 50%; overflow-y: auto; overflow-x: hidden; flex-shrink: 0; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color);">
             <div class="drag-handle" id="handle-main"></div>
             <div class="account-badge section">
-                <div class="avatar" style="background-color: white; border: 2px solid var(--border-color); overflow: hidden;">
+                <div class="avatar" style="background-color: var(--bg-surface); border: 2px solid var(--border-subtle); overflow: hidden;">
                     <!-- Simple Google 'G' logo representation -->
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="40px" height="40px">
                         <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
@@ -130,7 +130,7 @@
                                     <span class="has-text-weight-bold is-size-5 has-text-info" id="metric-active-instances">0</span>
                                 </div>
                                 
-                                <div class="mt-4 pt-3" style="border-top: 1px solid #eee;">
+                                <div class="mt-4 pt-3" style="border-top: 1px solid var(--border-subtle);">
                                     <div class="is-flex is-justify-content-space-between mb-1">
                                         <span class="is-size-7 has-text-grey">Tokens Streamed (Last Hour)</span>
                                         <span class="is-size-7 has-text-weight-bold" id="metric-tokens-text">0 / 0</span>
@@ -185,18 +185,23 @@
                 </main>
 
                 <!-- Projects View (formerly Chats) -->
-                <main class="section view-section is-hidden pt-5" id="view-chats">
-                    <div class="box facet">
-                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
-                            <h2 class="title is-3 cinzel facet-title mb-0" style="border:none;">Projects</h2>
-                            <button class="button is-small is-outlined" id="btn-toggle-channels" title="Collapse / Expand Channels (Cmd+E)">
-                                <span class="icon is-small"><i class="ph ph-sidebar-simple"></i></span>
-                                <span id="btn-toggle-channels-text">Hide Channels</span>
-                            </button>
+                <main class="view-section is-hidden" id="view-chats">
+                    <div class="box facet is-flex is-flex-direction-column">
+                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-2 pb-2" style="border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; min-height: 32px;">
+                            <div class="is-flex is-align-items-center">
+                                <h2 class="title is-5 cinzel mb-0 mr-3">Projects</h2>
+                                <span class="is-size-7 has-text-muted">Channels & Contexts</span>
+                            </div>
+                            <div class="is-flex is-align-items-center">
+                                <button class="button is-square btn-action-icon" id="btn-toggle-channels" data-tooltip="Hide Channels (Cmd+E)" data-tooltip-pos="bottom" aria-label="Hide Channels">
+                                    <i class="ph ph-sidebar-simple"></i>
+                                    <span id="btn-toggle-channels-text" class="is-sr-only">Hide Channels</span>
+                                </button>
+                            </div>
                         </div>
-                        <div class="columns is-variable is-2">
+                        <div class="columns is-variable is-2 is-flex-grow-1 mb-0" style="min-height: 0; height: calc(100% - 38px); overflow: hidden;">
                             <!-- Left: Project List & Artifacts -->
-                            <div id="channels-pane" style="width: 330px; max-width: 50%; min-width: 200px; overflow-y: auto; overflow-x: hidden; padding-right: 15px; border-right: 1px solid #eee; height: calc(100vh - 210px); flex-shrink: 0; position: relative;">
+                            <div id="channels-pane" style="width: 320px; max-width: 50%; min-width: 200px; height: 100%; overflow-y: auto; overflow-x: hidden; padding-right: 12px; border-right: 1px solid var(--border-subtle); flex-shrink: 0; position: relative;">
                                 <div class="drag-handle" id="handle-channels"></div>
                                 <div class="field mb-3">
                                     <div class="control has-icons-left">
@@ -219,18 +224,29 @@
                                 </div>
                             </div>
                             <!-- Right: Chat Interface -->
-                            <div class="column" id="chat-pane" style="flex: 1; min-width: 0;">
-                                <div class="box is-flex is-flex-direction-column" style="height: calc(100vh - 210px); background-color: #fafafa; overflow: hidden;">
-                                     <div class="chat-header pb-3 mb-3 border-bottom is-flex is-justify-content-space-between is-align-items-center">
-                                        <div>
-                                            <h3 class="title is-5 mb-0 is-flex is-align-items-center"><i id="chat-platform-icon" class="ph ph-chat-circle mr-2"></i><span id="chat-title">Select or start a chat</span></h3>
-                                            <p class="subtitle is-6" id="chat-subtitle"></p>
+                            <div class="column is-flex is-flex-direction-column p-0 pl-2" id="chat-pane" style="flex: 1; min-width: 0; height: 100%;">
+                                <div class="box is-flex is-flex-direction-column is-flex-grow-1 mb-0" style="height: 100%; background-color: var(--bg-surface-alt); padding: 10px 14px; overflow: hidden; border: 1px solid var(--border-subtle);">
+                                     <div class="chat-header pb-2 mb-2 is-flex is-justify-content-space-between is-align-items-center" style="border-bottom: 1px solid var(--border-subtle); flex-shrink: 0; min-height: 38px;">
+                                        <div class="is-flex is-align-items-center" style="min-width: 0; flex: 1; overflow: hidden;">
+                                            <i id="chat-platform-icon" class="ph ph-chat-circle mr-2" style="font-size: 1.25rem; flex-shrink: 0;"></i>
+                                            <div style="min-width: 0; overflow: hidden;">
+                                                <h3 class="title is-6 mb-0 is-flex is-align-items-center" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span id="chat-title">Select or start a chat</span></h3>
+                                                <p class="subtitle is-7 has-text-muted font-mono mb-0" id="chat-subtitle" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-view-artifacts">View Artifacts</button>
-                                            <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-export-chat">Export Markdown</button>
-                                            <button class="button is-small is-info is-outlined is-hidden mr-2" id="btn-fork-chat">Fork Chat</button>
-                                            <button class="button is-small is-warning is-outlined is-hidden" id="btn-merge-context">Merge Context</button>
+                                        <div class="is-flex is-align-items-center ml-2" style="flex-shrink: 0; gap: 6px;">
+                                            <button class="button is-square btn-action-icon is-hidden" id="btn-view-artifacts" data-tooltip="View Artifacts" data-tooltip-pos="bottom" aria-label="View Artifacts">
+                                                <i class="ph ph-files"></i>
+                                            </button>
+                                            <button class="button is-square btn-action-icon is-hidden" id="btn-export-chat" data-tooltip="Export Markdown" data-tooltip-pos="bottom" aria-label="Export Markdown">
+                                                <i class="ph ph-download-simple"></i>
+                                            </button>
+                                            <button class="button is-square btn-action-icon is-hidden" id="btn-fork-chat" data-tooltip="Fork Chat" data-tooltip-pos="bottom" aria-label="Fork Chat">
+                                                <i class="ph ph-git-fork"></i>
+                                            </button>
+                                            <button class="button is-square btn-action-icon is-warning-subtle is-hidden" id="btn-merge-context" data-tooltip="Merge Context" data-tooltip-pos="bottom" aria-label="Merge Context">
+                                                <i class="ph ph-git-merge"></i>
+                                            </button>
                                         </div>
                                     </div>
                                     
@@ -309,13 +325,16 @@
                                         <button class="button is-small is-primary mt-4" id="btn-save-project-rules">Save Rules</button>
                                     </div>
 
-                                    <div class="chat-input mt-4 pt-3 border-top" id="chat-input-area">
-                                        <div class="field has-addons">
+                                    <div class="chat-input mt-2 pt-2" id="chat-input-area" style="border-top: 1px solid var(--border-subtle); flex-shrink: 0;">
+                                        <div class="field has-addons mb-0">
                                             <div class="control is-expanded">
                                                 <input class="input" type="text" id="chat-input-field" placeholder="Chat natively with the executing agent...">
                                             </div>
                                             <div class="control">
-                                                <button class="button is-info" id="chat-send-btn">Send</button>
+                                                <button class="button is-info has-text-weight-semibold" id="chat-send-btn" data-tooltip="Send Message (Enter)" data-tooltip-pos="top" aria-label="Send Message">
+                                                    <span class="icon is-small mr-1"><i class="ph ph-paper-plane-right" style="font-size: 1.1rem;"></i></span>
+                                                    <span>Send</span>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -347,7 +366,7 @@
                         </header>
                         <section class="modal-card-body is-paddingless is-flex" style="height: calc(85vh - 120px); overflow: hidden;">
                             <!-- Left: File List -->
-                            <div id="artifact-sidebar-pane" style="width: 320px; border-right: 1px solid var(--border-marble); overflow-y: auto; background-color: #fafafa; padding: 12px; flex-shrink: 0;">
+                            <div id="artifact-sidebar-pane" style="width: 320px; border-right: 1px solid var(--border-subtle); overflow-y: auto; background-color: var(--bg-surface-alt); padding: 12px; flex-shrink: 0;">
                                 <div class="field mb-3">
                                     <div class="control has-icons-left">
                                         <input class="input is-small" type="text" id="artifact-filter" placeholder="Filter files...">
@@ -355,12 +374,12 @@
                                     </div>
                                 </div>
                                 <ul class="file-list" id="file-list" style="list-style: none; margin: 0; padding: 0;">
-                                    <li class="has-text-grey is-size-7 p-3 text-center">Loading artifacts...</li>
+                                    <li class="has-text-muted is-size-7 p-3 text-center">Loading artifacts...</li>
                                 </ul>
                             </div>
                             <!-- Right: Preview Pane -->
-                            <div class="is-flex-grow-1 is-flex is-flex-direction-column" style="overflow: hidden; background-color: #ffffff;">
-                                <div class="is-flex is-justify-content-space-between is-align-items-center px-4 py-2 border-bottom" style="background-color: var(--bg-alabaster); min-height: 40px;">
+                            <div class="is-flex-grow-1 is-flex is-flex-direction-column" style="overflow: hidden; background-color: var(--bg-surface);">
+                                <div class="is-flex is-justify-content-space-between is-align-items-center px-4 py-2 border-bottom" style="background-color: var(--bg-surface-alt); border-bottom: 1px solid var(--border-subtle); min-height: 40px;">
                                     <div class="is-flex is-align-items-center">
                                         <span class="icon is-small mr-2 text-info"><i class="ph ph-article"></i></span>
                                         <strong id="preview-filename" class="is-size-7 font-mono">Select a file to preview</strong>
@@ -447,11 +466,16 @@
                 <!-- Agent Detail / Editor View -->
                 <main class="section view-section pt-5 is-hidden" id="view-agent-detail">
                     <div class="mb-4 is-flex is-justify-content-space-between is-align-items-center">
-                        <button class="button is-small is-light" id="btn-back-to-agents">
-                            <span class="icon is-small mr-1"><i class="ph ph-arrow-left"></i></span>
-                            <span>Back to Agents</span>
-                        </button>
-                        <div class="buttons">
+                        <div class="is-flex is-align-items-center">
+                            <button class="button is-square btn-back-nav mr-3" id="btn-back-to-agents" title="Back to Agents" aria-label="Back to Agents">
+                                <span class="icon"><i class="ph ph-arrow-left" style="font-size: 1.15rem;"></i></span>
+                            </button>
+                            <div>
+                                <h2 class="title is-4 cinzel mb-0" id="agent-detail-title">Loading...</h2>
+                                <p class="subtitle is-7 has-text-muted font-mono" id="agent-detail-id-label">Agent Profile</p>
+                            </div>
+                        </div>
+                        <div class="buttons mb-0">
                             <button class="button is-small is-danger is-outlined" id="btn-delete-agent">
                                 <span class="icon is-small mr-1"><i class="ph ph-trash"></i></span>
                                 <span>Delete Agent</span>
@@ -466,12 +490,9 @@
                         <!-- Left Column: Core Agent Profile -->
                         <div class="column is-5">
                             <div class="box facet mb-4">
-                                <div class="is-flex is-align-items-center mb-4">
-                                    <span class="icon is-large has-text-primary mr-3" id="agent-detail-icon"><i class="ph ph-robot fa-2x"></i></span>
-                                    <div>
-                                        <h2 class="title is-4 cinzel mb-1" id="agent-detail-title">Loading...</h2>
-                                        <p class="subtitle is-6 has-text-grey" id="agent-detail-id-label">Agent Profile</p>
-                                    </div>
+                                <div class="is-flex is-align-items-center mb-3">
+                                    <span class="icon is-medium has-text-primary mr-2" id="agent-detail-icon"><i class="ph ph-robot fa-lg"></i></span>
+                                    <h3 class="title is-5 cinzel mb-0">Profile Configuration</h3>
                                 </div>
                                 <hr class="my-3">
                                 
@@ -722,7 +743,7 @@
                                 </div>
                                 <!-- Right: Editor -->
                                 <div class="column is-8">
-                                    <div class="box is-flex is-flex-direction-column" style="background-color: #fafafa;">
+                                    <div class="box is-flex is-flex-direction-column" style="background-color: var(--bg-surface-alt);">
                                         <div class="field mb-2">
                                             <div class="control">
                                                 <input class="input cinzel has-text-weight-bold is-size-5" type="text" id="rule-filename" placeholder="rule_name.md" disabled>
@@ -753,6 +774,6 @@
 
     <!-- Markdown Parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=0.1.106"></script>
 </body>
 </html>

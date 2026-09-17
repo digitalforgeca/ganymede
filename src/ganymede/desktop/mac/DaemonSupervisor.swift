@@ -9,12 +9,28 @@ final class DaemonSupervisor: NSObject {
     private var healthCheckTimer: Timer?
     
     let defaultPort: Int = 8180
+
+    var activePort: Int {
+        let dataDir = NSString(string: "~/.ganymede/data").expandingTildeInPath
+        let lockPath = (dataDir as NSString).appendingPathComponent("ganymede.lock")
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: lockPath)),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let port = json["port"] as? Int {
+            return port
+        }
+        if let envPort = ProcessInfo.processInfo.environment["GANYMEDE_PORT"],
+           let port = Int(envPort) {
+            return port
+        }
+        return defaultPort
+    }
+
     var dashboardURL: URL {
-        return URL(string: "http://127.0.0.1:\(defaultPort)")!
+        return URL(string: "http://127.0.0.1:\(activePort)")!
     }
     
     var statusURL: URL {
-        return URL(string: "http://127.0.0.1:\(defaultPort)/api/status")!
+        return URL(string: "http://127.0.0.1:\(activePort)/api/status")!
     }
 
     var onStatusChanged: ((Bool, String) -> Void)?

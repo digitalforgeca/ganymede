@@ -89,13 +89,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function getUserHeaderHtml() {
         if (userInfo) {
-            const avatarHtml = userInfo.avatar_url ? `<img src="${userInfo.avatar_url}" referrerpolicy="no-referrer" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: #ddd; fill: #666; padding: 4px;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+            const avatarHtml = userInfo.avatar_url ? `<img src="${userInfo.avatar_url}" referrerpolicy="no-referrer" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px;">` : `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: var(--bg-surface-alt); fill: var(--text-muted); padding: 4px; border: 1px solid var(--border-subtle);" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
             return `<div style="margin-bottom: 8px; display: flex; align-items: center;">
                         ${avatarHtml}
                         <strong>${userInfo.name}</strong>
                     </div>`;
         }
-        const defaultUserIcon = `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: #ddd; fill: #666; padding: 4px;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+        const defaultUserIcon = `<svg style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; background: var(--bg-surface-alt); fill: var(--text-muted); padding: 4px; border: 1px solid var(--border-subtle);" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
         return `<div style="margin-bottom: 8px; display: flex; align-items: center;">
                     ${defaultUserIcon}
                     <strong>You</strong>
@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.context && data.context === currentChatId) {
                     if (data.event === "Agent Stream Start") {
                         const msgDiv = document.createElement('div');
-                        msgDiv.className = 'box has-background-light mb-3';
+                        msgDiv.className = 'box chat-bubble-agent mb-3';
                         msgDiv.id = data.payload.msg_id;
                         let safeContent = data.payload.content || "⏳ *Thinking...*";
                         safeContent = formatAgentMarkdown(safeContent);
@@ -331,8 +331,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
         const views = document.querySelectorAll('.view-section');
 
-        function handleRoute() {
-            let hash = window.location.hash;
+        function handleRoute(explicitHash) {
+            let hash = (typeof explicitHash === 'string' && explicitHash) ? explicitHash : window.location.hash;
             if (!hash) {
                 hash = '#view-dashboard';
             }
@@ -342,33 +342,42 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!document.getElementById(targetId)) {
                 targetId = 'view-dashboard';
             }
+
+            console.log("[Router] handleRoute targetId:", targetId, "hash:", hash);
             
             // Remove active class from all nav items
             navItems.forEach(nav => nav.classList.remove('is-active'));
             
             // Add active class to clicked item (match by data-target)
-            const activeNav = document.querySelector(`.sidebar-nav .nav-item[data-target="${targetId}"]`);
+            let navTarget = targetId;
+            if (targetId === 'view-agent-detail') navTarget = 'view-agents';
+            const activeNav = document.querySelector(`.sidebar-nav .nav-item[data-target="${navTarget}"]`);
             if (activeNav) activeNav.classList.add('is-active');
             
             // Hide all views
-            views.forEach(view => view.classList.add('is-hidden'));
+            views.forEach(view => {
+                view.classList.add('is-hidden');
+            });
             
             // Show target view
             const targetView = document.getElementById(targetId);
             if (targetView) {
                 targetView.classList.remove('is-hidden');
+                console.log("[Router] Activated view element:", targetId);
+            } else {
+                console.error("[Router] Target view element not found:", targetId);
             }
             
             // Trigger specific actions based on the view
             try {
                 if (targetId === 'view-agents' || targetId === 'view-bots') {
-                    loadAgents();
+                    if (typeof loadAgents === 'function') loadAgents();
                 } else if (targetId === 'view-agent-detail' || targetId === 'view-bot-detail') {
                     const params = new URLSearchParams(hash.split('?')[1] || '');
                     const agentId = params.get('id') || 'default';
-                    loadAgentDetails(agentId);
+                    if (typeof loadAgentDetails === 'function') loadAgentDetails(agentId);
                 } else if (targetId === 'view-channels') {
-                    loadChannels();
+                    if (typeof loadChannels === 'function') loadChannels();
                 } else if (targetId === 'view-chats') {
                     const params = new URLSearchParams(hash.split('?')[1] || '');
                     if (params.has('chat') && window.selectChatById) {
@@ -396,21 +405,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         window.handleRoute = handleRoute;
-        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('hashchange', () => handleRoute());
         
+        console.log("[Router] Initializing navItems click listeners, count:", navItems.length);
         navItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 const target = item.getAttribute('data-target') || item.getAttribute('href');
+                console.log("[Router] Nav item clicked:", target);
                 let targetHash = target;
                 if (!targetHash.startsWith('#')) {
                     targetHash = '#' + targetHash;
                 }
                 if (window.location.hash !== targetHash) {
                     window.location.hash = targetHash;
-                } else {
-                    handleRoute();
                 }
+                handleRoute(targetHash);
             });
         });
         
@@ -434,7 +444,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (savedChannelsCollapsed && channelsPane) {
             channelsPane.classList.add('is-hidden');
             if (toggleChannelsText) toggleChannelsText.textContent = 'Show Channels';
-            if (toggleChannelsBtn) toggleChannelsBtn.classList.add('is-active-toggle');
+            if (toggleChannelsBtn) {
+                toggleChannelsBtn.setAttribute('data-tooltip', 'Show Channels (Cmd+E)');
+                toggleChannelsBtn.classList.add('is-active-toggle');
+            }
         }
 
         if (toggleChannelsBtn && channelsPane) {
@@ -444,6 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (toggleChannelsText) {
                     toggleChannelsText.textContent = isHidden ? 'Show Channels' : 'Hide Channels';
                 }
+                toggleChannelsBtn.setAttribute('data-tooltip', isHidden ? 'Show Channels (Cmd+E)' : 'Hide Channels (Cmd+E)');
                 toggleChannelsBtn.classList.toggle('is-active-toggle', isHidden);
                 localStorage.setItem('ganymede_channels_collapsed', isHidden);
             });
@@ -818,39 +832,153 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
+    let currentChatPagination = {
+        chatId: null,
+        offset: 0,
+        limit: 40,
+        hasMore: false,
+        isLoading: false
+    };
+
+    function renderMessageDiv(msg) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `box mb-3 ${msg.role === 'assistant' ? 'chat-bubble-agent' : 'chat-bubble-user'}`;
+        const safeContent = formatAgentMarkdown(msg.content);
+        const roleLabel = msg.role === 'assistant' ? getAgentHeaderHtml() : getUserHeaderHtml();
+        msgDiv.innerHTML = `${roleLabel}${safeContent}`;
+        return msgDiv;
+    }
+
     async function loadChatHistory(chatId) {
         const chatHistory = document.getElementById('chat-history');
-        chatHistory.innerHTML = '<div class="has-text-centered has-text-grey mt-5">Loading history...</div>';
+        chatHistory.innerHTML = '<div class="has-text-centered has-text-muted mt-5"><i class="ph ph-spinner ph-spin mr-1"></i> Loading conversation...</div>';
         
+        currentChatPagination = {
+            chatId: chatId,
+            offset: 0,
+            limit: 40,
+            hasMore: false,
+            isLoading: true
+        };
+
         try {
-            const res = await fetch(`/api/chats/${chatId}/history`);
+            const res = await fetch(`/api/chats/${chatId}/history?limit=${currentChatPagination.limit}&offset=0`);
             if (!res.ok) throw new Error("Failed to load chat history");
             const data = await res.json();
             
             currentChatHistoryData = data.messages || [];
+            currentChatPagination.hasMore = !!data.has_more;
+            currentChatPagination.offset = 0;
+            currentChatPagination.isLoading = false;
             
             chatHistory.innerHTML = '';
+            
+            if (currentChatPagination.hasMore) {
+                const loadMoreContainer = document.createElement('div');
+                loadMoreContainer.id = 'chat-load-more-container';
+                loadMoreContainer.className = 'has-text-centered my-2';
+                loadMoreContainer.innerHTML = `
+                    <button class="button is-small is-ghost" id="btn-load-more-history" data-tooltip="Load earlier conversation" data-tooltip-pos="bottom">
+                        <i class="ph ph-arrow-counter-clockwise mr-1"></i> Load Earlier Messages
+                    </button>
+                `;
+                chatHistory.appendChild(loadMoreContainer);
+                loadMoreContainer.querySelector('#btn-load-more-history').addEventListener('click', loadEarlierMessages);
+            }
+
             if (currentChatHistoryData.length > 0) {
+                const fragment = document.createDocumentFragment();
                 currentChatHistoryData.forEach(msg => {
-                    const msgDiv = document.createElement('div');
-                    msgDiv.className = `box mb-3 ${msg.role === 'assistant' ? 'has-background-light' : 'has-background-white'}`;
-                    
-                    // Convert markdown to HTML using formatAgentMarkdown
-                    const safeContent = formatAgentMarkdown(msg.content);
-                    
-                    const roleLabel = msg.role === 'assistant' ? getAgentHeaderHtml() : getUserHeaderHtml();
-                    msgDiv.innerHTML = `${roleLabel}${safeContent}`;
-                    
-                    chatHistory.appendChild(msgDiv);
+                    fragment.appendChild(renderMessageDiv(msg));
                 });
+                chatHistory.appendChild(fragment);
             } else {
-                chatHistory.innerHTML = '<div class="has-text-centered has-text-grey mt-5">No history yet. Say hello!</div>';
+                chatHistory.innerHTML = '<div class="has-text-centered has-text-muted mt-5">No history yet. Say hello!</div>';
             }
             chatHistory.scrollTop = chatHistory.scrollHeight;
         } catch (e) {
             console.error(e);
+            currentChatPagination.isLoading = false;
             chatHistory.innerHTML = `<div class="has-text-centered has-text-danger mt-5">Error: ${e.message}</div>`;
         }
+    }
+
+    async function loadEarlierMessages() {
+        if (!currentChatPagination.hasMore || currentChatPagination.isLoading || !currentChatPagination.chatId) return;
+        
+        currentChatPagination.isLoading = true;
+        const loadMoreBtn = document.getElementById('btn-load-more-history');
+        if (loadMoreBtn) {
+            loadMoreBtn.innerHTML = '<i class="ph ph-spinner ph-spin mr-1"></i> Loading earlier messages...';
+            loadMoreBtn.disabled = true;
+        }
+
+        const nextOffset = currentChatPagination.offset + currentChatPagination.limit;
+        const chatHistory = document.getElementById('chat-history');
+        const prevScrollHeight = chatHistory.scrollHeight;
+        const prevScrollTop = chatHistory.scrollTop;
+
+        try {
+            const res = await fetch(`/api/chats/${currentChatPagination.chatId}/history?limit=${currentChatPagination.limit}&offset=${nextOffset}`);
+            if (!res.ok) throw new Error("Failed to load earlier messages");
+            const data = await res.json();
+            
+            const olderMessages = data.messages || [];
+            currentChatPagination.offset = nextOffset;
+            currentChatPagination.hasMore = !!data.has_more;
+            
+            // Prepend to currentChatHistoryData for export
+            currentChatHistoryData = [...olderMessages, ...currentChatHistoryData];
+
+            const loadMoreContainer = document.getElementById('chat-load-more-container');
+            if (loadMoreContainer) {
+                if (!currentChatPagination.hasMore) {
+                    loadMoreContainer.remove();
+                } else if (loadMoreBtn) {
+                    loadMoreBtn.innerHTML = '<i class="ph ph-arrow-counter-clockwise mr-1"></i> Load Earlier Messages';
+                    loadMoreBtn.disabled = false;
+                }
+            }
+
+            if (olderMessages.length > 0) {
+                const fragment = document.createDocumentFragment();
+                olderMessages.forEach(msg => {
+                    fragment.appendChild(renderMessageDiv(msg));
+                });
+                
+                if (loadMoreContainer && loadMoreContainer.parentNode === chatHistory) {
+                    chatHistory.insertBefore(fragment, loadMoreContainer.nextSibling);
+                } else {
+                    chatHistory.insertBefore(fragment, chatHistory.firstChild);
+                }
+
+                // Preserve exact scroll position so the view doesn't jump
+                chatHistory.scrollTop = (chatHistory.scrollHeight - prevScrollHeight) + prevScrollTop;
+            }
+        } catch (e) {
+            console.error("Error loading earlier messages:", e);
+            if (loadMoreBtn) {
+                loadMoreBtn.innerHTML = '<i class="ph ph-warning mr-1"></i> Failed to load. Retry?';
+                loadMoreBtn.disabled = false;
+            }
+        } finally {
+            currentChatPagination.isLoading = false;
+        }
+    }
+
+    function setupChatScrollListener() {
+        const chatHistory = document.getElementById('chat-history');
+        if (!chatHistory) return;
+        let scrollTimeout = null;
+        chatHistory.addEventListener('scroll', () => {
+            if (scrollTimeout) return;
+            scrollTimeout = setTimeout(() => {
+                scrollTimeout = null;
+                if (chatHistory.scrollTop < 60 && currentChatPagination.hasMore && !currentChatPagination.isLoading) {
+                    loadEarlierMessages();
+                }
+            }, 150);
+        });
     }
 
     function setupChatExport() {
@@ -960,7 +1088,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Optimistically append user message to UI
             const msgDiv = document.createElement('div');
-            msgDiv.className = 'box has-background-white mb-3';
+            msgDiv.className = 'box chat-bubble-user mb-3';
             msgDiv.innerHTML = `${getUserHeaderHtml()}${text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}`;
             if (chatHistory.querySelector('.has-text-grey')) {
                 chatHistory.innerHTML = ''; // clear empty state
@@ -1296,7 +1424,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span class="has-text-grey">Model:</span> <strong>${subagent.model || 'Gemini 3.7 Flash'}</strong>
                     <span class="has-text-grey ml-3">Current Action:</span> <span class="tag is-small is-light">${subagent.lastTool || 'None'}</span>
                 </div>
-                ${subagent.actionSummary ? `<p class="is-size-7 has-text-dark mb-0 font-mono" style="background: #f9f9fa; padding: 6px; border-radius: 4px;">↳ ${subagent.actionSummary}</p>` : ''}
+                ${subagent.actionSummary ? `<p class="is-size-7 mb-0 font-mono" style="background: var(--bg-surface-alt); color: var(--text-main); padding: 6px; border-radius: 4px; border: 1px solid var(--border-subtle);">↳ ${subagent.actionSummary}</p>` : ''}
             `;
             container.appendChild(card);
         });
@@ -1546,7 +1674,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(fetchStatus, 5000); // Live updates for header and metrics
     fetchChats();
     connectWebSocket();
-    setupRouting();
     setupPanes();
     setupWebChat();
     setupContextMerge();
@@ -1558,8 +1685,10 @@ document.addEventListener("DOMContentLoaded", () => {
     setupArtifactsModal();
     setupDashboardCenterTabs();
     setupChatExport();
+    setupChatScrollListener();
     setupProjectSettings();
     setupRulesEditor();
+    setupRouting();
     
     // Rules & Workflows Editor
     function setupRulesEditor() {
@@ -1791,7 +1920,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const html = `
                 <div class="column is-4">
-                    <div class="card facet is-clickable" onclick="window.location.hash='#view-agent-detail?id=' + encodeURIComponent('${agentId}'); if (window.handleRoute) window.handleRoute();" style="height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                    <div class="card facet is-clickable" onclick="window.location.hash='#view-agent-detail?id=' + encodeURIComponent('${agentId}'); if (window.handleRoute) window.handleRoute('#view-agent-detail?id=' + encodeURIComponent('${agentId}'));" style="height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease;">
                         <div class="card-content is-flex is-flex-direction-column" style="height: 100%;">
                             <div class="is-flex is-align-items-center mb-3">
                                 <span class="icon is-large has-text-primary mr-3" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(50, 115, 220, 0.1); border-radius: 50%;">
@@ -2037,7 +2166,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnCreateAgent.addEventListener('click', (e) => {
             e.preventDefault();
             window.location.hash = '#view-agent-detail?id=new';
-            if (window.handleRoute) window.handleRoute();
+            if (window.handleRoute) window.handleRoute('#view-agent-detail?id=new');
         });
     }
 
@@ -2046,7 +2175,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btnBackToAgents.addEventListener('click', (e) => {
             e.preventDefault();
             window.location.hash = '#view-agents';
-            if (window.handleRoute) window.handleRoute();
+            if (window.handleRoute) window.handleRoute('#view-agents');
         });
     }
 

@@ -1,15 +1,13 @@
-:root {
-    --bg-alabaster: #f9f9fa;
-    --text-obsidian: #111827;
-    --text-slate: #4b5563;
-    --accent-azure: #0ea5e9;
-    --accent-gold: #d97706;
-    --border-marble: #e5e7eb;
-}
+/* 
+ * Ganymede Olympus Stylesheet
+ * Integrates with Bulma 1.0.0 and theme.css design tokens.
+ */
 
 body {
-    background-color: var(--bg-alabaster);
-    color: var(--text-obsidian);
+    background-color: var(--bg-canvas);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
 }
 
 .cinzel {
@@ -18,9 +16,9 @@ body {
 
 /* Sidebar Styling */
 .olympus-sidebar {
-    background-color: #ffffff;
-    border-right: 1px solid var(--border-marble);
-    box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border-subtle);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.03);
     display: flex;
     flex-direction: column;
 }
@@ -46,18 +44,34 @@ body {
     font-weight: 700;
 }
 
+.menu-list a {
+    color: var(--text-secondary);
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    font-weight: 500;
+}
+
 .menu-list a.is-active {
     background-color: var(--accent-azure);
-    color: white;
+    color: #ffffff !important;
 }
+
 .menu-list a:hover:not(.is-active) {
-    background-color: var(--bg-alabaster);
+    background-color: var(--bg-surface-alt);
+    color: var(--text-main);
+}
+
+.menu-label {
+    color: var(--text-muted) !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.1em !important;
+    font-weight: 600 !important;
 }
 
 /* Header Styling */
 .olympus-header {
-    background-color: #ffffff;
-    border-bottom: 1px solid var(--border-marble);
+    background-color: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
@@ -70,46 +84,48 @@ body {
 }
 
 .pulse.online {
-    background-color: var(--accent-azure);
-    box-shadow: 0 0 0 rgba(14, 165, 233, 0.4);
-    animation: pulse-azure 2s infinite;
+    background-color: var(--accent-emerald);
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+    animation: pulse-emerald 2s infinite;
 }
 
 .pulse.offline {
-    background-color: #ef4444;
+    background-color: var(--accent-ruby);
 }
 
-@keyframes pulse-azure {
-    0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(14, 165, 233, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+@keyframes pulse-emerald {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
 /* Facets */
 .facet {
+    background-color: var(--bg-surface) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-subtle) !important;
     border-top: 4px solid var(--accent-gold) !important;
-    border-radius: 4px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
 }
 
 .facet-title {
-    border-bottom: 1px solid var(--border-marble);
+    border-bottom: 1px solid var(--border-subtle);
     padding-bottom: 0.75rem;
     margin-bottom: 1rem !important;
-    color: var(--text-obsidian);
+    color: var(--text-main);
 }
 
-/* SOTA Metric Cards */
+/* Metric Cards */
 .metric {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(240, 248, 255, 0.5));
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     padding: 1.25rem;
     position: relative;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    backdrop-filter: blur(10px);
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
 }
 
 .metric::before {
@@ -125,9 +141,9 @@ body {
 }
 
 .metric:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 12px 25px rgba(14, 165, 233, 0.15);
-    border-color: rgba(14, 165, 233, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    border-color: var(--border-highlight);
 }
 
 .metric:hover::before {
@@ -135,8 +151,8 @@ body {
 }
 
 .metric .heading {
-    color: var(--text-slate);
-    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -144,22 +160,18 @@ body {
 }
 
 .metric .title {
-    color: var(--text-obsidian);
+    color: var(--text-main);
     font-weight: 700;
-    font-size: 1.25rem;
+    font-size: 1.35rem;
     margin-bottom: 0;
-    /* Premium text gradient */
-    background: linear-gradient(45deg, #111827, #0ea5e9);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
 }
 
 .file-list li {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-marble);
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--border-subtle);
     display: flex;
     justify-content: space-between;
+    color: var(--text-main);
 }
 .file-list li:last-child { border-bottom: none; }
 
@@ -168,35 +180,40 @@ body {
     color: var(--accent-azure);
 }
 
-/* Logs */
+/* Logs Container */
 .log-container {
-    background-color: #fafafa;
-    border: 1px inset var(--border-marble);
+    background-color: var(--bg-surface-alt);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-main);
     overflow-y: auto;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.9rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
     padding: 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     height: 600px;
+    border-radius: 6px;
 }
 
 .log-entry {
-    padding: 0.5rem;
-    border-left: 3px solid var(--border-marble);
-    background-color: #ffffff;
+    padding: 0.6rem 0.85rem;
+    border-radius: 4px;
+    border-left: 3px solid var(--border-subtle);
+    background-color: var(--bg-surface);
+    color: var(--text-main);
     word-wrap: break-word;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.log-entry.system { border-left-color: var(--text-slate); color: var(--text-slate); }
-.log-entry.event { border-left-color: var(--accent-azure); }
-.log-entry.error { border-left-color: #ef4444; color: #ef4444; }
-.log-entry.action { border-left-color: var(--accent-gold); font-weight: 600; }
+.log-entry.system { border-left-color: var(--text-muted); color: var(--text-muted); }
+.log-entry.event { border-left-color: var(--accent-azure); color: var(--text-main); }
+.log-entry.error { border-left-color: var(--accent-ruby); color: var(--accent-ruby); }
+.log-entry.action { border-left-color: var(--accent-gold); font-weight: 600; color: var(--text-main); }
 
 .log-time {
     font-size: 0.75rem;
-    color: var(--text-slate);
+    color: var(--text-muted);
     margin-right: 0.75rem;
 }
 
@@ -216,14 +233,14 @@ body {
 }
 
 .drag-handle:hover, .drag-handle.is-dragging {
-    background-color: rgba(192, 160, 98, 0.2);
+    background-color: var(--accent-gold-bg);
 }
 
 .drag-handle::after {
     content: "";
     height: 40px;
     width: 4px;
-    background-color: var(--accent-gold, #c0a062);
+    background-color: var(--accent-gold);
     border-radius: 2px;
     opacity: 0.7;
 }
@@ -243,7 +260,6 @@ body {
     border-radius: 6px;
     padding: 12px 16px;
     margin: 12px 0;
-    background-color: rgba(0, 0, 0, 0.02);
 }
 .antigravity-alert-header {
     display: flex;
@@ -263,42 +279,53 @@ body {
     line-height: 1.5;
 }
 .antigravity-alert-note {
-    border-left-color: #0ea5e9;
-    background-color: rgba(14, 165, 233, 0.06);
+    border-left-color: #0284c7;
+    background-color: rgba(2, 132, 199, 0.08);
     color: #0369a1;
 }
 .antigravity-alert-tip {
-    border-left-color: #10b981;
-    background-color: rgba(16, 185, 129, 0.06);
+    border-left-color: #059669;
+    background-color: rgba(5, 150, 105, 0.08);
     color: #047857;
 }
 .antigravity-alert-important {
-    border-left-color: #8b5cf6;
-    background-color: rgba(139, 92, 246, 0.06);
+    border-left-color: #7c3aed;
+    background-color: rgba(124, 58, 237, 0.08);
     color: #6d28d9;
 }
 .antigravity-alert-warning {
-    border-left-color: #f59e0b;
-    background-color: rgba(245, 158, 11, 0.06);
+    border-left-color: #d97706;
+    background-color: rgba(217, 119, 6, 0.08);
     color: #b45309;
 }
 .antigravity-alert-caution {
-    border-left-color: #ef4444;
-    background-color: rgba(239, 68, 68, 0.06);
+    border-left-color: #dc2626;
+    background-color: rgba(220, 38, 38, 0.08);
     color: #b91c1c;
+}
+
+/* Dark Mode adjustment for Antigravity Alerts */
+@media (prefers-color-scheme: dark) {
+    .antigravity-alert-note { color: #38bdf8; background-color: rgba(56, 189, 248, 0.12); }
+    .antigravity-alert-tip { color: #34d399; background-color: rgba(52, 211, 153, 0.12); }
+    .antigravity-alert-important { color: #a78bfa; background-color: rgba(167, 139, 250, 0.12); }
+    .antigravity-alert-warning { color: #fbbf24; background-color: rgba(251, 191, 36, 0.12); }
+    .antigravity-alert-caution { color: #f87171; background-color: rgba(248, 113, 113, 0.12); }
 }
 
 /* Antigravity Tool Call Cards */
 .tool-call-card {
-    border: 1px solid var(--border-marble);
+    border: 1px solid var(--border-subtle);
     border-radius: 6px;
     margin: 10px 0;
-    background: #ffffff;
+    background: var(--bg-surface);
+    color: var(--text-main);
     overflow: hidden;
     transition: all 0.2s ease;
 }
 .tool-call-card[open] {
     box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    border-color: var(--border-highlight);
 }
 .tool-call-summary {
     display: flex;
@@ -306,7 +333,8 @@ body {
     padding: 8px 12px;
     cursor: pointer;
     user-select: none;
-    background-color: #fafafa;
+    background-color: var(--bg-surface-alt);
+    color: var(--text-main);
     font-size: 0.85rem;
     font-weight: 500;
 }
@@ -317,7 +345,7 @@ body {
     content: "▶";
     font-size: 0.65rem;
     margin-right: 8px;
-    color: var(--accent-gold, #cfa85e);
+    color: var(--accent-gold);
     transition: transform 0.2s ease;
     display: inline-block;
 }
@@ -325,13 +353,13 @@ body {
     transform: rotate(90deg);
 }
 .tool-call-summary:hover {
-    background-color: #f3f4f6;
+    background-color: var(--border-subtle);
 }
 .tool-call-card pre {
     margin: 0;
     padding: 12px;
-    background-color: #1e1e2e;
-    color: #cdd6f4;
+    background-color: #111827;
+    color: #e2e8f0;
     border-radius: 0;
     font-size: 0.8rem;
     max-height: 350px;
@@ -344,18 +372,19 @@ body {
 }
 
 .button.is-active-toggle {
-    background-color: rgba(207, 168, 94, 0.15) !important;
-    border-color: var(--accent-gold, #cfa85e) !important;
-    color: var(--accent-gold, #cfa85e) !important;
+    background-color: var(--accent-gold-bg) !important;
+    border-color: var(--accent-gold) !important;
+    color: var(--accent-gold) !important;
 }
 
 /* Subagent & Task Visualization */
 .subagent-card {
-    border: 1px solid var(--border-marble);
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
     padding: 14px;
     margin-bottom: 12px;
-    background: #ffffff;
+    background: var(--bg-surface);
+    color: var(--text-main);
     transition: all 0.2s ease;
     box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 }
@@ -378,12 +407,12 @@ body {
     font-weight: 600;
 }
 .subagent-status-running {
-    background-color: #ecfdf5;
-    color: #059669;
+    background-color: rgba(5, 150, 105, 0.15);
+    color: var(--accent-emerald);
 }
 .subagent-status-idle {
-    background-color: #f3f4f6;
-    color: #6b7280;
+    background-color: var(--bg-surface-alt);
+    color: var(--text-muted);
 }
 
 /* Artifact Inspector */
@@ -396,12 +425,70 @@ body {
     align-items: center;
     justify-content: space-between;
     transition: background-color 0.15s ease;
+    color: var(--text-main);
 }
 .artifact-item:hover {
-    background-color: #f3f4f6;
+    background-color: var(--bg-surface-alt);
 }
 .artifact-item.is-selected {
-    background-color: #e0f2fe;
-    color: #0369a1;
+    background-color: var(--accent-azure-bg);
+    color: var(--accent-azure);
     font-weight: 600;
+}
+
+/* Projects View Layout - Eliminates Dead Gap Above Channel Content */
+#view-chats {
+    padding: 8px 12px !important;
+    height: calc(100vh - 2.5rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#view-chats > .facet {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 14px;
+    margin-bottom: 0 !important;
+    height: 100%;
+    overflow: hidden;
+}
+
+#view-chats .columns {
+    flex: 1;
+    height: calc(100% - 38px);
+    margin-bottom: 0 !important;
+    min-height: 0;
+}
+
+#view-chats #channels-pane {
+    height: 100% !important;
+}
+
+#view-chats #chat-pane {
+    height: 100% !important;
+}
+
+#view-chats #chat-pane > .box {
+    height: 100% !important;
+    margin-bottom: 0 !important;
+}
+
+/* Ensure tooltips never get clipped by header or input boundaries */
+.chat-header {
+    overflow: visible !important;
+}
+.chat-header .buttons,
+.chat-header .is-flex {
+    overflow: visible !important;
+}
+.chat-input {
+    overflow: visible !important;
+}
+.chat-input .field {
+    overflow: visible !important;
+}
+.chat-input .control {
+    overflow: visible !important;
 }
