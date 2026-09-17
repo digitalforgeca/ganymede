@@ -480,9 +480,9 @@ class ManagedAgent:
                     parts = prompt.split(" ", 1)
                     cmd = parts[0]
                     rest = parts[1] if len(parts) > 1 else ""
-                    final_prompt = f"{cmd} System Instructions:\n{sys_inst}\n\nUser Request:\n{rest}"
+                    final_prompt = f"{cmd} [System: {sys_inst}] {rest}".strip()
                 else:
-                    final_prompt = f"System Instructions:\n{sys_inst}\n\nUser Request:\n{prompt}"
+                    final_prompt = f"[System: {sys_inst}]\n\n{prompt}".strip()
 
             # Flush any stale chunks/events before prompt submission
             while not self.chunk_queue.empty():

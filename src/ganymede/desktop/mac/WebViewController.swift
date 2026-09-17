@@ -167,19 +167,25 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
             return
         }
 
-        // Allow localhost / 127.0.0.1
-        let isLocalhost = url.host == "127.0.0.1" || url.host == "localhost"
+        // Allow in-page anchors, about:blank, or scheme-less navigations
+        if url.scheme == nil || url.scheme == "about" || url.host == nil {
+            decisionHandler(.allow)
+            return
+        }
+
+        let host = url.host?.lowercased() ?? ""
+        let isLocalhost = host == "127.0.0.1" || host == "localhost"
         
         // Allow Google OAuth & Cerberus Keycloak domains in the webview
-        let isAuthHost = url.host?.contains("google.com") == true
-            || url.host?.contains("gstatic.com") == true
-            || url.host?.contains("technocraftonline.com") == true
-            || url.host?.contains("dforge.ca") == true
+        let isAuthHost = host.contains("google.com")
+            || host.contains("gstatic.com")
+            || host.contains("technocraftonline.com")
+            || host.contains("dforge.ca")
 
         if isLocalhost || isAuthHost {
             decisionHandler(.allow)
         } else {
-            // External links (e.g. Patreon, docs, GitHub) or file URLs open in default system handler
+            // External links (e.g. Patreon, docs, GitHub) open in default system handler
             NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
         }
@@ -190,12 +196,14 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         // Intercept target="_blank" and open internally or in browser
         if let url = navigationAction.request.url {
-            let isLocal = url.host == "127.0.0.1"
-                || url.host == "localhost"
-                || url.host?.contains("google.com") == true
-                || url.host?.contains("gstatic.com") == true
-                || url.host?.contains("technocraftonline.com") == true
-                || url.host?.contains("dforge.ca") == true
+            let host = url.host?.lowercased() ?? ""
+            let isLocal = host == "127.0.0.1"
+                || host == "localhost"
+                || host.isEmpty
+                || host.contains("google.com")
+                || host.contains("gstatic.com")
+                || host.contains("technocraftonline.com")
+                || host.contains("dforge.ca")
             if isLocal {
                 webView.load(navigationAction.request)
             } else {

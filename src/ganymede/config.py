@@ -78,7 +78,7 @@ class BotConfig:
         "name": "ganymede",
         "namespace": None
     })
-    identity: str = "You are {bot_name}, a helpful AI assistant. Always begin your response by thinking out loud and explicitly explaining what you are going to do before calling any tools. This ensures the user is kept abreast of your activity. Your mission is {mission_statement}. Additional context about your current channel or project may be provided below — use it to orient your responses."
+    identity: str = "You are {bot_name}. Mission: {mission_statement}."
 
 @dataclass
 class AppConfig:

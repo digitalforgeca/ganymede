@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const valDatadir = document.getElementById("val-datadir");
     
     const fileList = document.getElementById("file-list");
-    const logContainer = document.getElementById("log-container");
+    const logContainer = document.getElementById("tab-telemetry-content") || document.getElementById("log-container");
 
     let ws = null;
     let currentChatHistoryData = []; // Store the messages to export later
@@ -296,19 +296,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function appendLog(message, type = 'system') {
+        const container = document.getElementById("tab-telemetry-content") || logContainer;
+        if (!container) return;
+
         const entry = document.createElement('div');
         entry.className = `log-entry ${type}`;
         
         const time = new Date().toLocaleTimeString();
         entry.innerHTML = `<span class="log-time">[${time}]</span><span class="log-msg">${message}</span>`;
         
-        logContainer.appendChild(entry);
+        container.appendChild(entry);
         
         // Auto scroll to bottom
-        if (logContainer.children.length > 200) {
-            logContainer.removeChild(logContainer.firstChild); // Keep memory bounded
+        if (container.children.length > 200) {
+            container.removeChild(container.firstChild); // Keep memory bounded
         }
-        logContainer.scrollTop = logContainer.scrollHeight;
+        container.scrollTop = container.scrollHeight;
     }
 
     function setOnline(isOnline) {
@@ -332,7 +335,6 @@ document.addEventListener("DOMContentLoaded", () => {
             let hash = window.location.hash;
             if (!hash) {
                 hash = '#view-dashboard';
-                // Don't replace state, just let it fall through
             }
             
             // Extract the base view id (e.g., #view-bots?botId=xxx -> view-bots)
@@ -358,45 +360,57 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             
             // Trigger specific actions based on the view
-            if (targetId === 'view-agents' || targetId === 'view-bots') {
-                loadAgents();
-            } else if (targetId === 'view-agent-detail' || targetId === 'view-bot-detail') {
-                const params = new URLSearchParams(hash.split('?')[1] || '');
-                const agentId = params.get('id') || 'default';
-                loadAgentDetails(agentId);
-            } else if (targetId === 'view-channels') {
-                loadChannels();
-            } else if (targetId === 'view-chats') {
-                const params = new URLSearchParams(hash.split('?')[1] || '');
-                if (params.has('chat') && window.selectChatById) {
-                    window.selectChatById(params.get('chat'));
+            try {
+                if (targetId === 'view-agents' || targetId === 'view-bots') {
+                    loadAgents();
+                } else if (targetId === 'view-agent-detail' || targetId === 'view-bot-detail') {
+                    const params = new URLSearchParams(hash.split('?')[1] || '');
+                    const agentId = params.get('id') || 'default';
+                    loadAgentDetails(agentId);
+                } else if (targetId === 'view-channels') {
+                    loadChannels();
+                } else if (targetId === 'view-chats') {
+                    const params = new URLSearchParams(hash.split('?')[1] || '');
+                    if (params.has('chat') && window.selectChatById) {
+                        window.selectChatById(params.get('chat'));
+                    } else if (window.selectFirstChat) {
+                        window.selectFirstChat();
+                    }
+                    if (params.has('tab') && window.selectChatTab) {
+                        window.selectChatTab(params.get('tab'));
+                    } else if (window.selectChatTab) {
+                        window.selectChatTab('chat');
+                    }
+                } else if (targetId === 'view-settings') {
+                    if (window.loadConfig) window.loadConfig();
+                    const params = new URLSearchParams(hash.split('?')[1] || '');
+                    if (params.has('tab') && window.selectSettingsTab) {
+                        window.selectSettingsTab(params.get('tab'));
+                    } else if (window.selectSettingsTab) {
+                        window.selectSettingsTab('global');
+                    }
                 }
-                if (params.has('tab') && window.selectChatTab) {
-                    window.selectChatTab(params.get('tab'));
-                } else if (window.selectChatTab) {
-                    window.selectChatTab('chat');
-                }
-            } else if (targetId === 'view-settings') {
-                const params = new URLSearchParams(hash.split('?')[1] || '');
-                if (params.has('tab') && window.selectSettingsTab) {
-                    window.selectSettingsTab(params.get('tab'));
-                } else if (window.selectSettingsTab) {
-                    window.selectSettingsTab('global');
-                }
+            } catch (err) {
+                console.error("Error during route handling:", err);
             }
         }
 
+        window.handleRoute = handleRoute;
         window.addEventListener('hashchange', handleRoute);
         
         navItems.forEach(item => {
             item.addEventListener('click', (e) => {
+                e.preventDefault();
                 const target = item.getAttribute('data-target') || item.getAttribute('href');
-                if (target && target.startsWith('#')) {
-                    window.location.hash = target;
-                } else if (target) {
-                    window.location.hash = `#${target}`;
+                let targetHash = target;
+                if (!targetHash.startsWith('#')) {
+                    targetHash = '#' + targetHash;
                 }
-                setTimeout(handleRoute, 10);
+                if (window.location.hash !== targetHash) {
+                    window.location.hash = targetHash;
+                } else {
+                    handleRoute();
+                }
             });
         });
         
@@ -585,11 +599,13 @@ document.addEventListener("DOMContentLoaded", () => {
     function setupChatTabs() {
         const tabList = document.querySelectorAll('#chat-tabs-container li');
         tabList.forEach(tab => {
-            tab.addEventListener('click', () => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
                 const target = tab.dataset.tab;
                 const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
                 params.set('tab', target);
                 window.location.hash = `#view-chats?${params.toString()}`;
+                if (window.selectChatTab) window.selectChatTab(target);
             });
         });
     }
@@ -605,24 +621,28 @@ document.addEventListener("DOMContentLoaded", () => {
         const activeTab = document.querySelector(`#settings-tabs-container li[data-tab="${target}"]`);
         if (activeTab) activeTab.classList.add('is-active');
         
-        viewGlobal.classList.add('is-hidden');
-        viewRules.classList.add('is-hidden');
-        viewRaw.classList.add('is-hidden');
+        viewGlobal?.classList.add('is-hidden');
+        viewRules?.classList.add('is-hidden');
+        viewRaw?.classList.add('is-hidden');
         
         if (target === 'global') {
-            viewGlobal.classList.remove('is-hidden');
+            viewGlobal?.classList.remove('is-hidden');
         } else if (target === 'rules') {
-            viewRules.classList.remove('is-hidden');
+            viewRules?.classList.remove('is-hidden');
+            if (window.loadRules) window.loadRules();
         } else if (target === 'raw') {
-            viewRaw.classList.remove('is-hidden');
+            viewRaw?.classList.remove('is-hidden');
         }
     };
 
     function setupSettingsTabs() {
         const tabList = document.querySelectorAll('#settings-tabs-container li');
         tabList.forEach(tab => {
-            tab.addEventListener('click', () => {
-                window.location.hash = `#view-settings?tab=${tab.dataset.tab}`;
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = tab.dataset.tab;
+                window.location.hash = `#view-settings?tab=${target}`;
+                if (window.selectSettingsTab) window.selectSettingsTab(target);
             });
         });
     }
@@ -714,10 +734,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 a.classList.add('is-active');
             }
             
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.location.hash = `#view-chats?chat=${chat.id}`;
+                if (window.selectChatById) {
+                    window.selectChatById(chat.id);
+                }
+            });
+            
             li.appendChild(a);
             chatList.appendChild(li);
         });
     }
+
+    window.selectFirstChat = function() {
+        if (!currentChatId && chatGroups) {
+            for (const platform in chatGroups) {
+                if (chatGroups[platform] && chatGroups[platform].length > 0) {
+                    window.selectChatById(chatGroups[platform][0].id);
+                    break;
+                }
+            }
+        }
+    };
 
     async function fetchChats() {
         try {
@@ -760,6 +799,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     applyChatSearch();
                 } else {
                     renderChats(data.chats);
+                }
+
+                if (window.location.hash.startsWith('#view-chats') && !currentChatId) {
+                    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+                    if (params.has('chat') && window.selectChatById) {
+                        window.selectChatById(params.get('chat'));
+                    } else if (window.selectFirstChat) {
+                        window.selectFirstChat();
+                    }
                 }
             } else {
                 document.getElementById('chat-list').innerHTML = '<li><a>No active projects found.</a></li>';
@@ -897,9 +945,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 channel_id = `portal-${Date.now()}`;
                 currentChatId = `web_${channel_id}_main`;
                 
-                // Set up UI for the new chat
-                document.getElementById('chat-title').textContent = `web-${channel_id}`;
-                document.getElementById('chat-platform-icon').className = 'ph ph-globe';
+                const titleEl = document.getElementById('chat-title');
+                if (titleEl) titleEl.textContent = `web-${channel_id}`;
+                const iconEl = document.getElementById('chat-platform-icon');
+                if (iconEl) iconEl.className = 'ph ph-globe mr-2';
                 chatHistory.innerHTML = '';
             } else {
                 const parts = currentChatId.split('_');
@@ -1205,6 +1254,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Load initially
+        window.loadConfig = loadConfig;
         loadConfig();
     }
 
@@ -1643,6 +1693,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         
         // Initial load
+        window.loadRules = loadRules;
         loadRules();
     }
     
@@ -1740,7 +1791,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const html = `
                 <div class="column is-4">
-                    <div class="card facet is-clickable" onclick="window.location.hash='#view-agent-detail?id=' + encodeURIComponent('${agentId}')" style="height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                    <div class="card facet is-clickable" onclick="window.location.hash='#view-agent-detail?id=' + encodeURIComponent('${agentId}'); if (window.handleRoute) window.handleRoute();" style="height: 100%; transition: transform 0.2s ease, box-shadow 0.2s ease;">
                         <div class="card-content is-flex is-flex-direction-column" style="height: 100%;">
                             <div class="is-flex is-align-items-center mb-3">
                                 <span class="icon is-large has-text-primary mr-3" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(50, 115, 220, 0.1); border-radius: 50%;">
@@ -1812,8 +1863,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     workspace: '~/dev',
                     mode: 'accept-edits',
                     skip_permissions: true,
-                    identity: 'You are {bot_name}, a specialized autonomous AI assistant. Your mission is {mission_statement}.',
-                    mission_statement: 'assisting with specialized engineering tasks',
+                    identity: 'You are {bot_name}. Mission: {mission_statement}.',
+                    mission_statement: 'assisting with engineering tasks',
                     bindings: []
                 };
             }
@@ -1938,6 +1989,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 tbody.appendChild(tr);
             });
 
+            // Add click listener to Edit Agent buttons
+            tbody.querySelectorAll('a[href^="#view-agent-detail"]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.hash = link.getAttribute('href');
+                    if (window.handleRoute) window.handleRoute();
+                });
+            });
+
             // Add change listener to channel agent selects
             document.querySelectorAll('.channel-agent-select').forEach(sel => {
                 sel.addEventListener('change', async (e) => {
@@ -1974,15 +2034,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Agent Creation & Save Event Listeners
     const btnCreateAgent = document.getElementById('btn-create-agent');
     if (btnCreateAgent) {
-        btnCreateAgent.addEventListener('click', () => {
+        btnCreateAgent.addEventListener('click', (e) => {
+            e.preventDefault();
             window.location.hash = '#view-agent-detail?id=new';
+            if (window.handleRoute) window.handleRoute();
         });
     }
 
     const btnBackToAgents = document.getElementById('btn-back-to-agents');
     if (btnBackToAgents) {
-        btnBackToAgents.addEventListener('click', () => {
+        btnBackToAgents.addEventListener('click', (e) => {
+            e.preventDefault();
             window.location.hash = '#view-agents';
+            if (window.handleRoute) window.handleRoute();
         });
     }
 
@@ -2051,6 +2115,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         btnSaveAgent.classList.remove('is-success');
                         btnSaveAgent.textContent = 'Save Changes';
                         window.location.hash = '#view-agents';
+                        if (window.handleRoute) window.handleRoute();
                     }, 1200);
                 } else {
                     const err = await res.json();
@@ -2084,6 +2149,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 if (res.ok) {
                     window.location.hash = '#view-agents';
+                    if (window.handleRoute) window.handleRoute();
                 } else {
                     const err = await res.json();
                     alert(err.error || 'Failed to delete agent');

@@ -221,9 +221,9 @@
                             <!-- Right: Chat Interface -->
                             <div class="column" id="chat-pane" style="flex: 1; min-width: 0;">
                                 <div class="box is-flex is-flex-direction-column" style="height: calc(100vh - 210px); background-color: #fafafa; overflow: hidden;">
-                                    <div class="chat-header pb-3 mb-3 border-bottom is-flex is-justify-content-space-between is-align-items-center">
+                                     <div class="chat-header pb-3 mb-3 border-bottom is-flex is-justify-content-space-between is-align-items-center">
                                         <div>
-                                            <h3 class="title is-5 mb-0" id="chat-title">Select or start a chat</h3>
+                                            <h3 class="title is-5 mb-0 is-flex is-align-items-center"><i id="chat-platform-icon" class="ph ph-chat-circle mr-2"></i><span id="chat-title">Select or start a chat</span></h3>
                                             <p class="subtitle is-6" id="chat-subtitle"></p>
                                         </div>
                                         <div>
@@ -549,7 +549,7 @@
                                 <h3 class="title is-6 mb-2"><span class="icon is-small mr-2"><i class="ph ph-magic"></i></span>Persona & System Instructions</h3>
                                 <div class="field">
                                     <div class="control">
-                                        <textarea class="textarea is-small font-mono" id="agent-input-identity" rows="8" placeholder="You are {bot_name}, specialized in..."></textarea>
+                                        <textarea class="textarea is-small font-mono" id="agent-input-identity" rows="8" placeholder="You are {bot_name}. Mission: {mission_statement}."></textarea>
                                     </div>
                                 </div>
                                 

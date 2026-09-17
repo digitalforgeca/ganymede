@@ -421,40 +421,24 @@ class DiscordAdapter(discord.Client, PlatformAdapter):
         except Exception:
             pass
 
-        additions = """
-You are currently communicating with the user via a Discord bridge.
-**CRITICAL**: You DO NOT need to use any special tools to reply to the user in this channel. Any standard text response you generate will be automatically streamed back to them.
-
-**Media & File Attachments**:
-- **To send a file**: Simply include a markdown file link to the local absolute path of the file anywhere in your response (e.g., `[image.png](file:///absolute/path/to/image.png)`). The provider will automatically intercept the link and upload the file natively as an attachment.
-- **To receive a file**: When users send you files, they will appear as URLs in your prompt or when you read past messages. You MUST use the `download_attachment` tool to securely download these into your workspace before trying to read them.
-
-Optional extended capabilities (if Discord MCP tools are available):
-- `read_channel_history`: Reads older messages or context from a channel (now includes attachment URLs).
-- `get_message_by_id`: Retrieves a specific message by ID (now includes attachment URLs).
-- `download_attachment`: Securely downloads an attachment URL to a local absolute path.
-- `post_to_channel`: Sends a message to a *different* channel.
-- `create_thread`: Creates a new thread under a message.
-- `get_channel_info`: Retrieves channel metadata.
-"""
-        # Inject dynamic channel context
+        # Minimal Discord context: channel name, topic (if any), and file link convention
+        chan_desc = ""
         try:
             channel = await self._resolve_channel(context)
             if channel:
                 channel_name = getattr(channel, 'name', 'unknown')
-                channel_id = context.channel_id
-                additions += f"\nInvocation context: Discord channel #{channel_name} (ID: {channel_id})\n"
-
-                # Get topic — for threads, fall back to the parent channel's topic
+                chan_desc = f"Discord channel: #{channel_name}."
                 topic = getattr(channel, 'topic', None)
                 if not topic and hasattr(channel, 'parent') and channel.parent:
                     topic = getattr(channel.parent, 'topic', None)
                 if topic:
-                    additions += f"Channel Description: {topic}\n"
+                    chan_desc += f" Topic: {topic}."
         except Exception as e:
             logger.warning("Failed to inject channel info into system prompt", error=str(e))
+            chan_desc = "Discord bridge."
 
-        return f"{current_prompt}\n\n{additions.strip()}"
+        additions = f"{chan_desc} Responses stream to Discord. Local file links [label](file:///path) upload as attachments."
+        return f"{current_prompt}\n\n{additions}".strip()
 
 def time_ns() -> int:
     return int(time.time() * 1000000000)
