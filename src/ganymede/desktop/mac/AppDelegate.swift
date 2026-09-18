@@ -64,8 +64,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     private func setupTray() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.isVisible = true
         if let button = statusItem.button {
-            button.image = createTrayImage()
+            let icon = createTrayImage()
+            button.image = icon
+            button.imagePosition = .imageOnly
             button.toolTip = "Ganymede Gateway\n(Click to Show/Hide, Right-Click for Menu)"
             button.target = self
             button.action = #selector(statusItemClicked(_:))
@@ -74,23 +77,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func createTrayImage() -> NSImage {
-        if let imagePath = Bundle.main.path(forResource: "AppLogo", ofType: "png"),
-           let img = NSImage(contentsOfFile: imagePath) {
-            img.size = NSSize(width: 18, height: 18)
-            img.isTemplate = true
-            return img
+        // 1. Primary: Native SF Symbol moon.stars.fill (bold, native macOS menu bar hinted template)
+        if #available(macOS 11.0, *),
+           let symbol = NSImage(systemSymbolName: "moon.stars.fill", accessibilityDescription: "Ganymede Gateway") {
+            let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
+            let icon = symbol.withSymbolConfiguration(config) ?? symbol
+            icon.isTemplate = true
+            return icon
         }
-        if let img = NSImage(named: "AppLogo") {
-            img.size = NSSize(width: 18, height: 18)
-            img.isTemplate = true
-            return img
+
+        // 2. High-precision vector fallback if SF Symbol is unavailable
+        let icon = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
+            guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+            ctx.setFillColor(NSColor.black.cgColor)
+            
+            // Crescent moon
+            let center = CGPoint(x: 8.5, y: 9.0)
+            let path = CGMutablePath()
+            path.addArc(center: center, radius: 6.0, startAngle: -.pi * 0.45, endAngle: .pi * 0.7, clockwise: false)
+            path.addCurve(to: CGPoint(x: center.x + 6.0 * cos(-.pi * 0.45), y: center.y + 6.0 * sin(-.pi * 0.45)),
+                          control1: CGPoint(x: 6.5, y: 12.0),
+                          control2: CGPoint(x: 6.5, y: 6.0))
+            path.closeSubpath()
+            ctx.addPath(path)
+            ctx.fillPath()
+            
+            // Star
+            ctx.fillEllipse(in: CGRect(x: 12.0, y: 11.0, width: 3.2, height: 3.2))
+            return true
         }
-        if #available(macOS 11.0, *), let symbol = NSImage(systemSymbolName: "orbit", accessibilityDescription: "Ganymede") {
-            symbol.size = NSSize(width: 18, height: 18)
-            symbol.isTemplate = true
-            return symbol
-        }
-        return NSImage(size: NSSize(width: 18, height: 18))
+        icon.isTemplate = true
+        return icon
     }
 
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
